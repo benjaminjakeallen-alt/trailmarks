@@ -57,7 +57,7 @@ export default function Slideshow({ items, startIndex, onClose }: SlideshowProps
   if (typeof document === "undefined") return null;
   const item = items[index];
   if (!item) return null;
-  const state = STATES_BY_CODE[item.stateCode];
+  const state = item.stateCode ? STATES_BY_CODE[item.stateCode] : undefined;
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex flex-col bg-black">
@@ -90,7 +90,7 @@ export default function Slideshow({ items, startIndex, onClose }: SlideshowProps
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-16 text-white sm:p-10">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/60">
-          {state?.name ?? item.stateCode}
+          {state?.name ?? "On the road"}
         </p>
         <h2 className="font-display text-xl font-semibold sm:text-2xl">{item.memoryTitle}</h2>
       </div>

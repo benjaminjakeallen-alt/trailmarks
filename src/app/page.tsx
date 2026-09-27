@@ -32,6 +32,12 @@ export default function HomePage() {
           Mark off the states you&apos;ve visited, drop in the photos and stories from each trip,
           and watch your travel map fill in.
         </p>
+        <Link
+          href="/trips"
+          className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+        >
+          Or start a trip and let Trailmarks draw the route for you →
+        </Link>
       </section>
 
       <MapDashboard initialVisited={visitedCodes} />
@@ -46,12 +52,17 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {recentMemories.map((memory) => {
-              const state = STATES_BY_CODE[memory.stateCode];
+              const state = memory.stateCode ? STATES_BY_CODE[memory.stateCode] : undefined;
               const cover = memory.photos[0];
+              const href = memory.stateCode
+                ? `/states/${memory.stateCode.toLowerCase()}`
+                : memory.tripId
+                  ? `/trips/${memory.tripId}`
+                  : "/memories";
               return (
                 <Link
                   key={memory.id}
-                  href={`/states/${memory.stateCode.toLowerCase()}`}
+                  href={href}
                   className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-sm transition-shadow hover:shadow-md"
                 >
                   <div className="relative aspect-[4/3] w-full bg-surface-muted">
@@ -69,7 +80,7 @@ export default function HomePage() {
                   </div>
                   <div className="p-3.5">
                     <p className="text-xs font-medium uppercase tracking-wide text-accent">
-                      {state?.name ?? memory.stateCode}
+                      {state?.name ?? "On the road"}
                     </p>
                     <p className="mt-0.5 truncate font-medium text-foreground">{memory.title}</p>
                   </div>

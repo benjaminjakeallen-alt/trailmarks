@@ -3,7 +3,10 @@ import type { Memory, Photo } from "@/lib/types";
 
 interface MemoryRow {
   id: number;
-  state_code: string;
+  state_code: string | null;
+  trip_id: number | null;
+  lat: number | null;
+  lng: number | null;
   title: string;
   body: string | null;
   memory_date: string | null;
@@ -12,7 +15,7 @@ interface MemoryRow {
 
 interface PhotoRow {
   id: number;
-  state_code: string;
+  state_code: string | null;
   memory_id: number | null;
   file_name: string;
   caption: string | null;
@@ -39,12 +42,26 @@ function toMemory(row: MemoryRow, photos: Photo[]): Memory {
   return {
     id: row.id,
     stateCode: row.state_code,
+    tripId: row.trip_id,
+    lat: row.lat,
+    lng: row.lng,
     title: row.title,
     body: row.body,
     memoryDate: row.memory_date,
     createdAt: row.created_at,
     photos,
   };
+}
+
+function attachPhotos(memoryRows: MemoryRow[], photoRows: PhotoRow[]): Memory[] {
+  const photosByMemory = new Map<number, Photo[]>();
+  for (const row of photoRows) {
+    if (row.memory_id == null) continue;
+    const photo = toPhoto(row);
+    if (!photosByMemory.has(row.memory_id)) photosByMemory.set(row.memory_id, []);
+    photosByMemory.get(row.memory_id)!.push(photo);
+  }
+  return memoryRows.map((row) => toMemory(row, photosByMemory.get(row.id) ?? []));
 }
 
 export function getMemoriesForState(stateCode: string): Memory[] {
@@ -59,15 +76,27 @@ export function getMemoriesForState(stateCode: string): Memory[] {
     .prepare("SELECT * FROM photos WHERE state_code = ? ORDER BY created_at ASC, id ASC")
     .all(stateCode) as unknown as PhotoRow[];
 
-  const photosByMemory = new Map<number | null, Photo[]>();
-  for (const row of photoRows) {
-    const photo = toPhoto(row);
-    const key = row.memory_id;
-    if (!photosByMemory.has(key)) photosByMemory.set(key, []);
-    photosByMemory.get(key)!.push(photo);
-  }
+  return attachPhotos(memoryRows, photoRows);
+}
 
-  return memoryRows.map((row) => toMemory(row, photosByMemory.get(row.id) ?? []));
+export function getMemoriesForTrip(tripId: number): Memory[] {
+  const db = getDb();
+  const memoryRows = db
+    .prepare(
+      "SELECT * FROM memories WHERE trip_id = ? ORDER BY COALESCE(memory_date, created_at) ASC, id ASC",
+    )
+    .all(tripId) as unknown as MemoryRow[];
+
+  const photoRows = db
+    .prepare(
+      `SELECT photos.* FROM photos
+       JOIN memories ON memories.id = photos.memory_id
+       WHERE memories.trip_id = ?
+       ORDER BY photos.created_at ASC, photos.id ASC`,
+    )
+    .all(tripId) as unknown as PhotoRow[];
+
+  return attachPhotos(memoryRows, photoRows);
 }
 
 export function getAllMemories(): Memory[] {
@@ -80,15 +109,7 @@ export function getAllMemories(): Memory[] {
     .prepare("SELECT * FROM photos ORDER BY created_at ASC, id ASC")
     .all() as unknown as PhotoRow[];
 
-  const photosByMemory = new Map<number, Photo[]>();
-  for (const row of photoRows) {
-    if (row.memory_id == null) continue;
-    const photo = toPhoto(row);
-    if (!photosByMemory.has(row.memory_id)) photosByMemory.set(row.memory_id, []);
-    photosByMemory.get(row.memory_id)!.push(photo);
-  }
-
-  return memoryRows.map((row) => toMemory(row, photosByMemory.get(row.id) ?? []));
+  return attachPhotos(memoryRows, photoRows);
 }
 
 export function getAllPhotosLoose(): Photo[] {

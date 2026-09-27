@@ -52,7 +52,7 @@ export default function MemoriesGallery({ items }: MemoriesGalleryProps) {
             />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2.5 opacity-0 transition-opacity group-hover:opacity-100">
               <p className="truncate text-xs font-medium text-white">
-                {STATES_BY_CODE[item.stateCode]?.name ?? item.stateCode}
+                {(item.stateCode && STATES_BY_CODE[item.stateCode]?.name) ?? "On the road"}
               </p>
             </div>
           </button>

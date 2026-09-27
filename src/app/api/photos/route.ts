@@ -15,15 +15,13 @@ export async function POST(req: NextRequest) {
   }
 
   const file = form.get("file");
-  const stateCode = String(form.get("stateCode") || "").toUpperCase();
+  const stateCodeRaw = String(form.get("stateCode") || "").toUpperCase();
+  const stateCode = STATES_BY_CODE[stateCodeRaw] ? stateCodeRaw : null;
   const memoryIdRaw = form.get("memoryId");
   const caption = typeof form.get("caption") === "string" ? String(form.get("caption")).trim() : null;
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "file is required" }, { status: 400 });
-  }
-  if (!STATES_BY_CODE[stateCode]) {
-    return NextResponse.json({ error: "Unknown state code" }, { status: 400 });
   }
   if (!file.type.startsWith("image/")) {
     return NextResponse.json({ error: "Only image uploads are supported" }, { status: 400 });
