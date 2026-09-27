@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf6ef;
+  --surface: #ffffff;
+  --surface-muted: #f2ece0;
+  --foreground: #241c14;
+  --foreground-muted: #6b6055;
+  --border: #e7ddcb;
+
+  --accent: #d9711f;
+  --accent-foreground: #fff8f0;
+  --accent-soft: #fbe4cd;
+
+  --visited: #2f6f5e;
+  --visited-soft: #d9ebe4;
+  --unvisited: #d7cebc;
+
+  --ring: #d9711f;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-border: var(--border);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-visited: var(--visited);
+  --color-visited-soft: var(--visited-soft);
+  --color-unvisited: var(--unvisited);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-fraunces);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #14110c;
+    --surface: #1c1811;
+    --surface-muted: #241f16;
+    --foreground: #f3ece0;
+    --foreground-muted: #a99d8a;
+    --border: #362e21;
+
+    --accent: #ef8b3e;
+    --accent-foreground: #1c1811;
+    --accent-soft: #3a2718;
+
+    --visited: #4fa88f;
+    --visited-soft: #1c332c;
+    --unvisited: #33291d;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--foreground);
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+@keyframes shimmer-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.state-just-visited {
+  animation: shimmer-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }

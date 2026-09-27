@@ -2,6 +2,9 @@
   "name": "trailmarks",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,15 +12,23 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "d3-geo": "^3.1.1",
+    "framer-motion": "^13.4.4",
     "next": "16.3.6",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-simple-maps": "^5.0.5",
+    "sharp": "^0.35.5",
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/d3-geo": "^3.1.1",
+    "@types/node": "^22.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/topojson-client": "^3.1.5",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "tailwindcss": "^4",
