@@ -1,8 +1,13 @@
 # Trailmarks
 
+**Live at [trailmarks-lovat.vercel.app](https://trailmarks-lovat.vercel.app)**
+
 A fun, interactive way to track every state you've visited in North America —
 mark states off on a live map, capture the memories and photos from each
 trip, and relive them in a slideshow. Photo book printing is on the roadmap.
+
+Deployed on [Vercel](https://vercel.com/) (auto-deploys from `main`), backed
+by [Supabase](https://supabase.com/) for the database and photo storage.
 
 ## Stack
 
