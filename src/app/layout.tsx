@@ -1,13 +1,11 @@
-import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import Nav from "@/components/Nav";
+import Providers from "@/components/Providers";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
+const geist = Geist({ variable: "--font-geist", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
@@ -17,18 +15,28 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: "Trailmarks — Every state, remembered",
   description:
-    "Track every state you've visited, capture the memories and photos from each trip, and relive them in a slideshow.",
+    "Claim every state you've visited, record trips that draw their own maps, and turn the photos into a story.",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f1ea" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c0f13" },
+  ],
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${geist.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Nav />
-        <main className="flex-1">{children}</main>
+      <body className="grain flex min-h-[100dvh] flex-col bg-bg text-ink">
+        <Providers>
+          <Nav />
+          <main className="flex-1 pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-0">{children}</main>
+        </Providers>
       </body>
     </html>
   );

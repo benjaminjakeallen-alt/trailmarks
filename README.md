@@ -29,6 +29,24 @@ deploy to any Node host.
   style) — real streets/terrain, not a choropleth, so a recorded route draws
   as an actual line over the map like Polarsteps.
 
+## Design system
+
+"Golden Hour" — warm paper and ink, **Lagoon** (teal) for land you've claimed,
+**Ember** (sunset coral) for anything you act on, **Gold** for achievement
+moments, plus a true night-map dark mode. Tokens live in `src/app/globals.css`;
+never hard-code hex values in components.
+
+- Type: Fraunces (display, light weight + italic accents), Geist (UI), Geist
+  Mono (dates, stats, eyebrows). Icons: Phosphor, light weight.
+- Motion: `src/lib/motion.ts` holds the shared easings and springs. Respect
+  `prefers-reduced-motion` (handled globally via `MotionConfig`).
+- The home map (`src/components/map/UsMap.tsx`) is hand-built on `d3-geo` +
+  us-atlas's pre-projected Albers file, so every state is its own animatable
+  path: sunrise-sweep intro, a stamp + ripple + spark burst on claim, a
+  collapsing ring on unclaim, haptics, and an ember outline trace on select.
+- Containers use a "double bezel" (`Panel`); trips render their GPS trail as
+  auto-drawn route art (`RouteSketch`) instead of a stock thumbnail.
+
 ## Architecture
 
 - `src/lib/supabase.ts` — single `getSupabase()` singleton, a

@@ -1,40 +1,38 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { PauseIcon, PlayIcon, XIcon } from "@phosphor-icons/react";
 import { STATES_BY_CODE } from "@/lib/statesData";
+import { formatMemoryDate } from "@/components/memories/MemoryCard";
+import { EASE_OUT_EXPO } from "@/lib/motion";
 import type { GalleryItem } from "@/lib/galleryItem";
 
-interface SlideshowProps {
+const SLIDE_MS = 5200;
+const MAX_SEGMENTS = 24;
+
+export default function Slideshow({
+  items,
+  startIndex,
+  onClose,
+}: {
   items: GalleryItem[];
   startIndex: number;
   onClose: () => void;
-}
-
-const SLIDE_DURATION_MS = 5000;
-
-export default function Slideshow({ items, startIndex, onClose }: SlideshowProps) {
+}) {
   const [index, setIndex] = useState(startIndex);
   const [playing, setPlaying] = useState(true);
-  const [zoomIn, setZoomIn] = useState(true);
 
-  const next = useCallback(() => {
-    setIndex((i) => (i + 1) % items.length);
-    setZoomIn((z) => !z);
-  }, [items.length]);
-
-  const prev = useCallback(() => {
-    setIndex((i) => (i - 1 + items.length) % items.length);
-    setZoomIn((z) => !z);
-  }, [items.length]);
+  const next = useCallback(() => setIndex((i) => (i + 1) % items.length), [items.length]);
+  const prev = useCallback(() => setIndex((i) => (i - 1 + items.length) % items.length), [items.length]);
 
   useEffect(() => {
     if (!playing) return;
-    const id = window.setInterval(next, SLIDE_DURATION_MS);
-    return () => window.clearInterval(id);
-  }, [playing, next]);
+    const id = window.setTimeout(next, SLIDE_MS);
+    return () => window.clearTimeout(id);
+  }, [playing, index, next]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -57,76 +55,110 @@ export default function Slideshow({ items, startIndex, onClose }: SlideshowProps
   if (typeof document === "undefined") return null;
   const item = items[index];
   if (!item) return null;
-  const state = item.stateCode ? STATES_BY_CODE[item.stateCode] : undefined;
+  const state = item.stateCode ? STATES_BY_CODE[item.stateCode] : null;
+  const zoomIn = index % 2 === 0;
+  const segmented = items.length <= MAX_SEGMENTS;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex flex-col bg-black">
-      <AnimatePresence mode="sync">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 z-[100] overflow-hidden bg-[#07090c] text-white"
+    >
+      <AnimatePresence initial={false}>
         <motion.div
           key={item.photo.id}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.9, ease: "easeInOut" }}
+          transition={{ duration: 1.1, ease: EASE_OUT_EXPO }}
           className="absolute inset-0"
         >
+          {/* Blurred fill so portrait photos never float in black bars. */}
+          <Image src={item.photo.url} alt="" fill sizes="30vw" className="scale-125 object-cover opacity-40 blur-3xl" />
           <motion.div
-            initial={{ scale: zoomIn ? 1 : 1.12 }}
-            animate={{ scale: zoomIn ? 1.12 : 1 }}
-            transition={{ duration: SLIDE_DURATION_MS / 1000 + 0.9, ease: "linear" }}
             className="absolute inset-0"
+            initial={{ scale: zoomIn ? 1 : 1.1, x: zoomIn ? 0 : 12 }}
+            animate={{ scale: zoomIn ? 1.1 : 1, x: zoomIn ? -12 : 0 }}
+            transition={{ duration: SLIDE_MS / 1000 + 1.2, ease: "linear" }}
           >
-            <Image
-              src={item.photo.url}
-              alt={item.photo.caption ?? item.memoryTitle}
-              fill
-              priority
-              className="object-contain"
-              sizes="100vw"
-            />
+            <Image src={item.photo.url} alt={item.photo.caption ?? item.memoryTitle} fill priority sizes="100vw" className="object-contain" />
           </motion.div>
         </motion.div>
       </AnimatePresence>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-16 text-white sm:p-10">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/60">
-          {state?.name ?? "On the road"}
-        </p>
-        <h2 className="font-display text-xl font-semibold sm:text-2xl">{item.memoryTitle}</h2>
+      {/* Tap zones: left third goes back, the rest goes forward — like stories. */}
+      <button aria-label="Previous" onClick={prev} className="absolute inset-y-0 left-0 w-1/3" />
+      <button aria-label="Next" onClick={next} className="absolute inset-y-0 right-0 w-2/3" />
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 bg-gradient-to-b from-black/60 to-transparent px-4 pb-10 pt-[calc(env(safe-area-inset-top)+0.9rem)] sm:px-8">
+        {segmented ? (
+          <div className="flex gap-1">
+            {items.map((it, i) => (
+              <span key={it.photo.id} className="h-[3px] flex-1 overflow-hidden rounded-full bg-white/25">
+                {i < index && <span className="block h-full w-full bg-white" />}
+                {i === index && (
+                  <span
+                    key={`${index}-${playing}`}
+                    className="segment-fill block h-full w-full bg-white"
+                    style={{ animationDuration: `${SLIDE_MS}ms`, animationPlayState: playing ? "running" : "paused" }}
+                  />
+                )}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="h-[3px] overflow-hidden rounded-full bg-white/25">
+            <motion.span
+              className="block h-full origin-left bg-white"
+              animate={{ scaleX: (index + 1) / items.length }}
+              transition={{ duration: 0.6, ease: EASE_OUT_EXPO }}
+            />
+          </div>
+        )}
+        <div className="pointer-events-auto mt-4 flex items-center justify-between">
+          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/70 tabular">
+            {String(index + 1).padStart(2, "0")} / {String(items.length).padStart(2, "0")}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPlaying((p) => !p)}
+              aria-label={playing ? "Pause" : "Play"}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 backdrop-blur-md hover:bg-white/20"
+            >
+              {playing ? <PauseIcon size={16} weight="fill" /> : <PlayIcon size={16} weight="fill" />}
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="Close slideshow"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/15 backdrop-blur-md hover:bg-white/20"
+            >
+              <XIcon size={16} />
+            </button>
+          </div>
+        </div>
       </div>
 
-      <button
-        onClick={onClose}
-        aria-label="Close slideshow"
-        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20"
-      >
-        ×
-      </button>
-
-      <button
-        onClick={prev}
-        aria-label="Previous"
-        className="absolute left-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20 sm:left-4"
-      >
-        ‹
-      </button>
-      <button
-        onClick={next}
-        aria-label="Next"
-        className="absolute right-2 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20 sm:right-4"
-      >
-        ›
-      </button>
-
-      <button
-        onClick={() => setPlaying((p) => !p)}
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-4 py-1.5 text-sm text-white hover:bg-white/20"
-      >
-        {playing ? "⏸ Pause" : "▶ Play"}
-      </button>
-
-      <div className="absolute left-0 top-0 h-1 bg-accent" style={{ width: `${((index + 1) / items.length) * 100}%` }} />
-    </div>,
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent px-5 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-24 sm:px-10 sm:pb-12">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={item.photo.id}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.7, ease: EASE_OUT_EXPO, delay: 0.2 }}
+          >
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/65">
+              {state?.name ?? "On the road"}
+              {formatMemoryDate(item.memoryDate) && <> · {formatMemoryDate(item.memoryDate)}</>}
+            </p>
+            <h2 className="mt-2 max-w-[20ch] font-display text-[clamp(2rem,5vw,3.75rem)] font-light leading-[1] tracking-[-0.03em]">
+              {item.memoryTitle}
+            </h2>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </motion.div>,
     document.body,
   );
 }

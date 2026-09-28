@@ -1,90 +1,190 @@
 @import "tailwindcss";
 
+/*
+ * "Golden Hour" — warm paper and ink, Lagoon for land you've claimed,
+ * Ember for anything you act on, Gold for achievement moments.
+ * Complementary sunset-over-water pairing; no purple, no pure black.
+ */
 :root {
-  --background: #faf6ef;
-  --surface: #ffffff;
-  --surface-muted: #f2ece0;
-  --foreground: #241c14;
-  --foreground-muted: #6b6055;
-  --border: #e7ddcb;
+  --bg: #f5f1ea;
+  --bg-elevated: #fffdf9;
+  --bg-sunken: #ece6dc;
+  --ink: #121418;
+  --ink-2: #4a4e56;
+  --ink-3: #8b8f96;
+  --line: rgb(18 20 24 / 0.07);
+  --line-strong: rgb(18 20 24 / 0.13);
 
-  --accent: #d9711f;
-  --accent-foreground: #fff8f0;
-  --accent-soft: #fbe4cd;
+  --land: #e3dcd0;
+  --land-hover: #d6ccbc;
+  --land-edge: #f5f1ea;
 
-  --visited: #2f6f5e;
-  --visited-soft: #d9ebe4;
-  --unvisited: #d7cebc;
+  --lagoon: #0e7a6e;
+  --lagoon-bright: #22b59f;
+  --lagoon-soft: #d3ebe6;
 
-  --ring: #d9711f;
-}
+  --ember: #ef5b34;
+  --ember-strong: #d8461f;
+  --ember-soft: #fbe1d7;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
-  --color-foreground: var(--foreground);
-  --color-foreground-muted: var(--foreground-muted);
-  --color-border: var(--border);
+  --gold: #e7a73a;
 
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent-soft: var(--accent-soft);
-
-  --color-visited: var(--visited);
-  --color-visited-soft: var(--visited-soft);
-  --color-unvisited: var(--unvisited);
-
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-fraunces);
+  --shadow-float: 0 24px 48px -24px rgb(60 40 20 / 0.18), 0 2px 6px -2px rgb(60 40 20 / 0.06);
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 0.6);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #14110c;
-    --surface: #1c1811;
-    --surface-muted: #241f16;
-    --foreground: #f3ece0;
-    --foreground-muted: #a99d8a;
-    --border: #362e21;
+    --bg: #0c0f13;
+    --bg-elevated: #141920;
+    --bg-sunken: #090b0e;
+    --ink: #f2eee7;
+    --ink-2: #b3b7be;
+    --ink-3: #767c85;
+    --line: rgb(242 238 231 / 0.07);
+    --line-strong: rgb(242 238 231 / 0.14);
 
-    --accent: #ef8b3e;
-    --accent-foreground: #1c1811;
-    --accent-soft: #3a2718;
+    --land: #1c222a;
+    --land-hover: #28313c;
+    --land-edge: #0c0f13;
 
-    --visited: #4fa88f;
-    --visited-soft: #1c332c;
-    --unvisited: #33291d;
+    --lagoon: #1fa593;
+    --lagoon-bright: #63dcc8;
+    --lagoon-soft: rgb(31 165 147 / 0.16);
+
+    --ember: #ff7a52;
+    --ember-strong: #ff6a3d;
+    --ember-soft: rgb(255 122 82 / 0.15);
+
+    --gold: #f3c15b;
+
+    --shadow-float: 0 24px 48px -20px rgb(0 0 0 / 0.55), 0 2px 6px -2px rgb(0 0 0 / 0.35);
+    --highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
   }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elevated: var(--bg-elevated);
+  --color-sunken: var(--bg-sunken);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-land: var(--land);
+  --color-lagoon: var(--lagoon);
+  --color-lagoon-bright: var(--lagoon-bright);
+  --color-lagoon-soft: var(--lagoon-soft);
+  --color-ember: var(--ember);
+  --color-ember-strong: var(--ember-strong);
+  --color-ember-soft: var(--ember-soft);
+  --color-gold: var(--gold);
+
+  --font-sans: var(--font-geist);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-glide: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-geist), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
 }
 
 ::selection {
-  background: var(--accent-soft);
-  color: var(--foreground);
+  background: var(--ember-soft);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
 .font-display {
-  font-family: var(--font-display), Georgia, serif;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-variation-settings: "SOFT" 50, "WONK" 0;
 }
 
-@keyframes shimmer-pop {
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Paper grain — fixed and non-interactive so it never repaints on scroll. */
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Faint topographic contour rings behind map stages. */
+.bg-topo {
+  --topo: color-mix(in oklab, var(--ink) 4.5%, transparent);
+  background-image:
+    repeating-radial-gradient(circle at 18% 22%, transparent 0 22px, var(--topo) 22px 23px),
+    repeating-radial-gradient(circle at 82% 78%, transparent 0 30px, var(--topo) 30px 31px);
+}
+
+.state-path {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes record-pulse {
   0% {
     transform: scale(1);
-  }
-  35% {
-    transform: scale(1.18);
+    opacity: 0.55;
   }
   100% {
-    transform: scale(1);
+    transform: scale(2.4);
+    opacity: 0;
   }
 }
 
-.state-just-visited {
-  animation: shimmer-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+.record-pulse {
+  animation: record-pulse 1.6s var(--ease-out-expo) infinite;
+}
+
+@keyframes segment-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.segment-fill {
+  transform-origin: left;
+  animation: segment-fill linear forwards;
+}
+
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .record-pulse,
+  .segment-fill {
+    animation: none;
+  }
 }

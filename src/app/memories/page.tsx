@@ -1,8 +1,11 @@
 import { getAllMemories } from "@/lib/memories";
 import MemoriesGallery from "@/components/MemoriesGallery";
+import { Eyebrow } from "@/components/ui/Panel";
+import { WordReveal } from "@/components/motion/Reveal";
 import type { GalleryItem } from "@/lib/galleryItem";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Memories — Trailmarks" };
 
 export default async function MemoriesPage() {
   const memories = await getAllMemories();
@@ -18,14 +21,14 @@ export default async function MemoriesPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-5 pb-24 pt-10 sm:px-8 sm:pt-14">
-      <header className="mb-8">
-        <h1 className="font-display text-4xl font-semibold tracking-tight">Memories</h1>
-        <p className="mt-2 text-foreground-muted">
-          Every photo from every trip, in one slideshow.
-        </p>
+    <div className="mx-auto max-w-[1400px] px-4 pb-24 pt-8 sm:px-8 lg:pt-16">
+      <header className="mb-10 sm:mb-14">
+        <Eyebrow>Memories</Eyebrow>
+        <WordReveal
+          text={"Every photo,\nevery road."}
+          className="mt-5 font-display text-[clamp(2.8rem,6.5vw,5.5rem)] font-light leading-[0.92] tracking-[-0.045em] [&>span:last-child]:italic [&>span:last-child]:text-ink-2"
+        />
       </header>
-
       <MemoriesGallery items={items} />
     </div>
   );

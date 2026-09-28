@@ -1,48 +1,82 @@
-import Link from "next/link";
+import { PlusIcon } from "@phosphor-icons/react/dist/ssr";
 import { listTrips, getTrip } from "@/lib/trips";
 import TripCard from "@/components/TripCard";
+import RouteSketch from "@/components/trips/RouteSketch";
+import { ButtonLink } from "@/components/ui/Button";
+import { Eyebrow } from "@/components/ui/Panel";
+import { WordReveal } from "@/components/motion/Reveal";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Trips — Trailmarks" };
+
+/** Keep card payloads small: a sketch never needs more than ~160 vertices. */
+function downsample<T>(items: T[], max = 160): T[] {
+  if (items.length <= max) return items;
+  const step = (items.length - 1) / (max - 1);
+  return Array.from({ length: max }, (_, i) => items[Math.round(i * step)]);
+}
+
+function bentoSpan(i: number, total: number) {
+  if (i === 0) return total > 1 ? "md:col-span-4 md:row-span-2" : "md:col-span-6";
+  if (i <= 2) return "md:col-span-2";
+  return "md:col-span-3";
+}
 
 export default async function TripsPage() {
   const trips = await listTrips();
-  const enriched = await Promise.all(
-    trips.map(async (trip) => {
-      const detail = await getTrip(trip.id);
-      return {
-        trip,
-        stateCount: detail?.stateCodes.length ?? 0,
-        distanceMiles: detail?.distanceMiles ?? 0,
-      };
-    }),
-  );
+  const details = await Promise.all(trips.map((t) => getTrip(t.id)));
 
   return (
-    <div className="mx-auto max-w-6xl px-5 pb-24 pt-10 sm:px-8 sm:pt-14">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <div className="mx-auto max-w-[1400px] px-4 pb-24 pt-8 sm:px-8 lg:pt-16">
+      <header className="mb-10 flex flex-col gap-6 sm:mb-14 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-4xl font-semibold tracking-tight">Trips</h1>
-          <p className="mt-2 text-foreground-muted">
-            Start a trip to auto-track your route and build its map as you go.
-          </p>
+          <Eyebrow>Trips</Eyebrow>
+          <WordReveal
+            text={"Roads you've\ndrawn."}
+            className="mt-5 font-display text-[clamp(2.8rem,6.5vw,5.5rem)] font-light leading-[0.92] tracking-[-0.045em] [&>span:last-child]:italic [&>span:last-child]:text-ink-2"
+          />
         </div>
-        <Link
-          href="/trips/new"
-          className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-accent-foreground hover:opacity-90"
-        >
-          + New trip
-        </Link>
+        <ButtonLink href="/trips/new" icon={<PlusIcon size={16} weight="bold" />} className="self-start sm:hidden">
+          New trip
+        </ButtonLink>
       </header>
 
       {trips.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-border p-10 text-center text-foreground-muted">
-          No trips yet — start one and Trailmarks will draw the map as you travel.
-        </p>
+        <div className="grid grid-cols-1 items-center gap-8 rounded-[2rem] bg-ink/[0.03] p-1.5 ring-1 ring-line md:grid-cols-2">
+          <div className="bg-topo aspect-[16/10] overflow-hidden rounded-[calc(2rem-0.375rem)] bg-elevated ring-1 ring-line">
+            <RouteSketch points={[]} demo className="h-full w-full" />
+          </div>
+          <div className="p-6 md:p-10">
+            <h2 className="font-display text-3xl tracking-[-0.02em]">Your first route starts here.</h2>
+            <p className="mt-3 max-w-[40ch] leading-relaxed text-ink-2">
+              Start a trip, hit record, and drive. Trailmarks traces the road as you go and claims every
+              state you cross when you finish.
+            </p>
+            <div className="mt-6">
+              <ButtonLink href="/trips/new" icon={<PlusIcon size={16} weight="bold" />}>
+                Start a trip
+              </ButtonLink>
+            </div>
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {enriched.map(({ trip, stateCount, distanceMiles }) => (
-            <TripCard key={trip.id} trip={trip} stateCount={stateCount} distanceMiles={distanceMiles} />
-          ))}
+        <div className="grid auto-rows-auto grid-cols-1 gap-4 md:grid-cols-6">
+          {trips.map((trip, i) => {
+            const detail = details[i];
+            return (
+              <div key={trip.id} className={bentoSpan(i, trips.length)}>
+                <TripCard
+                  trip={trip}
+                  index={i}
+                  featured={i === 0 && trips.length > 1}
+                  wide={trips.length === 1}
+                  points={downsample(detail?.points ?? []).map((p) => ({ lat: p.lat, lng: p.lng }))}
+                  stateCodes={detail?.stateCodes ?? []}
+                  distanceMiles={detail?.distanceMiles ?? 0}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

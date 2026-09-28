@@ -1,19 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import {
-  Map as MapLibreMap,
-  Marker,
-  Popup,
-  NavigationControl,
-  type GeoJSONSource,
-} from "maplibre-gl";
+import { Map as MapLibreMap, Marker, Popup, NavigationControl, type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-const MAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
-const ROUTE_SOURCE_ID = "trip-route";
-const ROUTE_LINE_LAYER_ID = "trip-route-line";
-const ROUTE_HEAD_LAYER_ID = "trip-route-head";
+const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
+const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
+const ROUTE_SOURCE = "trip-route";
+const HEAD_SOURCE = "trip-head";
 
 export interface TripMapPoint {
   lat: number;
@@ -25,6 +19,7 @@ export interface TripMapPin {
   lat: number;
   lng: number;
   label: string;
+  index: number;
 }
 
 interface TripMapProps {
@@ -35,24 +30,34 @@ interface TripMapProps {
   className?: string;
 }
 
-function emptyRouteGeoJson(): GeoJSON.FeatureCollection {
-  return { type: "FeatureCollection", features: [] };
+function cssVar(name: string, fallback: string) {
+  if (typeof window === "undefined") return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 }
 
-function routeGeoJson(points: TripMapPoint[]): GeoJSON.FeatureCollection {
-  if (points.length < 2) return emptyRouteGeoJson();
+function routeData(points: TripMapPoint[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates: points.map((p) => [p.lng, p.lat]),
-        },
-      },
-    ],
+    features:
+      points.length < 2
+        ? []
+        : [
+            {
+              type: "Feature",
+              properties: {},
+              geometry: { type: "LineString", coordinates: points.map((p) => [p.lng, p.lat]) },
+            },
+          ],
+  };
+}
+
+function headData(points: TripMapPoint[]): GeoJSON.FeatureCollection {
+  const last = points[points.length - 1];
+  return {
+    type: "FeatureCollection",
+    features: last
+      ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [last.lng, last.lat] } }]
+      : [],
   };
 }
 
@@ -60,43 +65,78 @@ export default function TripMap({ points, pins = [], onPinClick, followLatest, c
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
-  const loadedRef = useRef(false);
+  const readyRef = useRef(false);
+  const pointsRef = useRef(points);
+
+  useEffect(() => {
+    pointsRef.current = points;
+  }, [points]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const first = pointsRef.current[0];
     const map = new MapLibreMap({
       container: containerRef.current,
-      style: MAP_STYLE,
-      center: points[0] ? [points[0].lng, points[0].lat] : [-98.5, 39.8],
-      zoom: points[0] ? 10 : 3.2,
+      style: dark ? STYLE_DARK : STYLE_LIGHT,
+      center: first ? [first.lng, first.lat] : [-96, 38.5],
+      zoom: first ? 10 : 3.3,
       attributionControl: { compact: true },
+      fadeDuration: 250,
     });
     map.addControl(new NavigationControl({ showCompass: false }), "top-right");
     mapRef.current = map;
 
-    map.on("load", () => {
-      loadedRef.current = true;
-      map.addSource(ROUTE_SOURCE_ID, { type: "geojson", data: emptyRouteGeoJson() });
+    // If the dark style is ever unavailable, fall back to the light one rather than a blank map.
+    let fellBack = !dark;
+    map.on("error", () => {
+      if (!fellBack && !map.isStyleLoaded()) {
+        fellBack = true;
+        map.setStyle(STYLE_LIGHT);
+      }
+    });
+
+    map.on("style.load", () => {
+      const lagoon = cssVar("--lagoon", "#0e7a6e");
+      const ember = cssVar("--ember", "#ef5b34");
+      const halo = cssVar("--bg-elevated", "#fffdf9");
+
+      map.addSource(ROUTE_SOURCE, { type: "geojson", data: routeData(pointsRef.current), lineMetrics: true });
+      map.addSource(HEAD_SOURCE, { type: "geojson", data: headData(pointsRef.current) });
+
       map.addLayer({
-        id: ROUTE_LINE_LAYER_ID,
+        id: "trip-route-casing",
         type: "line",
-        source: ROUTE_SOURCE_ID,
+        source: ROUTE_SOURCE,
         layout: { "line-join": "round", "line-cap": "round" },
-        paint: { "line-color": "#d9711f", "line-width": 4, "line-opacity": 0.9 },
+        paint: { "line-color": halo, "line-width": 9, "line-opacity": 0.9 },
       });
       map.addLayer({
-        id: ROUTE_HEAD_LAYER_ID,
-        type: "circle",
-        source: ROUTE_SOURCE_ID,
-        filter: ["==", "$type", "Point"],
+        id: "trip-route-line",
+        type: "line",
+        source: ROUTE_SOURCE,
+        layout: { "line-join": "round", "line-cap": "round" },
         paint: {
-          "circle-radius": 6,
-          "circle-color": "#d9711f",
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
+          "line-width": 4.5,
+          "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, lagoon, 1, ember],
         },
       });
+      map.addLayer({
+        id: "trip-head-glow",
+        type: "circle",
+        source: HEAD_SOURCE,
+        paint: { "circle-radius": 16, "circle-color": ember, "circle-opacity": 0.18 },
+      });
+      map.addLayer({
+        id: "trip-head",
+        type: "circle",
+        source: HEAD_SOURCE,
+        paint: { "circle-radius": 6.5, "circle-color": ember, "circle-stroke-width": 3, "circle-stroke-color": halo },
+      });
+
+      readyRef.current = true;
+      fit(map, pointsRef.current, false);
     });
 
     return () => {
@@ -104,76 +144,58 @@ export default function TripMap({ points, pins = [], onPinClick, followLatest, c
       markersRef.current = [];
       map.remove();
       mapRef.current = null;
-      loadedRef.current = false;
+      readyRef.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep the route line (and a "current position" dot) in sync with points.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-
-    const apply = () => {
-      const source = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource | undefined;
-      if (!source) return;
-
-      const geojson = routeGeoJson(points);
-      const last = points[points.length - 1];
-      if (last) {
-        geojson.features.push({
-          type: "Feature",
-          properties: {},
-          geometry: { type: "Point", coordinates: [last.lng, last.lat] },
-        });
-      }
-      source.setData(geojson);
-
-      if (points.length === 1) {
-        map.jumpTo({ center: [points[0].lng, points[0].lat], zoom: 11 });
-      } else if (points.length > 1) {
-        const lngs = points.map((p) => p.lng);
-        const lats = points.map((p) => p.lat);
-        const bounds: [[number, number], [number, number]] = [
-          [Math.min(...lngs), Math.min(...lats)],
-          [Math.max(...lngs), Math.max(...lats)],
-        ];
-        if (followLatest) {
-          map.panTo([last.lng, last.lat], { duration: 400 });
-        } else {
-          map.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 400 });
-        }
-      }
-    };
-
-    if (loadedRef.current) apply();
-    else map.once("load", apply);
+    if (!map || !readyRef.current) return;
+    (map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined)?.setData(routeData(points));
+    (map.getSource(HEAD_SOURCE) as GeoJSONSource | undefined)?.setData(headData(points));
+    fit(map, points, !!followLatest);
   }, [points, followLatest]);
 
-  // Memory "step" pins.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = pins.map((pin) => {
       const el = document.createElement("button");
-      el.setAttribute("aria-label", pin.label);
-      el.style.width = "16px";
-      el.style.height = "16px";
-      el.style.borderRadius = "50%";
-      el.style.background = "#2f6f5e";
-      el.style.border = "2px solid white";
-      el.style.boxShadow = "0 1px 4px rgba(0,0,0,0.35)";
-      el.style.cursor = "pointer";
+      el.type = "button";
+      el.setAttribute("aria-label", `Step ${pin.index + 1}: ${pin.label}`);
+      el.textContent = String(pin.index + 1).padStart(2, "0");
+      el.className =
+        "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-elevated)] font-mono text-[11px] text-[var(--ink)] shadow-[0_6px_16px_-6px_rgb(0_0_0/0.35)] ring-2 ring-[var(--ember)] transition-transform duration-300 hover:scale-110";
       el.addEventListener("click", () => onPinClick?.(pin.id));
-
       return new Marker({ element: el })
         .setLngLat([pin.lng, pin.lat])
-        .setPopup(new Popup({ offset: 12 }).setText(pin.label))
+        .setPopup(new Popup({ offset: 18, closeButton: false }).setText(pin.label))
         .addTo(map);
     });
   }, [pins, onPinClick]);
 
   return <div ref={containerRef} className={className ?? "h-full w-full"} />;
+}
+
+function fit(map: MapLibreMap, points: TripMapPoint[], follow: boolean) {
+  if (points.length === 0) return;
+  const last = points[points.length - 1];
+  if (points.length === 1) {
+    map.easeTo({ center: [last.lng, last.lat], zoom: 12, duration: 600 });
+    return;
+  }
+  if (follow) {
+    map.easeTo({ center: [last.lng, last.lat], duration: 500 });
+    return;
+  }
+  const lngs = points.map((p) => p.lng);
+  const lats = points.map((p) => p.lat);
+  map.fitBounds(
+    [
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)],
+    ],
+    { padding: { top: 70, bottom: 110, left: 50, right: 50 }, maxZoom: 13, duration: 800 },
+  );
 }

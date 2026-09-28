@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { FlagCheckeredIcon, PauseIcon, WarningIcon } from "@phosphor-icons/react";
 import TripMap, { type TripMapPin, type TripMapPoint } from "@/components/TripMap";
 import { haversineMiles } from "@/lib/geo";
+import { EASE_OUT_EXPO, haptic } from "@/lib/motion";
 import type { TripDetail } from "@/lib/types";
 
 const MIN_SECONDS_BETWEEN_POINTS = 10;
@@ -14,9 +17,16 @@ interface LiveRecorderProps {
   onPinClick?: (id: number | string) => void;
   onFinished: (newStateCodes: string[]) => void;
   onPointsChange?: (points: TripMapPoint[]) => void;
+  onRecordingChange?: (recording: boolean) => void;
 }
 
 type GeoState = "idle" | "recording" | "unsupported" | "denied" | "error";
+
+const GEO_ERRORS: Partial<Record<GeoState, string>> = {
+  denied: "Location access is off for this site. Turn it on in your browser settings to record a route.",
+  unsupported: "This browser can't share GPS location.",
+  error: "Couldn't get a location fix. Try again with a clearer view of the sky.",
+};
 
 export default function LiveRecorder({
   trip,
@@ -24,19 +34,24 @@ export default function LiveRecorder({
   onPinClick,
   onFinished,
   onPointsChange,
+  onRecordingChange,
 }: LiveRecorderProps) {
-  const [points, setPoints] = useState<TripMapPoint[]>(
-    trip.points.map((p) => ({ lat: p.lat, lng: p.lng })),
-  );
+  const [points, setPoints] = useState<TripMapPoint[]>(() => trip.points.map((p) => ({ lat: p.lat, lng: p.lng })));
+  const [geoState, setGeoState] = useState<GeoState>("idle");
+  const [finishing, setFinishing] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
+  const lastSavedRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
 
   useEffect(() => {
     onPointsChange?.(points);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [points]);
-  const [geoState, setGeoState] = useState<GeoState>("idle");
-  const [finishing, setFinishing] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
-  const lastSavedRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
+
+  const recording = geoState === "recording";
+  useEffect(() => {
+    onRecordingChange?.(recording);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recording]);
 
   const stopWatching = useCallback(() => {
     if (watchIdRef.current !== null && typeof navigator !== "undefined") {
@@ -47,7 +62,12 @@ export default function LiveRecorder({
 
   useEffect(() => stopWatching, [stopWatching]);
 
-  async function ensureTripStarted() {
+  async function startRecording() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoState("unsupported");
+      return;
+    }
+    haptic(12);
     if (trip.status === "planned") {
       await fetch(`/api/trips/${trip.id}`, {
         method: "PATCH",
@@ -55,15 +75,6 @@ export default function LiveRecorder({
         body: JSON.stringify({ action: "start" }),
       });
     }
-  }
-
-  async function startRecording() {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setGeoState("unsupported");
-      return;
-    }
-
-    await ensureTripStarted();
     setGeoState("recording");
 
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -71,16 +82,12 @@ export default function LiveRecorder({
         const { latitude: lat, longitude: lng } = position.coords;
         const now = Date.now();
         const last = lastSavedRef.current;
-        const secondsSince = last ? (now - last.time) / 1000 : Infinity;
-        const distanceSince = last ? haversineMiles(last, { lat, lng }) : Infinity;
-
-        if (secondsSince < MIN_SECONDS_BETWEEN_POINTS && distanceSince < MIN_MILES_BETWEEN_POINTS) {
-          return;
-        }
+        const seconds = last ? (now - last.time) / 1000 : Infinity;
+        const miles = last ? haversineMiles(last, { lat, lng }) : Infinity;
+        if (seconds < MIN_SECONDS_BETWEEN_POINTS && miles < MIN_MILES_BETWEEN_POINTS) return;
 
         lastSavedRef.current = { lat, lng, time: now };
         setPoints((prev) => [...prev, { lat, lng }]);
-
         fetch(`/api/trips/${trip.id}/points`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -96,12 +103,14 @@ export default function LiveRecorder({
   }
 
   function pauseRecording() {
+    haptic(8);
     stopWatching();
     setGeoState("idle");
   }
 
   async function finishTrip() {
     stopWatching();
+    setGeoState("idle");
     setFinishing(true);
     try {
       const res = await fetch(`/api/trips/${trip.id}`, {
@@ -110,74 +119,100 @@ export default function LiveRecorder({
         body: JSON.stringify({ action: "finish" }),
       });
       const data = await res.json();
+      haptic([10, 50, 10, 50, 24]);
       onFinished(data.newStateCodes ?? []);
     } finally {
       setFinishing(false);
     }
   }
 
-  const isRecording = geoState === "recording";
-  const isCompleted = trip.status === "completed";
+  const completed = trip.status === "completed";
+  const statusText = recording
+    ? "Recording — keep this screen open"
+    : points.length > 0
+      ? "Paused"
+      : "Ready when you are";
 
   return (
-    <div className="space-y-3">
-      <div className="relative h-[380px] w-full overflow-hidden rounded-2xl border border-border shadow-sm sm:h-[480px]">
-        <TripMap points={points} pins={pins} onPinClick={onPinClick} followLatest={isRecording} />
+    <div>
+      <div className="rounded-[2rem] bg-ink/[0.03] p-1.5 ring-1 ring-line">
+        <div className="relative h-[62dvh] min-h-[380px] overflow-hidden rounded-[calc(2rem-0.375rem)] bg-sunken ring-1 ring-line sm:h-[560px]">
+          <TripMap points={points} pins={pins} onPinClick={onPinClick} followLatest={recording} />
 
-        {isRecording && (
-          <div className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
-            Recording — keep this tab open
-          </div>
-        )}
-      </div>
+          {!completed && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-3 sm:p-5">
+              <motion.div
+                layout
+                transition={{ layout: { duration: 0.45, ease: EASE_OUT_EXPO } }}
+                className="pointer-events-auto flex items-center gap-3 rounded-full bg-elevated/85 p-2 pr-3 shadow-[var(--shadow-float)] ring-1 ring-line backdrop-blur-xl"
+              >
+                <button
+                  type="button"
+                  onClick={recording ? pauseRecording : startRecording}
+                  aria-label={recording ? "Pause recording" : points.length ? "Resume recording" : "Start recording"}
+                  className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ember text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25)] transition-transform duration-200 active:scale-95"
+                >
+                  {recording && <span className="record-pulse absolute inset-0 rounded-full bg-ember" />}
+                  <AnimatePresence mode="wait" initial={false}>
+                    {recording ? (
+                      <motion.span
+                        key="pause"
+                        initial={{ scale: 0.4, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.4, opacity: 0 }}
+                        className="relative"
+                      >
+                        <PauseIcon size={22} weight="fill" />
+                      </motion.span>
+                    ) : (
+                      <motion.span
+                        key="rec"
+                        initial={{ scale: 0.4, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.4, opacity: 0 }}
+                        className="relative h-5 w-5 rounded-full bg-white"
+                      />
+                    )}
+                  </AnimatePresence>
+                </button>
 
-      {!isCompleted && (
-        <div className="flex flex-wrap items-center gap-2">
-          {!isRecording ? (
-            <button
-              onClick={startRecording}
-              className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90"
-            >
-              ● {points.length > 0 ? "Resume recording" : "Start recording"}
-            </button>
-          ) : (
-            <button
-              onClick={pauseRecording}
-              className="rounded-full bg-surface-muted px-4 py-2 text-sm font-medium text-foreground hover:bg-border/60"
-            >
-              ⏸ Pause recording
-            </button>
-          )}
+                <div className="min-w-0 pr-1">
+                  <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+                    {recording ? "Live" : "Route"}
+                  </p>
+                  <p className="truncate text-sm font-medium">{statusText}</p>
+                </div>
 
-          {points.length > 0 && (
-            <button
-              onClick={finishTrip}
-              disabled={finishing}
-              className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground-muted hover:text-foreground disabled:opacity-50"
-            >
-              {finishing ? "Finishing…" : "Finish trip"}
-            </button>
-          )}
-
-          {geoState === "denied" && (
-            <p className="w-full text-sm text-red-600">
-              Location access was denied — enable it for this site in your browser settings to record a
-              route.
-            </p>
-          )}
-          {geoState === "unsupported" && (
-            <p className="w-full text-sm text-red-600">
-              This browser doesn&apos;t support GPS location.
-            </p>
-          )}
-          {geoState === "error" && (
-            <p className="w-full text-sm text-red-600">
-              Couldn&apos;t get a location fix. Try again outdoors or with location services on.
-            </p>
+                {points.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={finishTrip}
+                    disabled={finishing}
+                    className="ml-1 flex h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-medium text-bg transition-transform active:scale-95 disabled:opacity-50"
+                  >
+                    <FlagCheckeredIcon size={16} />
+                    {finishing ? "Finishing…" : "Finish"}
+                  </button>
+                )}
+              </motion.div>
+            </div>
           )}
         </div>
-      )}
+      </div>
+
+      <AnimatePresence>
+        {GEO_ERRORS[geoState] && (
+          <motion.p
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-3 flex items-start gap-2 rounded-2xl bg-ember-soft px-4 py-3 text-sm text-ink"
+          >
+            <WarningIcon size={18} className="mt-px shrink-0 text-ember-strong" />
+            {GEO_ERRORS[geoState]}
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
