@@ -142,6 +142,8 @@ Geolocation requires a "secure context" (HTTPS, or `localhost` — which
 
 ## Roadmap
 
+Detailed feature ideas awaiting a go-ahead live in [`docs/BACKLOG.md`](docs/BACKLOG.md).
+
 - **Photo books** — export a state's (or a whole trip's) memories and photos
   into a printable photo book via a print-on-demand API (e.g. Mixbook,
   Printful, or Artifact Uprising's API where available).
