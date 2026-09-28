@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { getSupabase, unwrap, getPublicPhotoUrl } from "@/lib/supabase";
 import type { Memory, Photo } from "@/lib/types";
 
 interface MemoryRow {
@@ -34,7 +34,7 @@ function toPhoto(row: PhotoRow): Photo {
     width: row.width,
     height: row.height,
     createdAt: row.created_at,
-    url: `/api/photos/${row.id}`,
+    url: getPublicPhotoUrl(row.file_name),
   };
 }
 
@@ -53,69 +53,57 @@ function toMemory(row: MemoryRow, photos: Photo[]): Memory {
   };
 }
 
-function attachPhotos(memoryRows: MemoryRow[], photoRows: PhotoRow[]): Memory[] {
+function sortKey(row: MemoryRow): string {
+  return row.memory_date ?? row.created_at;
+}
+
+function attachPhotos(memoryRows: MemoryRow[], photoRows: PhotoRow[], order: "asc" | "desc"): Memory[] {
   const photosByMemory = new Map<number, Photo[]>();
   for (const row of photoRows) {
     if (row.memory_id == null) continue;
-    const photo = toPhoto(row);
     if (!photosByMemory.has(row.memory_id)) photosByMemory.set(row.memory_id, []);
-    photosByMemory.get(row.memory_id)!.push(photo);
+    photosByMemory.get(row.memory_id)!.push(toPhoto(row));
   }
-  return memoryRows.map((row) => toMemory(row, photosByMemory.get(row.id) ?? []));
+
+  const sorted = [...memoryRows].sort((a, b) => {
+    const cmp = sortKey(a).localeCompare(sortKey(b)) || a.id - b.id;
+    return order === "asc" ? cmp : -cmp;
+  });
+
+  return sorted.map((row) => toMemory(row, photosByMemory.get(row.id) ?? []));
 }
 
-export function getMemoriesForState(stateCode: string): Memory[] {
-  const db = getDb();
-  const memoryRows = db
-    .prepare(
-      "SELECT * FROM memories WHERE state_code = ? ORDER BY COALESCE(memory_date, created_at) DESC, id DESC",
-    )
-    .all(stateCode) as unknown as MemoryRow[];
-
-  const photoRows = db
-    .prepare("SELECT * FROM photos WHERE state_code = ? ORDER BY created_at ASC, id ASC")
-    .all(stateCode) as unknown as PhotoRow[];
-
-  return attachPhotos(memoryRows, photoRows);
+export async function getMemoriesForState(stateCode: string): Promise<Memory[]> {
+  const supabase = getSupabase();
+  const memoryRows = unwrap(
+    await supabase.from("memories").select("*").eq("state_code", stateCode),
+  ) as MemoryRow[];
+  const photoRows = unwrap(
+    await supabase.from("photos").select("*").eq("state_code", stateCode),
+  ) as PhotoRow[];
+  return attachPhotos(memoryRows, photoRows, "desc");
 }
 
-export function getMemoriesForTrip(tripId: number): Memory[] {
-  const db = getDb();
-  const memoryRows = db
-    .prepare(
-      "SELECT * FROM memories WHERE trip_id = ? ORDER BY COALESCE(memory_date, created_at) ASC, id ASC",
-    )
-    .all(tripId) as unknown as MemoryRow[];
+export async function getMemoriesForTrip(tripId: number): Promise<Memory[]> {
+  const supabase = getSupabase();
+  const memoryRows = unwrap(
+    await supabase.from("memories").select("*").eq("trip_id", tripId),
+  ) as MemoryRow[];
 
-  const photoRows = db
-    .prepare(
-      `SELECT photos.* FROM photos
-       JOIN memories ON memories.id = photos.memory_id
-       WHERE memories.trip_id = ?
-       ORDER BY photos.created_at ASC, photos.id ASC`,
-    )
-    .all(tripId) as unknown as PhotoRow[];
+  const memoryIds = memoryRows.map((m) => m.id);
+  const photoRows =
+    memoryIds.length === 0
+      ? []
+      : ((unwrap(
+          await supabase.from("photos").select("*").in("memory_id", memoryIds),
+        ) as PhotoRow[]));
 
-  return attachPhotos(memoryRows, photoRows);
+  return attachPhotos(memoryRows, photoRows, "asc");
 }
 
-export function getAllMemories(): Memory[] {
-  const db = getDb();
-  const memoryRows = db
-    .prepare("SELECT * FROM memories ORDER BY COALESCE(memory_date, created_at) DESC, id DESC")
-    .all() as unknown as MemoryRow[];
-
-  const photoRows = db
-    .prepare("SELECT * FROM photos ORDER BY created_at ASC, id ASC")
-    .all() as unknown as PhotoRow[];
-
-  return attachPhotos(memoryRows, photoRows);
-}
-
-export function getAllPhotosLoose(): Photo[] {
-  const db = getDb();
-  const photoRows = db
-    .prepare("SELECT * FROM photos ORDER BY created_at DESC, id DESC")
-    .all() as unknown as PhotoRow[];
-  return photoRows.map(toPhoto);
+export async function getAllMemories(): Promise<Memory[]> {
+  const supabase = getSupabase();
+  const memoryRows = unwrap(await supabase.from("memories").select("*")) as MemoryRow[];
+  const photoRows = unwrap(await supabase.from("photos").select("*")) as PhotoRow[];
+  return attachPhotos(memoryRows, photoRows, "desc");
 }

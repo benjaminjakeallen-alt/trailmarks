@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { setStateVisited } from "@/lib/stateVisits";
 import { STATES_BY_CODE } from "@/lib/statesData";
 
 export async function PATCH(
@@ -17,15 +17,6 @@ export async function PATCH(
   const firstVisitedOn: string | null =
     typeof body.firstVisitedOn === "string" && body.firstVisitedOn ? body.firstVisitedOn : null;
 
-  const db = getDb();
-  db.prepare(
-    `INSERT INTO state_visits (state_code, visited, first_visited_on, updated_at)
-     VALUES (?, ?, ?, datetime('now'))
-     ON CONFLICT(state_code) DO UPDATE SET
-       visited = excluded.visited,
-       first_visited_on = COALESCE(excluded.first_visited_on, state_visits.first_visited_on),
-       updated_at = datetime('now')`,
-  ).run(code, visited ? 1 : 0, firstVisitedOn);
-
-  return NextResponse.json({ stateCode: code, visited, firstVisitedOn });
+  const result = await setStateVisited(code, visited, firstVisitedOn);
+  return NextResponse.json({ stateCode: code, visited: result.visited, firstVisitedOn: result.firstVisitedOn });
 }

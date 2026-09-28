@@ -10,7 +10,7 @@ export async function GET(
   if (!Number.isInteger(tripId)) {
     return NextResponse.json({ error: "Invalid trip id" }, { status: 400 });
   }
-  const trip = getTrip(tripId);
+  const trip = await getTrip(tripId);
   if (!trip) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ trip });
 }
@@ -28,12 +28,12 @@ export async function PATCH(
   const body = await req.json().catch(() => ({}));
 
   if (body.action === "start") {
-    startTrip(tripId);
-    return NextResponse.json({ trip: getTrip(tripId) });
+    await startTrip(tripId);
+    return NextResponse.json({ trip: await getTrip(tripId) });
   }
 
   if (body.action === "finish") {
-    const { trip, newStateCodes } = finishTrip(tripId);
+    const { trip, newStateCodes } = await finishTrip(tripId);
     return NextResponse.json({ trip, newStateCodes });
   }
 
@@ -49,6 +49,6 @@ export async function DELETE(
   if (!Number.isInteger(tripId)) {
     return NextResponse.json({ error: "Invalid trip id" }, { status: 400 });
   }
-  deleteTrip(tripId);
+  await deleteTrip(tripId);
   return NextResponse.json({ ok: true });
 }

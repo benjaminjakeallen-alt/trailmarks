@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getSupabase, unwrap } from "@/lib/supabase";
 import { getMemoriesForTrip } from "@/lib/memories";
 import { findStateCodeForPoint } from "@/lib/stateLookup";
 
@@ -12,7 +12,7 @@ export async function GET(
   if (!Number.isInteger(tripId)) {
     return NextResponse.json({ error: "Invalid trip id" }, { status: 400 });
   }
-  return NextResponse.json({ memories: getMemoriesForTrip(tripId) });
+  return NextResponse.json({ memories: await getMemoriesForTrip(tripId) });
 }
 
 export async function POST(
@@ -38,16 +38,25 @@ export async function POST(
 
   const stateCode = lat != null && lng != null ? findStateCodeForPoint(lng, lat) : null;
 
-  const db = getDb();
-  const result = db
-    .prepare(
-      `INSERT INTO memories (state_code, trip_id, lat, lng, title, body, memory_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(stateCode, tripId, lat, lng, title, memoryBody || null, memoryDate);
+  const supabase = getSupabase();
+  const inserted = unwrap(
+    await supabase
+      .from("memories")
+      .insert({
+        state_code: stateCode,
+        trip_id: tripId,
+        lat,
+        lng,
+        title,
+        body: memoryBody || null,
+        memory_date: memoryDate,
+      })
+      .select("id")
+      .single(),
+  ) as { id: number };
 
-  const memories = getMemoriesForTrip(tripId);
-  const created = memories.find((m) => m.id === Number(result.lastInsertRowid));
+  const memories = await getMemoriesForTrip(tripId);
+  const created = memories.find((m) => m.id === inserted.id);
 
   return NextResponse.json({ memory: created }, { status: 201 });
 }

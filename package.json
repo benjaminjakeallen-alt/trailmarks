@@ -12,6 +12,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.2",
     "d3-geo": "^3.1.1",
     "framer-motion": "^13.4.4",
     "maplibre-gl": "^6.11.2",

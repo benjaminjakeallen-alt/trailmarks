@@ -1,7 +1,8 @@
-import { getDb } from "@/lib/db";
+import { getSupabase, unwrap, getPublicPhotoUrl } from "@/lib/supabase";
 import { getMemoriesForTrip } from "@/lib/memories";
 import { findStateCodesForPoints } from "@/lib/stateLookup";
 import { trackDistanceMiles } from "@/lib/geo";
+import { mergeVisitedStates, getVisitedStateCodes } from "@/lib/stateVisits";
 import type { Trip, TripDetail, TripPoint, TripStatus } from "@/lib/types";
 
 interface TripRow {
@@ -22,6 +23,10 @@ interface TripPointRow {
   recorded_at: string;
 }
 
+interface PhotoFileRow {
+  file_name: string;
+}
+
 function toTrip(row: TripRow): Trip {
   return {
     id: row.id,
@@ -31,77 +36,106 @@ function toTrip(row: TripRow): Trip {
     startedAt: row.started_at,
     endedAt: row.ended_at,
     coverPhotoId: row.cover_photo_id,
-    coverPhotoUrl: row.cover_photo_id ? `/api/photos/${row.cover_photo_id}` : null,
+    coverPhotoUrl: null, // callers resolve this via resolveCoverPhotoUrl when needed
     createdAt: row.created_at,
   };
+}
+
+async function resolveCoverPhotoUrl(row: TripRow): Promise<string | null> {
+  if (!row.cover_photo_id) return null;
+  const supabase = getSupabase();
+  const photo = unwrap(
+    await supabase.from("photos").select("file_name").eq("id", row.cover_photo_id).maybeSingle(),
+  ) as PhotoFileRow | null;
+  return photo ? getPublicPhotoUrl(photo.file_name) : null;
 }
 
 function toTripPoint(row: TripPointRow): TripPoint {
   return { id: row.id, lat: row.lat, lng: row.lng, recordedAt: row.recorded_at };
 }
 
-export function listTrips(): Trip[] {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM trips ORDER BY COALESCE(started_at, created_at) DESC, id DESC")
-    .all() as unknown as TripRow[];
-  return rows.map(toTrip);
+function sortTripKey(row: TripRow): string {
+  return row.started_at ?? row.created_at;
 }
 
-export function createTrip(input: { title: string; description: string | null }): Trip {
-  const db = getDb();
-  const result = db
-    .prepare("INSERT INTO trips (title, description, status) VALUES (?, ?, 'planned')")
-    .run(input.title, input.description);
-  const row = db
-    .prepare("SELECT * FROM trips WHERE id = ?")
-    .get(Number(result.lastInsertRowid)) as unknown as TripRow;
+export async function listTrips(): Promise<Trip[]> {
+  const supabase = getSupabase();
+  const rows = unwrap(await supabase.from("trips").select("*")) as TripRow[];
+  const sorted = [...rows].sort((a, b) => sortTripKey(b).localeCompare(sortTripKey(a)) || b.id - a.id);
+  return Promise.all(
+    sorted.map(async (row) => ({ ...toTrip(row), coverPhotoUrl: await resolveCoverPhotoUrl(row) })),
+  );
+}
+
+export async function createTrip(input: { title: string; description: string | null }): Promise<Trip> {
+  const supabase = getSupabase();
+  const row = unwrap(
+    await supabase
+      .from("trips")
+      .insert({ title: input.title, description: input.description, status: "planned" })
+      .select()
+      .single(),
+  ) as TripRow;
   return toTrip(row);
 }
 
-export function getTripPoints(tripId: number): TripPoint[] {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM trip_points WHERE trip_id = ? ORDER BY recorded_at ASC, id ASC")
-    .all(tripId) as unknown as TripPointRow[];
+export async function getTripPoints(tripId: number): Promise<TripPoint[]> {
+  const supabase = getSupabase();
+  const rows = unwrap(
+    await supabase
+      .from("trip_points")
+      .select("*")
+      .eq("trip_id", tripId)
+      .order("recorded_at", { ascending: true })
+      .order("id", { ascending: true }),
+  ) as TripPointRow[];
   return rows.map(toTripPoint);
 }
 
-export function addTripPoint(tripId: number, point: { lat: number; lng: number; recordedAt: string }): TripPoint {
-  const db = getDb();
-  const result = db
-    .prepare("INSERT INTO trip_points (trip_id, lat, lng, recorded_at) VALUES (?, ?, ?, ?)")
-    .run(tripId, point.lat, point.lng, point.recordedAt);
-  return {
-    id: Number(result.lastInsertRowid),
-    lat: point.lat,
-    lng: point.lng,
-    recordedAt: point.recordedAt,
-  };
+export async function addTripPoint(
+  tripId: number,
+  point: { lat: number; lng: number; recordedAt: string },
+): Promise<TripPoint> {
+  const supabase = getSupabase();
+  const row = unwrap(
+    await supabase
+      .from("trip_points")
+      .insert({ trip_id: tripId, lat: point.lat, lng: point.lng, recorded_at: point.recordedAt })
+      .select()
+      .single(),
+  ) as TripPointRow;
+  return toTripPoint(row);
 }
 
-export function getTrip(tripId: number): TripDetail | null {
-  const db = getDb();
-  const row = db.prepare("SELECT * FROM trips WHERE id = ?").get(tripId) as unknown as
-    | TripRow
-    | undefined;
+export async function getTrip(tripId: number): Promise<TripDetail | null> {
+  const supabase = getSupabase();
+  const row = unwrap(
+    await supabase.from("trips").select("*").eq("id", tripId).maybeSingle(),
+  ) as TripRow | null;
   if (!row) return null;
 
-  const points = getTripPoints(tripId);
-  const memories = getMemoriesForTrip(tripId);
+  const [points, memories, coverPhotoUrl] = await Promise.all([
+    getTripPoints(tripId),
+    getMemoriesForTrip(tripId),
+    resolveCoverPhotoUrl(row),
+  ]);
   const stateCodes = findStateCodesForPoints(points.map((p) => [p.lng, p.lat]));
   const distanceMiles = trackDistanceMiles(points);
 
-  return { ...toTrip(row), points, memories, stateCodes, distanceMiles };
+  return { ...toTrip(row), coverPhotoUrl, points, memories, stateCodes, distanceMiles };
 }
 
 /** Marks the trip active and starts the clock, if not already started. */
-export function startTrip(tripId: number): void {
-  const db = getDb();
-  db.prepare(
-    `UPDATE trips SET status = 'active', started_at = COALESCE(started_at, datetime('now'))
-     WHERE id = ?`,
-  ).run(tripId);
+export async function startTrip(tripId: number): Promise<void> {
+  const supabase = getSupabase();
+  const row = unwrap(
+    await supabase.from("trips").select("started_at").eq("id", tripId).maybeSingle(),
+  ) as { started_at: string | null } | null;
+
+  await supabase
+    .from("trips")
+    .update({ status: "active", started_at: row?.started_at ?? new Date().toISOString() })
+    .eq("id", tripId);
 }
 
 /**
@@ -109,46 +143,33 @@ export function startTrip(tripId: number): void {
  * through, and merges those into state_visits (without clobbering an
  * earlier first-visited date for a state already marked).
  */
-export function finishTrip(tripId: number): { trip: TripDetail; newStateCodes: string[] } {
-  const db = getDb();
-  const points = getTripPoints(tripId);
+export async function finishTrip(tripId: number): Promise<{ trip: TripDetail; newStateCodes: string[] }> {
+  const supabase = getSupabase();
+  const points = await getTripPoints(tripId);
   const stateCodes = findStateCodesForPoints(points.map((p) => [p.lng, p.lat]));
 
-  const tripRow = db.prepare("SELECT started_at FROM trips WHERE id = ?").get(tripId) as unknown as
-    | { started_at: string | null }
-    | undefined;
-  const visitDate = tripRow?.started_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+  const tripRow = unwrap(
+    await supabase.from("trips").select("started_at").eq("id", tripId).maybeSingle(),
+  ) as { started_at: string | null } | null;
+  const visitDate = (tripRow?.started_at ?? new Date().toISOString()).slice(0, 10);
 
-  const existing = new Set(
-    (
-      db.prepare("SELECT state_code FROM state_visits WHERE visited = 1").all() as unknown as {
-        state_code: string;
-      }[]
-    ).map((r) => r.state_code),
-  );
+  const existing = new Set(await getVisitedStateCodes());
   const newStateCodes = stateCodes.filter((c) => !existing.has(c));
 
-  const upsert = db.prepare(
-    `INSERT INTO state_visits (state_code, visited, first_visited_on, updated_at)
-     VALUES (?, 1, ?, datetime('now'))
-     ON CONFLICT(state_code) DO UPDATE SET
-       visited = 1,
-       first_visited_on = COALESCE(state_visits.first_visited_on, excluded.first_visited_on),
-       updated_at = datetime('now')`,
-  );
-  for (const code of stateCodes) upsert.run(code, visitDate);
+  await mergeVisitedStates(stateCodes, visitDate);
 
-  db.prepare("UPDATE trips SET status = 'completed', ended_at = datetime('now') WHERE id = ?").run(
-    tripId,
-  );
+  await supabase
+    .from("trips")
+    .update({ status: "completed", ended_at: new Date().toISOString() })
+    .eq("id", tripId);
 
-  const trip = getTrip(tripId)!;
+  const trip = (await getTrip(tripId))!;
   return { trip, newStateCodes };
 }
 
-export function deleteTrip(tripId: number): void {
-  const db = getDb();
-  db.prepare("UPDATE memories SET trip_id = NULL WHERE trip_id = ?").run(tripId);
-  db.prepare("DELETE FROM trip_points WHERE trip_id = ?").run(tripId);
-  db.prepare("DELETE FROM trips WHERE id = ?").run(tripId);
+export async function deleteTrip(tripId: number): Promise<void> {
+  // memories.trip_id -> ON DELETE SET NULL and trip_points.trip_id -> ON
+  // DELETE CASCADE are enforced by Postgres, so a plain delete is enough.
+  const supabase = getSupabase();
+  await supabase.from("trips").delete().eq("id", tripId);
 }

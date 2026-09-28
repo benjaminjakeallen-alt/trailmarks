@@ -10,7 +10,7 @@ export async function GET(
   if (!Number.isInteger(tripId)) {
     return NextResponse.json({ error: "Invalid trip id" }, { status: 400 });
   }
-  return NextResponse.json({ points: getTripPoints(tripId) });
+  return NextResponse.json({ points: await getTripPoints(tripId) });
 }
 
 export async function POST(
@@ -32,6 +32,6 @@ export async function POST(
   const recordedAt =
     typeof body.recordedAt === "string" && body.recordedAt ? body.recordedAt : new Date().toISOString();
 
-  const point = addTripPoint(tripId, { lat, lng, recordedAt });
+  const point = await addTripPoint(tripId, { lat, lng, recordedAt });
   return NextResponse.json({ point }, { status: 201 });
 }

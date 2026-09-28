@@ -4,16 +4,18 @@ import TripCard from "@/components/TripCard";
 
 export const dynamic = "force-dynamic";
 
-export default function TripsPage() {
-  const trips = listTrips();
-  const enriched = trips.map((trip) => {
-    const detail = getTrip(trip.id);
-    return {
-      trip,
-      stateCount: detail?.stateCodes.length ?? 0,
-      distanceMiles: detail?.distanceMiles ?? 0,
-    };
-  });
+export default async function TripsPage() {
+  const trips = await listTrips();
+  const enriched = await Promise.all(
+    trips.map(async (trip) => {
+      const detail = await getTrip(trip.id);
+      return {
+        trip,
+        stateCount: detail?.stateCodes.length ?? 0,
+        distanceMiles: detail?.distanceMiles ?? 0,
+      };
+    }),
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-5 pb-24 pt-10 sm:px-8 sm:pt-14">

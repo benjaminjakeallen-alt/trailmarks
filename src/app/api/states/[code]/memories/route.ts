@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { getSupabase, unwrap } from "@/lib/supabase";
 import { getMemoriesForState } from "@/lib/memories";
+import { setStateVisited } from "@/lib/stateVisits";
 import { STATES_BY_CODE } from "@/lib/statesData";
 
 export async function GET(
@@ -12,7 +13,7 @@ export async function GET(
   if (!STATES_BY_CODE[code]) {
     return NextResponse.json({ error: "Unknown state code" }, { status: 404 });
   }
-  return NextResponse.json({ memories: getMemoriesForState(code) });
+  return NextResponse.json({ memories: await getMemoriesForState(code) });
 }
 
 export async function POST(
@@ -34,25 +35,20 @@ export async function POST(
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
   }
 
-  const db = getDb();
-  const result = db
-    .prepare(
-      "INSERT INTO memories (state_code, title, body, memory_date) VALUES (?, ?, ?, ?)",
-    )
-    .run(code, title, memoryBody || null, memoryDate);
+  const supabase = getSupabase();
+  const inserted = unwrap(
+    await supabase
+      .from("memories")
+      .insert({ state_code: code, title, body: memoryBody || null, memory_date: memoryDate })
+      .select("id")
+      .single(),
+  ) as { id: number };
 
   // A memory implicitly counts as a visit, if the state wasn't marked yet.
-  db.prepare(
-    `INSERT INTO state_visits (state_code, visited, first_visited_on, updated_at)
-     VALUES (?, 1, ?, datetime('now'))
-     ON CONFLICT(state_code) DO UPDATE SET
-       visited = 1,
-       first_visited_on = COALESCE(state_visits.first_visited_on, excluded.first_visited_on),
-       updated_at = datetime('now')`,
-  ).run(code, memoryDate);
+  await setStateVisited(code, true, memoryDate);
 
-  const memories = getMemoriesForState(code);
-  const created = memories.find((m) => m.id === Number(result.lastInsertRowid));
+  const memories = await getMemoriesForState(code);
+  const created = memories.find((m) => m.id === inserted.id);
 
   return NextResponse.json({ memory: created }, { status: 201 });
 }

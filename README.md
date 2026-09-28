@@ -6,9 +6,10 @@ trip, and relive them in a slideshow. Photo book printing is on the roadmap.
 
 ## Stack
 
-Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4, using
-Node's built-in `node:sqlite` (`DatabaseSync`) — no external database
-service to configure. **Requires Node >= 22.5** for `node:sqlite`.
+Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4, backed by
+[Supabase](https://supabase.com/) (Postgres + Storage). No local database
+file, no persistent-volume requirement — the app is stateless and can
+deploy to any Node host.
 
 - **Map**: [`react-simple-maps`](https://www.react-simple-maps.io/) +
   [`us-atlas`](https://github.com/topojson/us-atlas) TopoJSON — a real,
@@ -25,15 +26,20 @@ service to configure. **Requires Node >= 22.5** for `node:sqlite`.
 
 ## Architecture
 
-- `src/lib/db.ts` — single `getDb()` singleton, creates the schema on first
-  call (`CREATE TABLE IF NOT EXISTS`). All API routes import `getDb()` from
-  here.
-- `DB_PATH` env var overrides the SQLite file location (default
-  `data/trailmarks.db`). `PHOTOS_DIR` overrides where uploaded photos are
-  stored on disk (default `data/photos`).
-- **Both are gitignored and must live on a persistent volume in
-  production**, or every redeploy wipes your trip data — this bit a sibling
-  project (see the note below) and is worth avoiding from day one.
+- `src/lib/supabase.ts` — single `getSupabase()` singleton, a
+  `@supabase/supabase-js` client authenticated with the **service_role**
+  key. All data access goes through this app's own API routes on the
+  server; the browser never talks to Supabase directly, so no key is ever
+  exposed client-side and Row Level Security on every table is left "on,
+  no policies" as a second lock (the service role bypasses RLS regardless).
+- Requires two env vars: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+  (Supabase dashboard → your project → **Settings → API**). Put them in
+  `.env.local` for local dev (gitignored) and in your host's environment
+  variables for production.
+- Photos upload to a public Supabase Storage bucket named `photos` (resized
+  to max 2400px and re-encoded to WebP with `sharp` first) and are served
+  straight from Supabase's CDN — `next.config.ts` allow-lists
+  `*.supabase.co/storage/v1/object/public/**` for `next/image`.
 - `src/lib/statesData.ts` — the 50 states + DC, keyed by USPS code, with a
   FIPS code for matching against the TopoJSON `id`, region, land area (for
   the "% of North America explored" stat), and a fun fact.
@@ -72,21 +78,29 @@ background geolocation, which is a real follow-up project, not a setting to
 flip. Points recorded so far are never lost when recording stops — resuming
 just continues appending to the same trip.
 
-### Deploying with a persistent volume
+## Supabase setup
 
-If you deploy on a platform with ephemeral filesystems (Railway, Render,
-Fly.io, etc.), attach a persistent volume and point **both** `DB_PATH` and
-`PHOTOS_DIR` at paths inside it, e.g. a volume mounted at `/app/data` with:
+The `trailmarks` Supabase project (org: `benjaminjakeallen-alt's Org`) already
+has this schema applied via migration:
+
+- `state_visits`, `trips`, `trip_points`, `memories`, `photos` — same shape
+  described above, Postgres types (`bigint identity` primary keys,
+  `timestamptz`/`date` instead of SQLite's text columns).
+- A public Storage bucket named `photos`.
+- RLS enabled on every table with no policies — nothing but the
+  service_role key (used only server-side by this app) can read or write.
+
+To point a fresh checkout at it (or a different Supabase project), set:
 
 ```
-DB_PATH=/app/data/trailmarks.db
-PHOTOS_DIR=/app/data/photos
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service_role secret, from Settings → API>
 ```
 
-Double-check the volume's *actual* mount path matches these env vars exactly
-— a mismatch fails silently (the app still runs, it just quietly resets on
-every deploy). Verify persistence by adding a state/memory, redeploying, and
-confirming it's still there — don't just trust that the volume is attached.
+Setting up a brand-new Supabase project instead of reusing this one? The
+migration SQL is straightforward to reconstruct from `src/lib/supabase.ts`,
+`src/lib/trips.ts`, and `src/lib/memories.ts`'s row shapes, or ask Claude to
+regenerate it from this repo's history.
 
 ## Getting started
 
@@ -112,8 +126,9 @@ Geolocation requires a "secure context" (HTTPS, or `localhost` — which
   extend beyond the US 50; adding provinces/states just means new entries
   in `statesData.ts` and swapping in a North America TopoJSON.
 - **Multi-user / family accounts** — shared trip tracking, so a family can
-  fill in the same map together (mirrors the auth pattern in the Robinson
-  reunion app: individual logins, no external auth service).
+  fill in the same map together. Now that the backend is Supabase, this is
+  Supabase Auth + per-row `user_id` columns and real RLS policies, rather
+  than hand-rolling it.
 - **Background GPS tracking** — a native app or PWA with background
   geolocation, so a trip keeps recording without the page staying open.
   This is the biggest gap versus Polarsteps' actual app.

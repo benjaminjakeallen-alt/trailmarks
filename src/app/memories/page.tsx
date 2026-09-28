@@ -4,8 +4,8 @@ import type { GalleryItem } from "@/lib/galleryItem";
 
 export const dynamic = "force-dynamic";
 
-export default function MemoriesPage() {
-  const memories = getAllMemories();
+export default async function MemoriesPage() {
+  const memories = await getAllMemories();
 
   const items: GalleryItem[] = memories.flatMap((memory) =>
     memory.photos.map((photo) => ({

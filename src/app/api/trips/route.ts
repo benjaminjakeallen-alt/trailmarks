@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createTrip, listTrips } from "@/lib/trips";
 
 export async function GET() {
-  return NextResponse.json({ trips: listTrips() });
+  return NextResponse.json({ trips: await listTrips() });
 }
 
 export async function POST(req: NextRequest) {
@@ -14,6 +14,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Title is required" }, { status: 400 });
   }
 
-  const trip = createTrip({ title, description: description || null });
+  const trip = await createTrip({ title, description: description || null });
   return NextResponse.json({ trip }, { status: 201 });
 }

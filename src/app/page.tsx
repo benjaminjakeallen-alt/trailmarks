@@ -1,23 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getDb } from "@/lib/db";
 import { getAllMemories } from "@/lib/memories";
+import { getVisitedStateCodes } from "@/lib/stateVisits";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import MapDashboard from "@/components/MapDashboard";
 
 export const dynamic = "force-dynamic";
 
-function getVisitedCodes(): string[] {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT state_code FROM state_visits WHERE visited = 1")
-    .all() as unknown as { state_code: string }[];
-  return rows.map((r) => r.state_code);
-}
-
-export default function HomePage() {
-  const visitedCodes = getVisitedCodes();
-  const recentMemories = getAllMemories().slice(0, 4);
+export default async function HomePage() {
+  const [visitedCodes, allMemories] = await Promise.all([getVisitedStateCodes(), getAllMemories()]);
+  const recentMemories = allMemories.slice(0, 4);
 
   return (
     <div className="mx-auto max-w-6xl px-5 pb-24 pt-10 sm:px-8 sm:pt-14">

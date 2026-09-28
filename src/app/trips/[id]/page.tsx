@@ -14,7 +14,7 @@ export default async function TripPage({ params }: TripPageProps) {
   const tripId = Number(id);
   if (!Number.isInteger(tripId)) notFound();
 
-  const trip = getTrip(tripId);
+  const trip = await getTrip(tripId);
   if (!trip) notFound();
 
   return (

@@ -36,9 +36,6 @@ yarn-error.log*
 # vercel
 .vercel
 
-# app data (sqlite db + uploaded photos) — never commit real trip data
-/data/
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts

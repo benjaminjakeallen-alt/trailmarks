@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getDb } from "@/lib/db";
 import { getMemoriesForState } from "@/lib/memories";
+import { getStateVisit } from "@/lib/stateVisits";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import StateDetailClient from "@/components/StateDetailClient";
 
@@ -17,12 +17,7 @@ export default async function StatePage({ params }: StatePageProps) {
   const info = STATES_BY_CODE[code];
   if (!info) notFound();
 
-  const db = getDb();
-  const visitRow = db
-    .prepare("SELECT visited, first_visited_on FROM state_visits WHERE state_code = ?")
-    .get(code) as { visited: number; first_visited_on: string | null } | undefined;
-
-  const memories = getMemoriesForState(code);
+  const [visit, memories] = await Promise.all([getStateVisit(code), getMemoriesForState(code)]);
 
   return (
     <div className="mx-auto max-w-3xl px-5 pb-24 pt-8 sm:px-8 sm:pt-12">
@@ -44,8 +39,8 @@ export default async function StatePage({ params }: StatePageProps) {
       <StateDetailClient
         stateCode={code}
         initialMemories={memories}
-        initialVisited={!!visitRow?.visited}
-        initialFirstVisitedOn={visitRow?.first_visited_on ?? null}
+        initialVisited={!!visit?.visited}
+        initialFirstVisitedOn={visit?.firstVisitedOn ?? null}
       />
     </div>
   );
