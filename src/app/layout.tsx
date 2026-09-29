@@ -7,7 +7,7 @@ import "./globals.css";
 const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Trailmarks — Every state, rempetroled",
+  title: "Trailmarks — Every memory, remembered",
   description:
     "Claim every state you've visited, record trips that draw their own maps, and turn the photos into a story.",
 };

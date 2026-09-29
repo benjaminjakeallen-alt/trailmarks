@@ -183,7 +183,7 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
             numbered
             onDelete={(id) => setMemories((prev) => prev.filter((m) => m.id !== id))}
             emptyTitle="No steps yet"
-            emptyBody="Drop a step at every stop worth rempetroling. Each one pins itself to the map."
+            emptyBody="Drop a step at every stop worth remembering. Each one pins itself to the map."
           />
         </div>
       </section>

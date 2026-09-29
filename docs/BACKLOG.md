@@ -71,3 +71,20 @@ EXIF capture date and GPS, with no scrolling or manual tagging.
   - A website can't query the photo library by date, so "show me only this
     trip's photos" without scrolling really needs the native app (PhotoKit).
   - The web version can still do multi-select plus automatic sorting.
+
+## 8. The whole world, with a globe that turns to each continent
+
+Grow from U.S. states to every country on every continent. A continent
+selector (a segmented control or a row of chips) turns the map like a globe
+to face the chosen continent, then settles into that continent's view for
+claiming countries.
+
+- Rendering: `d3-geo`'s `geoOrthographic` with an animated `rotate()` gives
+  the globe spin in the same SVG approach as the current map, with each
+  country still its own animatable path. `world-atlas` TopoJSON (110m for the
+  globe, 50m once zoomed in) replaces `us-atlas`.
+- Data model: `state_visits` becomes place visits keyed by a region code
+  (ISO 3166 for countries, with the U.S. states kept as a subdivision), and
+  the stats and ranking extend to countries and continents.
+- Trip auto-detection (`stateLookup.ts`) gains country point-in-polygon.
+

@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import type { ReactNode } from "react";
 import { ArrowUpRightIcon } from "@phosphor-icons/react";
 import { ButtonLink } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Panel";
@@ -15,16 +14,14 @@ interface StateCardProps {
   claimed: boolean;
   onToggle: (code: string) => void;
   compact?: boolean;
-  /** Shown when no state is selected. */
-  fallback?: ReactNode;
 }
 
-export function StateCardBody({ code, claimed, onToggle, compact = false, fallback = null }: StateCardProps) {
+export function StateCardBody({ code, claimed, onToggle, compact = false }: StateCardProps) {
   const info = code ? STATES_BY_CODE[code] : null;
 
   return (
     <AnimatePresence mode="wait" initial={false}>
-      {info ? (
+      {info && (
         <motion.div
           key={info.code}
           initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
@@ -70,16 +67,6 @@ export function StateCardBody({ code, claimed, onToggle, compact = false, fallba
               Open {info.name} journal
             </ButtonLink>
           </div>
-        </motion.div>
-      ) : (
-        <motion.div
-          key="empty"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="h-full"
-        >
-          {fallback}
         </motion.div>
       )}
     </AnimatePresence>

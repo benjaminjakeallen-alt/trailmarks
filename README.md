@@ -43,9 +43,14 @@ Tokens live in `src/app/globals.css`; never hard-code hex values in components.
 
 - Type: Outfit everywhere, in bold geometric headlines and a plain UI weight.
   Icons: Phosphor, light weight.
-- Photos lead. The home hero is your latest memory photo, trip cards are the
-  trip's cover (or its first step's photo) with the route drawn over it in
-  white, and state pages put the state outline over its photo. With no photo,
+- You land on the map: the home page is a one-line headline and the map,
+  sized to fit above the fold. Progress lives in a "16 / 50 states" pill that
+  grows into a stats drawer (count, region ranking, land explored) over the
+  left third of the map; on desktop a tapped state takes over the map's top
+  bar instead of a side panel.
+- Photos lead everywhere else. Trip cards are the trip's cover (or its first
+  step's photo) with the route drawn over it in white, and trip and state
+  pages open on a full-bleed photo. With no photo,
   surfaces fall back to the `.brand-gradient`. `.glass` is for stat chips on
   photos, and `.photo-scrim` keeps white type legible on them.
 - Cards are one white surface (`Panel`) with a soft cool shadow and a 28px
