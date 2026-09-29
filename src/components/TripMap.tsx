@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Map as MapLibreMap, Marker, Popup, NavigationControl, type GeoJSONSource } from "maplibre-gl";
+import { Map as MapLibreMap, Marker, Popup, NavigationControl, setWorkerUrl, type GeoJSONSource } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const STYLE_LIGHT = "https://tiles.openfreemap.org/styles/positron";
 const STYLE_DARK = "https://tiles.openfreemap.org/styles/dark";
+/** Copied into public/ by scripts/copy-maplibre-worker.mjs; the bundled default URL 404s. */
+const WORKER_URL = "/vendor/maplibre/maplibre-gl-worker.mjs";
 const ROUTE_SOURCE = "trip-route";
 const HEAD_SOURCE = "trip-head";
 
@@ -75,6 +77,7 @@ export default function TripMap({ points, pins = [], onPinClick, followLatest, c
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    setWorkerUrl(WORKER_URL);
     const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const first = pointsRef.current[0];
     const map = new MapLibreMap({
@@ -98,9 +101,9 @@ export default function TripMap({ points, pins = [], onPinClick, followLatest, c
     });
 
     map.on("style.load", () => {
-      const lagoon = cssVar("--lagoon", "#0e7a6e");
-      const ember = cssVar("--ember", "#ef5b34");
-      const halo = cssVar("--bg-elevated", "#fffdf9");
+      const aqua = cssVar("--aqua", "#15a898");
+      const petrol = cssVar("--petrol", "#0b5c63");
+      const halo = cssVar("--bg-elevated", "#ffffff");
 
       map.addSource(ROUTE_SOURCE, { type: "geojson", data: routeData(pointsRef.current), lineMetrics: true });
       map.addSource(HEAD_SOURCE, { type: "geojson", data: headData(pointsRef.current) });
@@ -119,20 +122,20 @@ export default function TripMap({ points, pins = [], onPinClick, followLatest, c
         layout: { "line-join": "round", "line-cap": "round" },
         paint: {
           "line-width": 4.5,
-          "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, lagoon, 1, ember],
+          "line-gradient": ["interpolate", ["linear"], ["line-progress"], 0, aqua, 1, petrol],
         },
       });
       map.addLayer({
         id: "trip-head-glow",
         type: "circle",
         source: HEAD_SOURCE,
-        paint: { "circle-radius": 16, "circle-color": ember, "circle-opacity": 0.18 },
+        paint: { "circle-radius": 16, "circle-color": petrol, "circle-opacity": 0.18 },
       });
       map.addLayer({
         id: "trip-head",
         type: "circle",
         source: HEAD_SOURCE,
-        paint: { "circle-radius": 6.5, "circle-color": ember, "circle-stroke-width": 3, "circle-stroke-color": halo },
+        paint: { "circle-radius": 6.5, "circle-color": petrol, "circle-stroke-width": 3, "circle-stroke-color": halo },
       });
 
       readyRef.current = true;
@@ -166,7 +169,7 @@ export default function TripMap({ points, pins = [], onPinClick, followLatest, c
       el.setAttribute("aria-label", `Step ${pin.index + 1}: ${pin.label}`);
       el.textContent = String(pin.index + 1).padStart(2, "0");
       el.className =
-        "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-elevated)] font-mono text-[11px] text-[var(--ink)] shadow-[0_6px_16px_-6px_rgb(0_0_0/0.35)] ring-2 ring-[var(--ember)] transition-transform duration-300 hover:scale-110";
+        "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--petrol)] text-[12px] font-semibold text-white shadow-[0_6px_16px_-6px_rgb(0_0_0/0.45)] ring-[3px] ring-white transition-transform duration-300 hover:scale-110";
       el.addEventListener("click", () => onPinClick?.(pin.id));
       return new Marker({ element: el })
         .setLngLat([pin.lng, pin.lat])
