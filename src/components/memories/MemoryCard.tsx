@@ -78,25 +78,25 @@ export default function MemoryCard({ memory, onDelete }: { memory: Memory; onDel
 
   return (
     <article
-      className={`rounded-[1.75rem] bg-elevated p-5 shadow-[var(--highlight)] ring-1 ring-line transition-opacity sm:p-6 ${
+      className={`rounded-[1.75rem] bg-elevated p-5 shadow-[var(--shadow-card)] ring-1 ring-line transition-opacity sm:p-6 ${
         deleting ? "opacity-40" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           {formatMemoryDate(memory.memoryDate ?? memory.createdAt) && (
-            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
+            <p className="text-[13px] font-medium text-ink-3">
               {formatMemoryDate(memory.memoryDate ?? memory.createdAt)}
             </p>
           )}
-          <h3 className="mt-1.5 font-display text-[1.6rem] leading-tight tracking-[-0.02em]">{memory.title}</h3>
+          <h3 className="mt-1 font-display text-[1.6rem] leading-tight">{memory.title}</h3>
         </div>
         <button
           type="button"
           onClick={remove}
           disabled={deleting}
           aria-label={`Delete ${memory.title}`}
-          className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-ember-soft hover:text-ember-strong"
+          className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-coral-soft hover:text-coral"
         >
           <TrashIcon size={18} />
         </button>

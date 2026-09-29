@@ -1,7 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpRightIcon, HandTapIcon, PathIcon } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
+import { ArrowUpRightIcon } from "@phosphor-icons/react";
 import { ButtonLink } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Panel";
 import Switch from "@/components/ui/Switch";
@@ -14,9 +15,11 @@ interface StateCardProps {
   claimed: boolean;
   onToggle: (code: string) => void;
   compact?: boolean;
+  /** Shown when no state is selected. */
+  fallback?: ReactNode;
 }
 
-export function StateCardBody({ code, claimed, onToggle, compact = false }: StateCardProps) {
+export function StateCardBody({ code, claimed, onToggle, compact = false, fallback = null }: StateCardProps) {
   const info = code ? STATES_BY_CODE[code] : null;
 
   return (
@@ -33,18 +36,18 @@ export function StateCardBody({ code, claimed, onToggle, compact = false }: Stat
           <div className="flex items-start justify-between gap-3">
             <div>
               <Eyebrow>{info.region}</Eyebrow>
-              <h3 className={`mt-3 font-display leading-[1] tracking-[-0.03em] ${compact ? "text-[1.75rem]" : "text-[2.1rem]"}`}>
+              <h3 className={`mt-2 font-display leading-[1] ${compact ? "text-[1.75rem]" : "text-[2.25rem]"}`}>
                 {info.name}
               </h3>
-              <p className="mt-1.5 font-mono text-[12px] text-ink-3">Capital · {info.capital}</p>
+              <p className="mt-1.5 text-[14px] text-ink-3">Capital · {info.capital}</p>
             </div>
             <StateSilhouette code={info.code} claimed={claimed} width={96} height={72} className="h-16 w-24 shrink-0" />
           </div>
 
           <div className={`flex items-center justify-between rounded-2xl bg-bg px-4 py-3 ring-1 ring-line ${compact ? "mt-4" : "mt-6"}`}>
             <div>
-              <p className="text-sm font-medium">{claimed ? "Claimed" : "Not yet"}</p>
-              <p className="text-[12.5px] text-ink-3">
+              <p className="text-[15px] font-semibold">{claimed ? "Claimed" : "Not yet"}</p>
+              <p className="text-[13px] text-ink-3">
                 {claimed ? "On your map. Tap again to undo." : "Flip it once you've been."}
               </p>
             </div>
@@ -52,7 +55,7 @@ export function StateCardBody({ code, claimed, onToggle, compact = false }: Stat
           </div>
 
           {!compact && (
-            <p className="mt-5 border-l-2 border-gold/70 pl-3 text-[14px] leading-relaxed text-ink-2">
+            <p className="mt-5 rounded-2xl bg-sun-soft px-4 py-3 text-[14px] leading-relaxed text-ink-2">
               {info.funFact}
             </p>
           )}
@@ -60,7 +63,7 @@ export function StateCardBody({ code, claimed, onToggle, compact = false }: Stat
           <div className={`mt-auto ${compact ? "pt-4" : "pt-6"}`}>
             <ButtonLink
               href={`/states/${info.code.toLowerCase()}`}
-              variant="secondary"
+              variant="primary"
               trailingIcon={<ArrowUpRightIcon size={14} />}
               className="w-full justify-between"
             >
@@ -74,39 +77,9 @@ export function StateCardBody({ code, claimed, onToggle, compact = false }: Stat
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="flex h-full flex-col"
+          className="h-full"
         >
-          <Eyebrow>How it works</Eyebrow>
-          <ul className="mt-5 space-y-5">
-            <li className="flex gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ember-soft text-ember">
-                <HandTapIcon size={18} />
-              </span>
-              <div>
-                <p className="text-sm font-medium">Tap a state to claim it</p>
-                <p className="text-[13px] leading-relaxed text-ink-3">Tap again to take it back. Nothing is lost.</p>
-              </div>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-lagoon-soft text-lagoon">
-                <PathIcon size={18} />
-              </span>
-              <div>
-                <p className="text-sm font-medium">Or let a trip do it</p>
-                <p className="text-[13px] leading-relaxed text-ink-3">
-                  Record a route and every state it crosses fills in on its own.
-                </p>
-              </div>
-            </li>
-          </ul>
-          <div className="mt-auto flex items-center gap-4 pt-6 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-3">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-lagoon to-lagoon-bright" /> Claimed
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-land ring-1 ring-line-strong" /> Not yet
-            </span>
-          </div>
+          {fallback}
         </motion.div>
       )}
     </AnimatePresence>

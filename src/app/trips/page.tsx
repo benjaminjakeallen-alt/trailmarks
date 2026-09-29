@@ -22,18 +22,21 @@ function bentoSpan(i: number, total: number) {
   return "md:col-span-3";
 }
 
+/** Recording first, then trips with a route (newest first), then plans — so the big slot always has a story. */
+const STATUS_RANK = { active: 0, completed: 1, planned: 2 } as const;
+
 export default async function TripsPage() {
-  const trips = await listTrips();
+  const trips = (await listTrips()).sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status]);
   const details = await Promise.all(trips.map((t) => getTrip(t.id)));
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 pb-24 pt-8 sm:px-8 lg:pt-16">
-      <header className="mb-10 flex flex-col gap-6 sm:mb-14 sm:flex-row sm:items-end sm:justify-between">
+      <header className="mb-8 flex flex-col gap-6 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <Eyebrow>Trips</Eyebrow>
           <WordReveal
             text={"Roads you've\ndrawn."}
-            className="mt-5 font-display text-[clamp(2.8rem,6.5vw,5.5rem)] font-light leading-[0.92] tracking-[-0.045em] [&>span:last-child]:italic [&>span:last-child]:text-ink-2"
+            className="mt-3 font-display text-[clamp(2.6rem,6vw,4.75rem)] leading-[0.95] tracking-[-0.04em] [&>span:last-child]:text-petrol"
           />
         </div>
         <ButtonLink href="/trips/new" icon={<PlusIcon size={16} weight="bold" />} className="self-start sm:hidden">
@@ -42,12 +45,12 @@ export default async function TripsPage() {
       </header>
 
       {trips.length === 0 ? (
-        <div className="grid grid-cols-1 items-center gap-8 rounded-[2rem] bg-ink/[0.03] p-1.5 ring-1 ring-line md:grid-cols-2">
-          <div className="bg-topo aspect-[16/10] overflow-hidden rounded-[calc(2rem-0.375rem)] bg-elevated ring-1 ring-line">
-            <RouteSketch points={[]} demo className="h-full w-full" />
+        <div className="grid grid-cols-1 items-center gap-8 rounded-[1.75rem] bg-elevated p-2 shadow-[var(--shadow-card)] ring-1 ring-line md:grid-cols-2">
+          <div className="brand-gradient aspect-[16/10] overflow-hidden rounded-[1.4rem]">
+            <RouteSketch points={[]} demo onPhoto className="h-full w-full" />
           </div>
           <div className="p-6 md:p-10">
-            <h2 className="font-display text-3xl tracking-[-0.02em]">Your first route starts here.</h2>
+            <h2 className="font-display text-3xl">Your first route starts here.</h2>
             <p className="mt-3 max-w-[40ch] leading-relaxed text-ink-2">
               Start a trip, hit record, and drive. Trailmarks traces the road as you go and claims every
               state you cross when you finish.
@@ -66,7 +69,7 @@ export default async function TripsPage() {
             return (
               <div key={trip.id} className={bentoSpan(i, trips.length)}>
                 <TripCard
-                  trip={trip}
+                  trip={detail ? { ...trip, coverPhotoUrl: detail.coverPhotoUrl } : trip}
                   index={i}
                   featured={i === 0 && trips.length > 1}
                   wide={trips.length === 1}

@@ -40,17 +40,17 @@ export default function PhotoDropzone({
           add(e.dataTransfer.files);
         }}
         className={`flex w-full items-center gap-3 rounded-2xl border border-dashed px-4 py-3.5 text-left transition-colors duration-300 ${
-          dragging ? "border-ember bg-ember-soft" : "border-line-strong hover:border-ink-3"
+          dragging ? "border-petrol bg-petrol-soft" : "border-line-strong hover:border-ink-3"
         }`}
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/[0.05] text-ink-2">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-petrol-soft text-petrol">
           <CameraIcon size={20} />
         </span>
         <span>
-          <span className="block text-sm font-medium">
+          <span className="block text-[15px] font-semibold">
             {files.length ? `${files.length} photo${files.length > 1 ? "s" : ""} ready` : "Add photos"}
           </span>
-          <span className="block text-[12.5px] text-ink-3">Drop them here or tap to choose</span>
+          <span className="block text-[13px] text-ink-3">Drop them here or tap to choose</span>
         </span>
       </button>
       <input

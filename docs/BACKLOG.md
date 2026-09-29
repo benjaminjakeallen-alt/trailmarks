@@ -29,19 +29,16 @@ the state's edges, with a soft glow, instead of the current stamp/spark burst.
 - Likely approach: a radial gradient or expanding circle clipped to the
   state's own path, plus a blurred copy of the path for the glow.
 
-## 4. Remove the background contour lines
+## 4. Remove the background contour lines — done
 
-Remove the "globe lines" behind the map, which come from the `.bg-topo`
-utility in `globals.css`. The same pattern also sits behind the state
-silhouette, the trips empty state and the memory timeline empty state.
+Shipped with the "Glacier" redesign: the `.bg-topo` contour lines and the
+paper grain are gone everywhere.
 
-## 5. New color palette
+## 5. New color palette — done
 
-The current "Golden Hour" palette (paper, lagoon teal, ember coral) missed
-the "world class" brief. **Before building:** agree on a direction using
-concrete references (specific apps or screenshots) instead of guessing
-again. All colors are tokens in `src/app/globals.css`, so a new palette is a
-contained change.
+Replaced "Golden Hour" with "Glacier", built from the owner's three reference
+shots: deep petrol teal, glacier aqua, amber highlights, and photo-first
+cards with frosted-glass chips. See the README's design system section.
 
 ## 6. Voice journal with transcription
 

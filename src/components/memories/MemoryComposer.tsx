@@ -110,7 +110,7 @@ export default function MemoryComposer({
     <motion.div
       layout
       transition={{ layout: { duration: 0.5, ease: EASE_OUT_EXPO } }}
-      className="overflow-hidden rounded-[1.75rem] bg-elevated shadow-[var(--highlight)] ring-1 ring-line"
+      className="overflow-hidden rounded-[1.75rem] bg-elevated shadow-[var(--shadow-card)] ring-1 ring-line"
     >
       <AnimatePresence mode="popLayout" initial={false}>
         {!open ? (
@@ -123,7 +123,7 @@ export default function MemoryComposer({
             exit={{ opacity: 0 }}
             className="flex w-full items-center gap-3 p-3 pr-5 text-left"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-ember text-white">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-petrol text-white">
               <PencilSimpleIcon size={18} weight="regular" />
             </span>
             <span className="flex-1 text-[15px] text-ink-3">{prompt}</span>
@@ -145,7 +145,7 @@ export default function MemoryComposer({
               onChange={(e) => setTitle(e.target.value)}
               placeholder={titlePlaceholder}
               aria-label="Title"
-              className="w-full bg-transparent font-display text-[1.7rem] leading-tight tracking-[-0.02em] outline-none placeholder:text-ink-3/70"
+              className="w-full bg-transparent font-display text-[1.7rem] leading-tight outline-none placeholder:text-ink-3/70"
             />
 
             <TextArea
@@ -168,15 +168,15 @@ export default function MemoryComposer({
             </div>
 
             {captureLocation && (
-              <p className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-3">
+              <p className="flex items-center gap-1.5 text-[13px] font-medium text-ink-3">
                 <MapPinIcon size={13} /> Pinned to where you are when you save
               </p>
             )}
 
-            {error && <p className="text-sm text-ember-strong">{error}</p>}
+            {error && <p className="text-sm text-coral">{error}</p>}
 
             <div className="flex items-center justify-end gap-2 pt-1">
-              {status && <span className="mr-auto font-mono text-[12px] text-ink-3">{status}</span>}
+              {status && <span className="mr-auto text-[13px] font-medium text-ink-3">{status}</span>}
               <Button type="button" variant="quiet" onClick={reset} disabled={!!status}>
                 Cancel
               </Button>

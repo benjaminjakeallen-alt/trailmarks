@@ -11,22 +11,22 @@ const REGION_TOTALS = Object.fromEntries(
   REGIONS.map((r) => [r, STATES.filter((s) => s.region === r && s.code !== "DC").length]),
 ) as Record<Region, number>;
 
-export default function StatsPanel({ visitedCodes }: { visitedCodes: string[] }) {
+export default function StatsPanel({ visitedCodes, bare = false }: { visitedCodes: string[]; bare?: boolean }) {
   const claimed = visitedCodes.filter((c) => c !== "DC");
   const count = claimed.length;
   const landPct = (totalAreaSqMi(claimed) / US_LAND_SQ_MI) * 100;
 
   return (
-    <div className="flex h-full flex-col gap-7 p-6 sm:p-7">
+    <div className={`flex h-full flex-col gap-7 ${bare ? "" : "p-6 sm:p-7"}`}>
       <div>
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">States claimed</p>
+        <p className="text-[14px] font-medium text-ink-3">States claimed</p>
         <div className="mt-1 flex items-baseline gap-2">
           <AnimatedNumber
             value={count}
             pad={2}
-            className="font-display text-[5.5rem] font-light leading-[0.85] tracking-[-0.04em]"
+            className="font-display text-[5rem] leading-[0.85] tracking-[-0.05em] text-petrol"
           />
-          <span className="font-mono text-lg text-ink-3">/{STATE_COUNT}</span>
+          <span className="text-xl font-medium text-ink-3">/ {STATE_COUNT}</span>
         </div>
 
         {/* Passport strip — one tick per state. */}
@@ -37,7 +37,7 @@ export default function StatsPanel({ visitedCodes }: { visitedCodes: string[] })
               <motion.span
                 key={i}
                 className={`h-full flex-1 origin-bottom rounded-full transition-colors duration-500 ${
-                  on ? "bg-lagoon" : "bg-land"
+                  on ? "bg-gradient-to-t from-petrol to-aqua-bright" : "bg-land"
                 }`}
                 initial={{ scaleY: 0.42 }}
                 animate={{ scaleY: on ? 1 : 0.42 }}
@@ -55,14 +55,14 @@ export default function StatsPanel({ visitedCodes }: { visitedCodes: string[] })
           return (
             <div key={region}>
               <div className="flex items-baseline justify-between text-sm">
-                <span className="text-ink-2">{region}</span>
-                <span className="font-mono text-[12px] text-ink-3 tabular">
+                <span className="font-medium text-ink-2">{region}</span>
+                <span className="text-[13px] text-ink-3 tabular">
                   {got}/{total}
                 </span>
               </div>
-              <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-land">
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-land">
                 <motion.div
-                  className="h-full origin-left rounded-full bg-ink"
+                  className="h-full origin-left rounded-full bg-gradient-to-r from-petrol to-aqua"
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: total ? got / total : 0 }}
                   transition={{ duration: 0.9, ease: EASE_OUT_EXPO }}
@@ -74,8 +74,8 @@ export default function StatsPanel({ visitedCodes }: { visitedCodes: string[] })
       </div>
 
       <div className="mt-auto flex items-baseline justify-between border-t border-line pt-4">
-        <span className="text-sm text-ink-2">U.S. land explored</span>
-        <span className="font-display text-2xl tracking-tight">
+        <span className="text-[14px] font-medium text-ink-2">U.S. land explored</span>
+        <span className="font-display text-[1.75rem] text-petrol">
           <AnimatedNumber value={landPct} decimals={1} />
           <span className="text-ink-3">%</span>
         </span>

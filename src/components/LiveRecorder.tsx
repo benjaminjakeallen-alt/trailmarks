@@ -135,8 +135,8 @@ export default function LiveRecorder({
 
   return (
     <div>
-      <div className="rounded-[2rem] bg-ink/[0.03] p-1.5 ring-1 ring-line">
-        <div className="relative h-[62dvh] min-h-[380px] overflow-hidden rounded-[calc(2rem-0.375rem)] bg-sunken ring-1 ring-line sm:h-[560px]">
+      <div className="rounded-[2rem] bg-elevated p-1.5 shadow-[var(--shadow-card)] ring-1 ring-line">
+        <div className="relative h-[62dvh] min-h-[380px] overflow-hidden rounded-[calc(2rem-0.375rem)] bg-sunken sm:h-[560px]">
           <TripMap points={points} pins={pins} onPinClick={onPinClick} followLatest={recording} />
 
           {!completed && (
@@ -150,9 +150,9 @@ export default function LiveRecorder({
                   type="button"
                   onClick={recording ? pauseRecording : startRecording}
                   aria-label={recording ? "Pause recording" : points.length ? "Resume recording" : "Start recording"}
-                  className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ember text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25)] transition-transform duration-200 active:scale-95"
+                  className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-coral text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25),0_10px_22px_-10px_var(--coral)] transition-transform duration-200 active:scale-95"
                 >
-                  {recording && <span className="record-pulse absolute inset-0 rounded-full bg-ember" />}
+                  {recording && <span className="record-pulse absolute inset-0 rounded-full bg-coral" />}
                   <AnimatePresence mode="wait" initial={false}>
                     {recording ? (
                       <motion.span
@@ -177,10 +177,10 @@ export default function LiveRecorder({
                 </button>
 
                 <div className="min-w-0 pr-1">
-                  <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-3">
+                  <p className="text-[12px] font-medium text-ink-3">
                     {recording ? "Live" : "Route"}
                   </p>
-                  <p className="truncate text-sm font-medium">{statusText}</p>
+                  <p className="truncate text-[15px] font-semibold">{statusText}</p>
                 </div>
 
                 {points.length > 0 && (
@@ -188,7 +188,7 @@ export default function LiveRecorder({
                     type="button"
                     onClick={finishTrip}
                     disabled={finishing}
-                    className="ml-1 flex h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-medium text-bg transition-transform active:scale-95 disabled:opacity-50"
+                    className="ml-1 flex h-11 items-center gap-2 rounded-full bg-petrol px-4 text-[15px] font-medium text-white transition-transform hover:bg-petrol-strong active:scale-95 disabled:opacity-50"
                   >
                     <FlagCheckeredIcon size={16} />
                     {finishing ? "Finishing…" : "Finish"}
@@ -206,9 +206,9 @@ export default function LiveRecorder({
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mt-3 flex items-start gap-2 rounded-2xl bg-ember-soft px-4 py-3 text-sm text-ink"
+            className="mt-3 flex items-start gap-2 rounded-2xl bg-coral-soft px-4 py-3 text-sm text-ink"
           >
-            <WarningIcon size={18} className="mt-px shrink-0 text-ember-strong" />
+            <WarningIcon size={18} className="mt-px shrink-0 text-coral" />
             {GEO_ERRORS[geoState]}
           </motion.p>
         )}

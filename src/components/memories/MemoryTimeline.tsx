@@ -22,11 +22,11 @@ export default function MemoryTimeline({
 }) {
   if (memories.length === 0) {
     return (
-      <div className="bg-topo flex flex-col items-center rounded-[1.75rem] px-6 py-14 text-center ring-1 ring-line">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-elevated text-ink-2 ring-1 ring-line">
+      <div className="flex flex-col items-center rounded-[1.75rem] bg-elevated px-6 py-14 text-center shadow-[var(--shadow-card)] ring-1 ring-line">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-petrol-soft text-petrol">
           <FootprintsIcon size={26} />
         </span>
-        <p className="mt-4 font-display text-xl tracking-tight">{emptyTitle}</p>
+        <p className="mt-4 font-display text-xl">{emptyTitle}</p>
         <p className="mt-1 max-w-[36ch] text-sm leading-relaxed text-ink-3">{emptyBody}</p>
       </div>
     );
@@ -36,7 +36,7 @@ export default function MemoryTimeline({
     <ol className="relative space-y-5 pl-9 sm:pl-12">
       <span
         aria-hidden
-        className="absolute bottom-4 left-[13px] top-4 w-px bg-gradient-to-b from-line-strong via-line-strong to-transparent sm:left-[17px]"
+        className="absolute bottom-4 left-[13px] top-4 w-0.5 rounded-full bg-gradient-to-b from-aqua via-petrol/40 to-transparent sm:left-[17px]"
       />
       <AnimatePresence initial={false}>
         {memories.map((memory, i) => (
@@ -52,11 +52,13 @@ export default function MemoryTimeline({
           >
             <span
               aria-hidden
-              className={`absolute top-6 flex items-center justify-center rounded-full bg-elevated font-mono text-[10.5px] text-ink-2 ring-1 ring-line-strong ${
-                numbered ? "-left-9 h-7 w-7 sm:-left-12 sm:h-9 sm:w-9" : "-left-[29px] h-3 w-3 sm:-left-[37px]"
+              className={`absolute top-6 flex items-center justify-center rounded-full text-[12px] font-semibold ${
+                numbered
+                  ? "-left-9 h-7 w-7 bg-petrol text-white ring-[3px] ring-bg sm:-left-12 sm:h-9 sm:w-9"
+                  : "-left-[29px] h-3 w-3 bg-elevated ring-1 ring-line-strong sm:-left-[37px]"
               }`}
             >
-              {numbered ? String(i + 1).padStart(2, "0") : <span className="h-1.5 w-1.5 rounded-full bg-ember" />}
+              {numbered ? String(i + 1).padStart(2, "0") : <span className="h-1.5 w-1.5 rounded-full bg-aqua" />}
             </span>
             <MemoryCard memory={memory} onDelete={onDelete} />
           </motion.li>

@@ -60,11 +60,14 @@ export default function RouteSketch({
   points,
   live = false,
   demo = false,
+  onPhoto = false,
   className,
 }: {
   points: LatLng[];
   live?: boolean;
   demo?: boolean;
+  /** White route for photos and the brand gradient, like a trail drawn over the landscape. */
+  onPhoto?: boolean;
   className?: string;
 }) {
   const W = 400;
@@ -80,23 +83,40 @@ export default function RouteSketch({
   }, [source]);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className={className} preserveAspectRatio="xMidYMid slice" aria-hidden>
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className={className}
+      // On photos the whole route must stay inside its band so it never runs under the title.
+      preserveAspectRatio={onPhoto ? "xMidYMid meet" : "xMidYMid slice"}
+      aria-hidden
+    >
       <defs>
         <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={start[0]} y1={start[1]} x2={end[0]} y2={end[1]}>
-          <stop offset="0" style={{ stopColor: "var(--lagoon)" }} />
-          <stop offset="1" style={{ stopColor: "var(--ember)" }} />
+          <stop offset="0" style={{ stopColor: onPhoto ? "#ffffff" : "var(--aqua)" }} />
+          <stop offset="1" style={{ stopColor: onPhoto ? "#ffffff" : "var(--petrol)" }} />
         </linearGradient>
-        <pattern id={`${gradId}-grid`} width="26" height="26" patternUnits="userSpaceOnUse">
-          <path d="M26 0H0V26" fill="none" stroke="var(--ink)" strokeOpacity="0.05" strokeWidth="1" />
-        </pattern>
       </defs>
-      <rect width={W} height={H} fill={`url(#${gradId}-grid)`} />
 
       {isPlaceholder ? (
-        <path d={d} fill="none" stroke="var(--ink-3)" strokeOpacity={0.5} strokeWidth={2} strokeDasharray="2 7" strokeLinecap="round" />
+        <path
+          d={d}
+          fill="none"
+          stroke={onPhoto ? "#ffffff" : "var(--ink-3)"}
+          strokeOpacity={onPhoto ? 0.55 : 0.5}
+          strokeWidth={2.5}
+          strokeDasharray="2 8"
+          strokeLinecap="round"
+        />
       ) : (
         <>
-          <path d={d} fill="none" stroke="var(--bg-elevated)" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" />
+          <path
+            d={d}
+            fill="none"
+            stroke={onPhoto ? "rgb(0 0 0 / 0.2)" : "var(--bg-elevated)"}
+            strokeWidth={onPhoto ? 7 : 9}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
           <motion.path
             d={d}
             fill="none"
@@ -109,7 +129,14 @@ export default function RouteSketch({
             viewport={{ once: true }}
             transition={{ duration: 1.8, ease: [0.65, 0, 0.35, 1] }}
           />
-          <circle cx={start[0]} cy={start[1]} r={5} fill="var(--bg-elevated)" stroke="var(--lagoon)" strokeWidth={2.5} />
+          {onPhoto ? (
+            <>
+              <circle cx={start[0]} cy={start[1]} r={11} fill="rgb(255 255 255 / 0.22)" />
+              <circle cx={start[0]} cy={start[1]} r={5} fill="#ffffff" />
+            </>
+          ) : (
+            <circle cx={start[0]} cy={start[1]} r={5} fill="var(--bg-elevated)" stroke="var(--aqua)" strokeWidth={2.5} />
+          )}
           <motion.g
             initial={{ opacity: 0, scale: 0 }}
             whileInView={{ opacity: 1, scale: 1 }}
@@ -117,8 +144,15 @@ export default function RouteSketch({
             transition={{ delay: 1.6, type: "spring", stiffness: 400, damping: 18 }}
             style={{ transformBox: "fill-box", transformOrigin: "center" }}
           >
-            {live && <circle cx={end[0]} cy={end[1]} r={6} fill="var(--ember)" className="record-pulse state-path" />}
-            <circle cx={end[0]} cy={end[1]} r={6} fill="var(--ember)" stroke="var(--bg-elevated)" strokeWidth={2.5} />
+            {live && <circle cx={end[0]} cy={end[1]} r={7} fill="var(--coral)" className="record-pulse state-path" />}
+            <circle
+              cx={end[0]}
+              cy={end[1]}
+              r={7}
+              fill={live ? "var(--coral)" : onPhoto ? "var(--sun)" : "var(--petrol)"}
+              stroke={onPhoto ? "#ffffff" : "var(--bg-elevated)"}
+              strokeWidth={3}
+            />
           </motion.g>
         </>
       )}

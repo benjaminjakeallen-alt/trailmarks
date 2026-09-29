@@ -1,65 +1,76 @@
 @import "tailwindcss";
 
 /*
- * "Golden Hour" — warm paper and ink, Lagoon for land you've claimed,
- * Ember for anything you act on, Gold for achievement moments.
- * Complementary sunset-over-water pairing; no purple, no pure black.
+ * "Glacier" — cool mist and white surfaces, deep Petrol teal for anything
+ * you act on, Aqua for land and routes you've claimed, Sun (amber) for
+ * highlights and achievements, Coral only for recording and errors.
+ * Photos carry the color; the chrome stays quiet around them.
  */
 :root {
-  --bg: #f5f1ea;
-  --bg-elevated: #fffdf9;
-  --bg-sunken: #ece6dc;
-  --ink: #121418;
-  --ink-2: #4a4e56;
-  --ink-3: #8b8f96;
-  --line: rgb(18 20 24 / 0.07);
-  --line-strong: rgb(18 20 24 / 0.13);
+  --bg: #f2f5f6;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #e7edef;
+  --ink: #0e1b1f;
+  --ink-2: #4a5a60;
+  --ink-3: #87959a;
+  --line: rgb(14 27 31 / 0.07);
+  --line-strong: rgb(14 27 31 / 0.12);
 
-  --land: #e3dcd0;
-  --land-hover: #d6ccbc;
-  --land-edge: #f5f1ea;
+  --land: #dae2e5;
+  --land-hover: #c8d3d7;
+  --land-edge: #ffffff;
 
-  --lagoon: #0e7a6e;
-  --lagoon-bright: #22b59f;
-  --lagoon-soft: #d3ebe6;
+  --petrol: #0b5c63;
+  --petrol-strong: #08484e;
+  --petrol-soft: #dcecec;
 
-  --ember: #ef5b34;
-  --ember-strong: #d8461f;
-  --ember-soft: #fbe1d7;
+  --aqua: #15a898;
+  --aqua-bright: #3fd3c1;
+  --aqua-soft: #d4f2ee;
 
-  --gold: #e7a73a;
+  --sun: #f5a524;
+  --sun-soft: #fdefd4;
 
-  --shadow-float: 0 24px 48px -24px rgb(60 40 20 / 0.18), 0 2px 6px -2px rgb(60 40 20 / 0.06);
+  --coral: #e5483a;
+  --coral-soft: #fce2de;
+
+  --shadow-card: 0 10px 30px -18px rgb(11 50 56 / 0.28), 0 1px 3px rgb(11 50 56 / 0.05);
+  --shadow-float: 0 24px 48px -22px rgb(11 50 56 / 0.3), 0 2px 6px -2px rgb(11 50 56 / 0.08);
   --highlight: inset 0 1px 0 rgb(255 255 255 / 0.6);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0c0f13;
-    --bg-elevated: #141920;
-    --bg-sunken: #090b0e;
-    --ink: #f2eee7;
-    --ink-2: #b3b7be;
-    --ink-3: #767c85;
-    --line: rgb(242 238 231 / 0.07);
-    --line-strong: rgb(242 238 231 / 0.14);
+    --bg: #0a1316;
+    --bg-elevated: #111d21;
+    --bg-sunken: #070e10;
+    --ink: #e9f1f2;
+    --ink-2: #a5b4b8;
+    --ink-3: #6b7d82;
+    --line: rgb(233 241 242 / 0.07);
+    --line-strong: rgb(233 241 242 / 0.13);
 
-    --land: #1c222a;
-    --land-hover: #28313c;
-    --land-edge: #0c0f13;
+    --land: #1b292e;
+    --land-hover: #26383d;
+    --land-edge: #111d21;
 
-    --lagoon: #1fa593;
-    --lagoon-bright: #63dcc8;
-    --lagoon-soft: rgb(31 165 147 / 0.16);
+    --petrol: #1a8a8a;
+    --petrol-strong: #22a3a1;
+    --petrol-soft: rgb(26 138 138 / 0.18);
 
-    --ember: #ff7a52;
-    --ember-strong: #ff6a3d;
-    --ember-soft: rgb(255 122 82 / 0.15);
+    --aqua: #20c2af;
+    --aqua-bright: #62e4d2;
+    --aqua-soft: rgb(32 194 175 / 0.15);
 
-    --gold: #f3c15b;
+    --sun: #ffb940;
+    --sun-soft: rgb(255 185 64 / 0.15);
 
-    --shadow-float: 0 24px 48px -20px rgb(0 0 0 / 0.55), 0 2px 6px -2px rgb(0 0 0 / 0.35);
-    --highlight: inset 0 1px 0 rgb(255 255 255 / 0.06);
+    --coral: #ff6b5a;
+    --coral-soft: rgb(255 107 90 / 0.15);
+
+    --shadow-card: 0 10px 30px -18px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.3);
+    --shadow-float: 0 24px 48px -20px rgb(0 0 0 / 0.6), 0 2px 6px -2px rgb(0 0 0 / 0.35);
+    --highlight: inset 0 1px 0 rgb(255 255 255 / 0.05);
   }
 }
 
@@ -73,17 +84,19 @@
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-land: var(--land);
-  --color-lagoon: var(--lagoon);
-  --color-lagoon-bright: var(--lagoon-bright);
-  --color-lagoon-soft: var(--lagoon-soft);
-  --color-ember: var(--ember);
-  --color-ember-strong: var(--ember-strong);
-  --color-ember-soft: var(--ember-soft);
-  --color-gold: var(--gold);
+  --color-petrol: var(--petrol);
+  --color-petrol-strong: var(--petrol-strong);
+  --color-petrol-soft: var(--petrol-soft);
+  --color-aqua: var(--aqua);
+  --color-aqua-bright: var(--aqua-bright);
+  --color-aqua-soft: var(--aqua-soft);
+  --color-sun: var(--sun);
+  --color-sun-soft: var(--sun-soft);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
 
-  --font-sans: var(--font-geist);
-  --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-fraunces);
+  --font-sans: var(--font-outfit);
+  --font-display: var(--font-outfit);
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-glide: cubic-bezier(0.32, 0.72, 0, 1);
@@ -96,47 +109,51 @@ html {
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-geist), system-ui, sans-serif;
-  font-feature-settings: "ss01", "cv11";
+  font-family: var(--font-outfit), system-ui, sans-serif;
 }
 
 ::selection {
-  background: var(--ember-soft);
+  background: var(--aqua-soft);
   color: var(--ink);
 }
 
-:focus-visible {
-  outline: 2px solid var(--ember);
-  outline-offset: 3px;
-  border-radius: 6px;
+/* In the base layer so a component's own outline-none (inputs with their own focus ring) can win. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--petrol);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
 }
 
 .font-display {
-  font-family: var(--font-fraunces), Georgia, serif;
-  font-variation-settings: "SOFT" 50, "WONK" 0;
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/* Paper grain — fixed and non-interactive so it never repaints on scroll. */
-.grain::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+/* Frosted glass for chips and stat cards that sit on photos. */
+.glass {
+  background: rgb(255 255 255 / 0.16);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.25);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
 }
 
-/* Faint topographic contour rings behind map stages. */
-.bg-topo {
-  --topo: color-mix(in oklab, var(--ink) 4.5%, transparent);
-  background-image:
-    repeating-radial-gradient(circle at 18% 22%, transparent 0 22px, var(--topo) 22px 23px),
-    repeating-radial-gradient(circle at 82% 78%, transparent 0 30px, var(--topo) 30px 31px);
+/* Scrim that keeps white type legible on any photo. */
+.photo-scrim {
+  background: linear-gradient(to top, rgb(4 18 21 / 0.85), rgb(4 18 21 / 0.45) 50%, rgb(4 18 21 / 0.15));
+}
+
+/* Stand-in when there is no photo: the glacier gradient. */
+.brand-gradient {
+  background:
+    radial-gradient(120% 90% at 85% 10%, rgb(63 211 193 / 0.55), transparent 60%),
+    linear-gradient(150deg, #0e6f73 0%, #0b5c63 45%, #073f45 100%);
 }
 
 .state-path {

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
-type Variant = "primary" | "secondary" | "quiet";
+/** primary/secondary/quiet sit on the page; light/glass sit on photos. */
+type Variant = "primary" | "secondary" | "quiet" | "light" | "glass";
 
 interface BaseProps {
   variant?: Variant;
@@ -12,14 +13,15 @@ interface BaseProps {
 }
 
 const base =
-  "group relative inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-full text-sm font-medium transition-[transform,background-color,color,box-shadow] duration-300 ease-[var(--ease-glide)] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50";
+  "group relative inline-flex min-h-11 select-none items-center justify-center gap-2 rounded-full text-[15px] font-medium transition-[transform,background-color,color,box-shadow] duration-300 ease-[var(--ease-glide)] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50";
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-ember text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25),0_10px_24px_-12px_var(--ember)] hover:bg-ember-strong",
-  secondary:
-    "bg-elevated text-ink ring-1 ring-line-strong shadow-[var(--highlight)] hover:ring-ink-3/40",
+    "bg-petrol text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_24px_-14px_var(--petrol)] hover:bg-petrol-strong",
+  secondary: "bg-elevated text-ink ring-1 ring-line-strong shadow-[var(--shadow-card)] hover:ring-ink-3/40",
   quiet: "text-ink-2 hover:text-ink",
+  light: "bg-white text-[#0b5c63] shadow-[0_12px_30px_-14px_rgb(0_0_0/0.5)] hover:bg-white/90",
+  glass: "glass text-white hover:bg-white/25",
 };
 
 function padding(variant: Variant, hasTrailing: boolean) {
@@ -35,7 +37,11 @@ function Inner({ icon, trailingIcon, children, variant }: BaseProps & { variant:
       {trailingIcon && (
         <span
           className={`flex h-8 w-8 items-center justify-center rounded-full transition-transform duration-300 ease-[var(--ease-glide)] group-hover:translate-x-0.5 group-hover:-translate-y-px ${
-            variant === "primary" ? "bg-white/20" : "bg-ink/5"
+            variant === "primary" || variant === "glass"
+              ? "bg-white/20"
+              : variant === "light"
+                ? "bg-[#0b5c63]/10"
+                : "bg-ink/5"
           }`}
         >
           {trailingIcon}

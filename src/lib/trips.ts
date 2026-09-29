@@ -122,7 +122,17 @@ export async function getTrip(tripId: number): Promise<TripDetail | null> {
   const stateCodes = findStateCodesForPoints(points.map((p) => [p.lng, p.lat]));
   const distanceMiles = trackDistanceMiles(points);
 
-  return { ...toTrip(row), coverPhotoUrl, points, memories, stateCodes, distanceMiles };
+  // No explicit cover yet? Use the first photo from the trip's steps.
+  const firstStepPhoto = memories.find((m) => m.photos.length > 0)?.photos[0].url ?? null;
+
+  return {
+    ...toTrip(row),
+    coverPhotoUrl: coverPhotoUrl ?? firstStepPhoto,
+    points,
+    memories,
+    stateCodes,
+    distanceMiles,
+  };
 }
 
 /** Marks the trip active and starts the clock, if not already started. */

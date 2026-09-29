@@ -44,7 +44,7 @@ export default function NewTripPage() {
   return (
     <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-10 px-4 pb-24 pt-6 sm:px-8 lg:grid-cols-12 lg:gap-14 lg:pt-10">
       <div className="lg:col-span-6">
-        <Link href="/trips" className="group inline-flex items-center gap-2 text-sm text-ink-2 hover:text-ink">
+        <Link href="/trips" className="group inline-flex items-center gap-2 text-[15px] font-medium text-ink-2 hover:text-ink">
           <ArrowLeftIcon size={15} className="transition-transform duration-300 group-hover:-translate-x-1" />
           All trips
         </Link>
@@ -63,9 +63,9 @@ export default function NewTripPage() {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Name this trip"
             aria-label="Trip name"
-            className="mt-5 w-full bg-transparent font-display text-[clamp(2.4rem,5.5vw,4.25rem)] font-light leading-[1] tracking-[-0.04em] outline-none placeholder:text-ink-3/60"
+            className="mt-4 w-full bg-transparent font-display text-[clamp(2.4rem,5.5vw,4.25rem)] leading-[1] tracking-[-0.035em] outline-none placeholder:text-ink-3/50"
           />
-          <div className="mt-3 h-px w-full bg-gradient-to-r from-line-strong to-transparent" />
+          <div className="mt-3 h-0.5 w-full rounded-full bg-gradient-to-r from-aqua via-petrol/30 to-transparent" />
 
           <div className="mt-8">
             <Label htmlFor="trip-desc">The plan (optional)</Label>
@@ -78,13 +78,13 @@ export default function NewTripPage() {
             />
           </div>
 
-          {error && <p className="mt-4 text-sm text-ember-strong">{error}</p>}
+          {error && <p className="mt-4 text-sm text-coral">{error}</p>}
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <Button type="submit" disabled={submitting} trailingIcon={<ArrowRightIcon size={15} />}>
               {submitting ? "Creating…" : "Create trip"}
             </Button>
-            <p className="flex max-w-[34ch] items-start gap-2 text-[13px] leading-relaxed text-ink-3">
+            <p className="flex max-w-[34ch] items-start gap-2 text-[14px] leading-relaxed text-ink-3">
               <NavigationArrowIcon size={15} className="mt-0.5 shrink-0" />
               You&apos;ll start recording from the trip page. Location is only used while it&apos;s open.
             </p>
@@ -98,14 +98,12 @@ export default function NewTripPage() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1.1, ease: EASE_OUT_EXPO, delay: 0.1 }}
       >
-        <div className="rounded-[2rem] bg-ink/[0.03] p-1.5 ring-1 ring-line">
-          <div className="bg-topo aspect-[4/3] overflow-hidden rounded-[calc(2rem-0.375rem)] bg-elevated ring-1 ring-line">
-            <RouteSketch points={[]} demo className="h-full w-full" />
-          </div>
+        <div className="brand-gradient relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[var(--shadow-card)]">
+          <RouteSketch points={[]} demo onPhoto className="h-full w-full" />
+          <p className="glass absolute bottom-5 left-5 rounded-full px-4 py-2 text-[14px] font-medium text-white">
+            Your route draws itself as you drive
+          </p>
         </div>
-        <p className="mt-4 text-center font-mono text-[11px] uppercase tracking-[0.16em] text-ink-3">
-          Your route draws itself as you drive
-        </p>
       </motion.div>
     </div>
   );

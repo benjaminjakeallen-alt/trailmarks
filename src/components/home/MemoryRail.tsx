@@ -19,13 +19,13 @@ export default function MemoryRail({ memories }: { memories: Memory[] }) {
   if (memories.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-[1400px] px-4 py-20 sm:px-8 lg:py-28">
-      <div className="mb-8 flex items-end justify-between gap-4">
+    <section className="mx-auto max-w-[1400px] px-4 py-14 sm:px-8 lg:py-20">
+      <div className="mb-6 flex items-end justify-between gap-4">
         <div>
           <Eyebrow>Lately</Eyebrow>
-          <h2 className="mt-4 font-display text-4xl font-light tracking-[-0.03em] sm:text-5xl">Recent memories</h2>
+          <h2 className="mt-2 font-display text-3xl sm:text-[2.5rem]">Recent memories</h2>
         </div>
-        <Link href="/memories" className="group flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-ink-2 hover:text-ink">
+        <Link href="/memories" className="group flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[15px] font-semibold text-petrol hover:text-petrol-strong">
           All memories
           <ArrowRightIcon size={15} className="transition-transform duration-300 group-hover:translate-x-1" />
         </Link>
@@ -42,28 +42,29 @@ export default function MemoryRail({ memories }: { memories: Memory[] }) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-40px" }}
               transition={{ duration: 0.8, ease: EASE_OUT_EXPO, delay: i * 0.08 }}
-              className="w-[78%] shrink-0 snap-start sm:w-[340px]"
+              className="w-[74%] shrink-0 snap-start sm:w-[300px]"
             >
               <Link href={hrefFor(memory)} className="group block">
-                <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-sunken ring-1 ring-line">
+                <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-sunken shadow-[var(--shadow-card)]">
                   {cover ? (
                     <Image
                       src={cover.url}
                       alt={memory.title}
                       fill
-                      sizes="340px"
+                      sizes="300px"
                       className="object-cover transition-transform duration-[1.2s] ease-[var(--ease-out-expo)] group-hover:scale-[1.06]"
                     />
                   ) : (
-                    <div className="bg-topo flex h-full items-center justify-center text-ink-3">
+                    <div className="brand-gradient flex h-full items-center justify-center text-white/70">
                       <MapPinIcon size={34} />
                     </div>
                   )}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent p-5 pt-16 text-white">
-                    <p className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-white/70">
+                  <div className="photo-scrim absolute inset-x-0 bottom-0 p-5 pt-20 text-white">
+                    <p className="font-display text-[1.35rem] leading-tight">{memory.title}</p>
+                    <p className="mt-1.5 flex items-center gap-1 text-[13px] text-white/75">
+                      <MapPinIcon size={14} weight="fill" className="text-sun" />
                       {state?.name ?? "On the road"}
                     </p>
-                    <p className="mt-1 font-display text-xl leading-tight">{memory.title}</p>
                   </div>
                 </div>
               </Link>

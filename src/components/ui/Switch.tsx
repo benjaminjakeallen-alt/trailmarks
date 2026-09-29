@@ -20,7 +20,7 @@ export default function Switch({
       aria-label={label}
       onClick={onChange}
       className={`relative flex h-8 w-[3.4rem] shrink-0 items-center rounded-full p-1 transition-colors duration-300 ${
-        on ? "justify-end bg-lagoon" : "justify-start bg-land"
+        on ? "justify-end bg-aqua" : "justify-start bg-land"
       }`}
     >
       <motion.span

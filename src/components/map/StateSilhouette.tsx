@@ -15,6 +15,7 @@ export default function StateSilhouette({
   width = 320,
   height = 240,
   draw = false,
+  onPhoto = false,
   className,
 }: {
   code: string;
@@ -22,6 +23,8 @@ export default function StateSilhouette({
   width?: number;
   height?: number;
   draw?: boolean;
+  /** White outline and translucent land, for sitting on a photo or the brand gradient. */
+  onPhoto?: boolean;
   className?: string;
 }) {
   const rawId = useId();
@@ -33,14 +36,14 @@ export default function StateSilhouette({
     <svg viewBox={`0 0 ${width} ${height}`} className={className} aria-hidden>
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" style={{ stopColor: "var(--lagoon)" }} />
-          <stop offset="1" style={{ stopColor: "var(--lagoon-bright)" }} />
+          <stop offset="0" style={{ stopColor: onPhoto ? "var(--aqua-bright)" : "var(--petrol)" }} />
+          <stop offset="1" style={{ stopColor: onPhoto ? "var(--aqua)" : "var(--aqua-bright)" }} />
         </linearGradient>
       </defs>
 
       <motion.path
         d={d}
-        fill="var(--land)"
+        fill={onPhoto ? "rgb(255 255 255 / 0.14)" : "var(--land)"}
         initial={{ opacity: draw ? 0 : 1 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, ease: EASE_OUT_EXPO, delay: draw ? 1.1 : 0 }}
@@ -50,16 +53,16 @@ export default function StateSilhouette({
         className="state-path"
         fill={`url(#${gradId})`}
         initial={false}
-        animate={{ opacity: claimed ? 1 : 0, scale: claimed ? 1 : 0.92 }}
+        animate={{ opacity: claimed ? (onPhoto ? 0.85 : 1) : 0, scale: claimed ? 1 : 0.92 }}
         transition={{ scale: SPRING_STAMP, opacity: { duration: 0.25, delay: draw ? 1.2 : 0 } }}
       />
       <motion.path
         d={d}
         fill="none"
-        stroke="var(--ink)"
-        strokeWidth={1.2}
+        stroke={onPhoto ? "#ffffff" : "var(--ink)"}
+        strokeWidth={onPhoto ? 2 : 1.2}
         strokeLinejoin="round"
-        strokeOpacity={0.55}
+        strokeOpacity={onPhoto ? 0.95 : 0.55}
         initial={{ pathLength: draw ? 0 : 1 }}
         animate={{ pathLength: 1 }}
         transition={{ duration: 1.6, ease: [0.65, 0, 0.35, 1] }}

@@ -27,25 +27,36 @@ deploy to any Node host.
 - **Trip map**: [`maplibre-gl`](https://maplibre.org/) with free,
   no-API-key tiles from [OpenFreeMap](https://openfreemap.org/) (`positron`
   style) — real streets/terrain, not a choropleth, so a recorded route draws
-  as an actual line over the map like Polarsteps.
+  as an actual line over the map like Polarsteps. MapLibre's web worker
+  can't be found once Next bundles the library, so
+  `scripts/copy-maplibre-worker.mjs` (run by `predev`/`prebuild`) copies it
+  into `public/vendor/maplibre/` and `TripMap` points `setWorkerUrl()` there.
 
 ## Design system
 
-"Golden Hour" — warm paper and ink, **Lagoon** (teal) for land you've claimed,
-**Ember** (sunset coral) for anything you act on, **Gold** for achievement
-moments, plus a true night-map dark mode. Tokens live in `src/app/globals.css`;
-never hard-code hex values in components.
+"Glacier": modeled on the photo-first travel apps the owner picked as
+references. Cool mist and white surfaces let the photos carry the color.
+**Petrol** (deep teal) is for anything you act on. **Aqua** marks land and
+routes you've claimed. **Sun** (amber) is for highlights and achievements,
+and **Coral** is used only for recording and errors. There is a true dark mode.
+Tokens live in `src/app/globals.css`; never hard-code hex values in components.
 
-- Type: Fraunces (display, light weight + italic accents), Geist (UI), Geist
-  Mono (dates, stats, eyebrows). Icons: Phosphor, light weight.
+- Type: Outfit everywhere, in bold geometric headlines and a plain UI weight.
+  Icons: Phosphor, light weight.
+- Photos lead. The home hero is your latest memory photo, trip cards are the
+  trip's cover (or its first step's photo) with the route drawn over it in
+  white, and state pages put the state outline over its photo. With no photo,
+  surfaces fall back to the `.brand-gradient`. `.glass` is for stat chips on
+  photos, and `.photo-scrim` keeps white type legible on them.
+- Cards are one white surface (`Panel`) with a soft cool shadow and a 28px
+  radius. Buttons come in `primary`, `secondary` and `quiet` for the page,
+  plus `light` and `glass` for photos.
 - Motion: `src/lib/motion.ts` holds the shared easings and springs. Respect
   `prefers-reduced-motion` (handled globally via `MotionConfig`).
 - The home map (`src/components/map/UsMap.tsx`) is hand-built on `d3-geo` +
   us-atlas's pre-projected Albers file, so every state is its own animatable
-  path: sunrise-sweep intro, a stamp + ripple + spark burst on claim, a
-  collapsing ring on unclaim, haptics, and an ember outline trace on select.
-- Containers use a "double bezel" (`Panel`); trips render their GPS trail as
-  auto-drawn route art (`RouteSketch`) instead of a stock thumbnail.
+  path. It has a sunrise-sweep intro, a stamp + ripple + spark burst on claim,
+  a collapsing ring on unclaim, haptics, and an amber outline trace on select.
 
 ## Architecture
 

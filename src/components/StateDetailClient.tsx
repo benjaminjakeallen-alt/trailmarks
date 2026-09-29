@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
-import { ArrowLeftIcon } from "@phosphor-icons/react";
+import { ArrowLeftIcon, LightbulbIcon } from "@phosphor-icons/react";
 import StateSilhouette from "@/components/map/StateSilhouette";
 import MemoryComposer from "@/components/memories/MemoryComposer";
 import MemoryTimeline from "@/components/memories/MemoryTimeline";
 import Switch from "@/components/ui/Switch";
-import { Eyebrow, Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import { EASE_OUT_EXPO, haptic } from "@/lib/motion";
@@ -56,73 +56,97 @@ export default function StateDetailClient({
   }
 
   const since = visited ? sinceLabel(firstVisitedOn) : null;
+  const heroPhoto = memories.find((m) => m.photos.length > 0)?.photos[0].url ?? null;
 
   return (
     <>
-      <section className="mx-auto grid max-w-[1400px] grid-cols-1 gap-8 px-4 pb-12 pt-6 sm:px-8 lg:grid-cols-12 lg:gap-12 lg:pb-20 lg:pt-10">
-        <div className="lg:col-span-6 lg:pt-8">
-          <Link href="/" className="group inline-flex items-center gap-2 text-sm text-ink-2 hover:text-ink">
-            <ArrowLeftIcon size={15} className="transition-transform duration-300 group-hover:-translate-x-1" />
-            Back to the map
-          </Link>
-
-          <div className="mt-8">
-            <Eyebrow>{info.region}</Eyebrow>
-          </div>
-          <WordReveal
-            text={info.name}
-            className="mt-5 font-display text-[clamp(3rem,8vw,6.5rem)] font-light leading-[0.92] tracking-[-0.045em]"
-          />
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="mt-4 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-3"
-          >
-            Capital · {info.capital}
-          </motion.p>
-
-          <motion.blockquote
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.9, ease: EASE_OUT_EXPO }}
-            className="mt-8 max-w-[44ch] border-l-2 border-gold/70 pl-4 text-[17px] leading-[1.6] text-ink-2"
-          >
-            {info.funFact}
-          </motion.blockquote>
-
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.75, duration: 0.9, ease: EASE_OUT_EXPO }}
-            className="mt-8 flex max-w-md items-center justify-between gap-4 rounded-[1.4rem] bg-elevated px-5 py-4 shadow-[var(--highlight)] ring-1 ring-line"
-          >
-            <div>
-              <p className="font-medium">{visited ? "Claimed" : "Not claimed yet"}</p>
-              <p className="text-[13px] text-ink-3">
-                {visited ? (since ? `On your map since ${since}` : "On your map") : "Been here? Claim it."}
-              </p>
-            </div>
-            <Switch on={visited} onChange={toggle} label={`Claim ${info.name}`} />
-          </motion.div>
-        </div>
+      <section className="mx-auto max-w-[1400px] px-3 pb-10 pt-4 sm:px-8 lg:pb-14 lg:pt-6">
+        <Link href="/" className="group ml-1 inline-flex items-center gap-2 text-[15px] font-medium text-ink-2 hover:text-ink">
+          <ArrowLeftIcon size={15} className="transition-transform duration-300 group-hover:-translate-x-1" />
+          Back to the map
+        </Link>
 
         <motion.div
-          className="lg:col-span-6"
-          initial={{ opacity: 0, scale: 0.97 }}
+          initial={{ opacity: 0, scale: 0.985 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2, ease: EASE_OUT_EXPO }}
+          transition={{ duration: 1, ease: EASE_OUT_EXPO }}
+          className="relative isolate mt-5 overflow-hidden rounded-[2rem] text-white"
         >
-          <Panel innerClassName="bg-topo flex aspect-[4/3] items-center justify-center p-6 sm:p-10">
-            <StateSilhouette code={stateCode} claimed={visited} draw width={480} height={360} className="h-full w-full" />
-          </Panel>
+          {heroPhoto ? (
+            <motion.div
+              className="absolute inset-0 -z-10"
+              initial={{ scale: 1.1 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 2.4, ease: EASE_OUT_EXPO }}
+            >
+              <Image src={heroPhoto} alt="" fill priority sizes="(min-width: 1400px) 1400px, 100vw" className="object-cover" />
+            </motion.div>
+          ) : (
+            <div className="brand-gradient absolute inset-0 -z-10" />
+          )}
+          <div className="photo-scrim absolute inset-0 -z-10" />
+
+          <div className="grid min-h-[480px] grid-cols-1 gap-4 p-6 sm:p-10 lg:min-h-[540px] lg:grid-cols-12 lg:items-end lg:p-14">
+            <div className="order-2 lg:order-1 lg:col-span-7">
+              <span className="glass inline-flex rounded-full px-3 py-1 text-[12.5px] font-medium">{info.region}</span>
+              <WordReveal
+                text={info.name}
+                className="mt-4 font-display text-[clamp(3rem,7.5vw,6.25rem)] leading-[0.95] tracking-[-0.04em]"
+              />
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.8 }}
+                className="mt-3 text-[15px] text-white/75"
+              >
+                Capital · {info.capital}
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.9, ease: EASE_OUT_EXPO }}
+                className="glass mt-7 flex max-w-md items-center justify-between gap-4 rounded-2xl px-5 py-4"
+              >
+                <div>
+                  <p className="font-semibold">{visited ? "Claimed" : "Not claimed yet"}</p>
+                  <p className="text-[13.5px] text-white/70">
+                    {visited ? (since ? `On your map since ${since}` : "On your map") : "Been here? Claim it."}
+                  </p>
+                </div>
+                <Switch on={visited} onChange={toggle} label={`Claim ${info.name}`} />
+              </motion.div>
+            </div>
+
+            <div className="order-1 flex items-center justify-center lg:order-2 lg:col-span-5 lg:self-center">
+              <StateSilhouette
+                code={stateCode}
+                claimed={visited}
+                draw
+                onPhoto
+                width={480}
+                height={360}
+                className="h-44 w-full drop-shadow-[0_12px_30px_rgb(0_0_0/0.35)] sm:h-60 lg:h-auto"
+              />
+            </div>
+          </div>
         </motion.div>
       </section>
 
       <section className="mx-auto max-w-3xl px-4 pb-24 sm:px-8">
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.9, ease: EASE_OUT_EXPO }}
+          className="mb-10 flex gap-3 rounded-[1.4rem] bg-sun-soft px-5 py-4 text-[16px] leading-[1.6] text-ink-2"
+        >
+          <LightbulbIcon size={20} weight="fill" className="mt-0.5 shrink-0 text-sun" />
+          {info.funFact}
+        </motion.p>
         <div className="mb-6 flex items-baseline justify-between">
-          <h2 className="font-display text-3xl tracking-[-0.02em]">Journal</h2>
-          <span className="font-mono text-[12px] text-ink-3 tabular">
+          <h2 className="font-display text-3xl">Journal</h2>
+          <span className="text-[14px] font-medium text-ink-3 tabular">
             {memories.length} {memories.length === 1 ? "entry" : "entries"}
           </span>
         </div>

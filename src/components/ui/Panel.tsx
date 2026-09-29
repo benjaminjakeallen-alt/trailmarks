@@ -1,9 +1,6 @@
 import type { ReactNode } from "react";
 
-/**
- * Double-bezel container: a tinted outer tray with a hairline, holding an
- * inner core with its own highlight and a concentric (smaller) radius.
- */
+/** The one card surface: white on mist, soft cool shadow, generous radius. */
 export function Panel({
   children,
   className = "",
@@ -14,12 +11,8 @@ export function Panel({
   innerClassName?: string;
 }) {
   return (
-    <div className={`rounded-[2rem] bg-ink/[0.03] p-1.5 ring-1 ring-line ${className}`}>
-      <div
-        className={`h-full rounded-[calc(2rem-0.375rem)] bg-elevated shadow-[var(--highlight)] ring-1 ring-line ${innerClassName}`}
-      >
-        {children}
-      </div>
+    <div className={`rounded-[1.75rem] bg-elevated shadow-[var(--shadow-card)] ring-1 ring-line ${className}`}>
+      <div className={`h-full rounded-[1.75rem] ${innerClassName}`}>{children}</div>
     </div>
   );
 }
@@ -27,7 +20,7 @@ export function Panel({
 export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full bg-ink/[0.04] px-3 py-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-ink-2 ring-1 ring-line ${className}`}
+      className={`inline-flex items-center gap-1.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] text-petrol ${className}`}
     >
       {children}
     </span>

@@ -48,7 +48,7 @@ export default function Lightbox({ photos, index, onClose, onIndexChange }: Ligh
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0c0f13]/95 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050d0f]/95 p-4 backdrop-blur-sm"
         onClick={onClose}
       >
         <button
@@ -59,7 +59,7 @@ export default function Lightbox({ photos, index, onClose, onIndexChange }: Ligh
           <XIcon size={18} />
         </button>
         {photos.length > 1 && (
-          <span className="absolute left-1/2 top-[calc(env(safe-area-inset-top)+1.6rem)] -translate-x-1/2 font-mono text-[12px] tracking-[0.14em] text-white/60">
+          <span className="absolute left-1/2 top-[calc(env(safe-area-inset-top)+1.6rem)] -translate-x-1/2 text-[13px] font-medium text-white/65">
             {index + 1} / {photos.length}
           </span>
         )}

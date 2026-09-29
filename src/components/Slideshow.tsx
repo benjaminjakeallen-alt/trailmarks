@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { PauseIcon, PlayIcon, XIcon } from "@phosphor-icons/react";
+import { MapPinIcon, PauseIcon, PlayIcon, XIcon } from "@phosphor-icons/react";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import { formatMemoryDate } from "@/components/memories/MemoryCard";
 import { EASE_OUT_EXPO } from "@/lib/motion";
@@ -63,7 +63,7 @@ export default function Slideshow({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-[100] overflow-hidden bg-[#07090c] text-white"
+      className="fixed inset-0 z-[100] overflow-hidden bg-[#050d0f] text-white"
     >
       <AnimatePresence initial={false}>
         <motion.div
@@ -117,7 +117,7 @@ export default function Slideshow({
           </div>
         )}
         <div className="pointer-events-auto mt-4 flex items-center justify-between">
-          <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/70 tabular">
+          <span className="text-[13px] font-medium text-white/75 tabular">
             {String(index + 1).padStart(2, "0")} / {String(items.length).padStart(2, "0")}
           </span>
           <div className="flex gap-2">
@@ -148,11 +148,12 @@ export default function Slideshow({
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.7, ease: EASE_OUT_EXPO, delay: 0.2 }}
           >
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/65">
+            <p className="flex items-center gap-1.5 text-[14px] font-medium text-white/75">
+              <MapPinIcon size={15} weight="fill" className="text-sun" />
               {state?.name ?? "On the road"}
               {formatMemoryDate(item.memoryDate) && <> · {formatMemoryDate(item.memoryDate)}</>}
             </p>
-            <h2 className="mt-2 max-w-[20ch] font-display text-[clamp(2rem,5vw,3.75rem)] font-light leading-[1] tracking-[-0.03em]">
+            <h2 className="mt-2 max-w-[20ch] font-display text-[clamp(2rem,5vw,3.75rem)] leading-[1] tracking-[-0.035em]">
               {item.memoryTitle}
             </h2>
           </motion.div>

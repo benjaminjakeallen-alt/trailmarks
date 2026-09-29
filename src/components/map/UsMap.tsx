@@ -21,7 +21,7 @@ interface UsMapProps {
   onStateTap: (code: string) => void;
 }
 
-const SPARK_COLORS = ["var(--ember)", "var(--gold)", "var(--lagoon-bright)"];
+const SPARK_COLORS = ["var(--sun)", "var(--aqua-bright)", "var(--petrol)"];
 const INTRO_MS = 1700;
 
 /** Sunrise sweep: eastern states light up first. */
@@ -43,10 +43,10 @@ function ClaimFx({ fx, d }: { fx: Fx; d: string }) {
 
   return (
     <g>
-      {/* A glint of sunlight across the freshly claimed state. */}
+      {/* A glint of light across the freshly claimed state. */}
       <motion.path
         d={d}
-        fill="var(--gold)"
+        fill="#ffffff"
         initial={{ opacity: 0.7 }}
         animate={{ opacity: 0 }}
         transition={{ duration: 0.7, ease: EASE_OUT_EXPO, delay: 0.08 }}
@@ -55,7 +55,7 @@ function ClaimFx({ fx, d }: { fx: Fx; d: string }) {
         cx={fx.x}
         cy={fx.y}
         fill="none"
-        stroke="var(--ember)"
+        stroke="var(--aqua-bright)"
         initial={{ r: 6, opacity: 1, strokeWidth: 6 }}
         animate={{ r: 96, opacity: 0, strokeWidth: 0.5 }}
         transition={{ duration: 0.85, ease: EASE_OUT_EXPO }}
@@ -64,7 +64,7 @@ function ClaimFx({ fx, d }: { fx: Fx; d: string }) {
         cx={fx.x}
         cy={fx.y}
         fill="none"
-        stroke="var(--lagoon-bright)"
+        stroke="var(--sun)"
         initial={{ r: 3, opacity: 0.9, strokeWidth: 4 }}
         animate={{ r: 60, opacity: 0, strokeWidth: 0.5 }}
         transition={{ duration: 0.8, ease: EASE_OUT_EXPO, delay: 0.09 }}
@@ -87,10 +87,9 @@ function ClaimFx({ fx, d }: { fx: Fx; d: string }) {
         x={fx.x}
         y={fx.y - 14}
         textAnchor="middle"
-        className="font-mono"
-        fontSize={15}
-        fontWeight={600}
-        fill="var(--ember)"
+        fontSize={16}
+        fontWeight={700}
+        fill="var(--petrol)"
         initial={{ opacity: 0, y: 0 }}
         animate={{ opacity: [0, 1, 1, 0], y: -34 }}
         transition={{ duration: 0.95, ease: EASE_OUT_EXPO, times: [0, 0.15, 0.6, 1] }}
@@ -190,8 +189,9 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
       >
         <defs>
           <linearGradient id="tm-visited" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={MAP_WIDTH} y2={MAP_HEIGHT}>
-            <stop offset="0" style={{ stopColor: "var(--lagoon)" }} />
-            <stop offset="1" style={{ stopColor: "var(--lagoon-bright)" }} />
+            <stop offset="0" style={{ stopColor: "var(--petrol)" }} />
+            <stop offset="0.55" style={{ stopColor: "var(--aqua)" }} />
+            <stop offset="1" style={{ stopColor: "var(--aqua-bright)" }} />
           </linearGradient>
         </defs>
 
@@ -283,8 +283,8 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
               key={selectedShape.code}
               d={selectedShape.d}
               fill="none"
-              stroke="var(--ember)"
-              strokeWidth={2.2}
+              stroke="var(--sun)"
+              strokeWidth={2.6}
               strokeLinejoin="round"
               initial={{ pathLength: 0, opacity: 0 }}
               animate={{ pathLength: 1, opacity: 1 }}
@@ -320,7 +320,7 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
               className="-translate-x-1/2 -translate-y-[calc(100%+14px)] whitespace-nowrap rounded-xl bg-ink px-3 py-1.5 text-bg shadow-[var(--shadow-float)]"
             >
               <span className="text-[13px] font-medium">{hoveredShape.info.name}</span>
-              <span className="ml-2 font-mono text-[10.5px] uppercase tracking-[0.12em] opacity-60">
+              <span className="ml-2 text-[12px] opacity-65">
                 {visited.has(hoveredShape.code) ? "Claimed" : "Tap to claim"}
               </span>
             </motion.div>
