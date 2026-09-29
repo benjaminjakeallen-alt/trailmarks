@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { MapTrifoldIcon, PathIcon, ImagesIcon, PlusIcon } from "@phosphor-icons/react";
 import { SPRING_SNAPPY } from "@/lib/motion";
@@ -17,20 +17,31 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" || pathname.startsWith("/states") : pathname.startsWith(href);
 }
 
-export function LogoMark({ className = "h-8 w-8" }: { className?: string }) {
+/** "Folded Map": a paper road map with the route dotted across it, ending at an amber stop. */
+export function LogoMark({ className = "h-9 w-9" }: { className?: string }) {
+  const gradId = `logo-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   return (
-    <span className={`relative flex items-center justify-center rounded-[11px] bg-petrol text-white ${className}`}>
-      <svg viewBox="0 0 24 24" className="h-[62%] w-[62%]" fill="none">
-        <path
-          d="M4 18.5c3.2 0 3.4-5.2 7.4-5.2 3.7 0 3.9-6.3 7.1-6.3"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeDasharray="0.1 3.6"
-        />
-        <circle cx="18.6" cy="6.9" r="2.3" fill="var(--sun)" />
-      </svg>
-    </span>
+    <svg viewBox="0 0 48 48" className={`shrink-0 ${className}`} aria-hidden>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0" stopColor="#084a50" />
+          <stop offset="0.55" stopColor="#0b5c63" />
+          <stop offset="1" stopColor="#138085" />
+        </linearGradient>
+      </defs>
+      <rect width="48" height="48" rx="14" fill={`url(#${gradId})`} />
+      <path d="M8 14.2 18 10l12 4.2 10-4.2v23.8L30 38l-12-4.2L8 38Z" fill="#fff" />
+      <path d="M18 10l12 4.2V38l-12-4.2Z" fill="#dcecec" />
+      <path
+        d="M11.5 31c3.4-6.4 7.6-.8 11.2-7s7.6-5.6 11.8-6.8"
+        fill="none"
+        stroke="#0b5c63"
+        strokeWidth="2.8"
+        strokeLinecap="round"
+        strokeDasharray="0.1 4"
+      />
+      <circle cx="35" cy="16.8" r="3" fill="#f5a524" />
+    </svg>
   );
 }
 
