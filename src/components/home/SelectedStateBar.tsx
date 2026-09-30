@@ -4,31 +4,47 @@ import { ArrowUpRightIcon, XIcon } from "@phosphor-icons/react";
 import { ButtonLink } from "@/components/ui/Button";
 import Switch from "@/components/ui/Switch";
 import StateSilhouette from "@/components/map/StateSilhouette";
+import Visitors from "@/components/family/Visitors";
+import { useFamily } from "@/components/family/FamilyProvider";
 import { STATES_BY_CODE } from "@/lib/statesData";
 
 /** Desktop: the tapped state takes over the map's top bar instead of a side panel, so the map keeps its full width. */
 export default function SelectedStateBar({
   code,
   claimed,
+  visitorIds,
   onToggle,
   onClose,
 }: {
   code: string;
   claimed: boolean;
+  visitorIds: string[];
   onToggle: (code: string) => void;
   onClose: () => void;
 }) {
+  const { members } = useFamily();
   const info = STATES_BY_CODE[code];
   if (!info) return null;
 
   return (
     <div className="flex w-full items-center gap-5">
-      <StateSilhouette code={info.code} claimed={claimed} width={80} height={60} className="h-12 w-16 shrink-0" />
+      <StateSilhouette
+        code={info.code}
+        claimed={claimed}
+        gold={members.length > 1 && visitorIds.length === members.length}
+        width={80}
+        height={60}
+        className="h-12 w-16 shrink-0"
+      />
       <div className="min-w-0 shrink-0">
         <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-petrol">{info.region}</p>
         <h3 className="font-display text-[1.6rem] leading-tight">{info.name}</h3>
       </div>
-      <p className="line-clamp-2 hidden max-w-[46ch] text-[13.5px] leading-snug text-ink-3 xl:block">{info.funFact}</p>
+      {members.length > 1 ? (
+        <Visitors userIds={visitorIds} className="hidden min-w-0 xl:flex" />
+      ) : (
+        <p className="line-clamp-2 hidden max-w-[46ch] text-[13.5px] leading-snug text-ink-3 xl:block">{info.funFact}</p>
+      )}
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
         <div className="flex items-center gap-3 rounded-full bg-bg py-1.5 pl-4 pr-1.5 ring-1 ring-line">

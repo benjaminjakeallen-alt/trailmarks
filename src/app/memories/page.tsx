@@ -1,3 +1,4 @@
+import { requireViewer } from "@/lib/auth";
 import { getAllMemories } from "@/lib/memories";
 import MemoriesGallery from "@/components/MemoriesGallery";
 import { Eyebrow } from "@/components/ui/Panel";
@@ -8,13 +9,15 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Memories — Trailmarks" };
 
 export default async function MemoriesPage() {
-  const memories = await getAllMemories();
+  const viewer = await requireViewer();
+  const memories = await getAllMemories(viewer.familyId);
 
   const items: GalleryItem[] = memories.flatMap((memory) =>
     memory.photos.map((photo) => ({
       photo,
       memoryId: memory.id,
       memoryTitle: memory.title,
+      userId: memory.userId,
       stateCode: memory.stateCode,
       memoryDate: memory.memoryDate,
     })),

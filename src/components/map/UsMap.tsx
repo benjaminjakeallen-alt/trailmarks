@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MAP_HEIGHT, MAP_WIDTH, getUsGeometry } from "@/lib/usGeo";
 import { EASE_OUT_EXPO, SPRING_SNAPPY, SPRING_STAMP, haptic } from "@/lib/motion";
+import { initials } from "@/components/family/Avatar";
+import type { Member } from "@/lib/types";
 
 type FxKind = "claim" | "unclaim";
 
@@ -16,9 +18,71 @@ interface Fx {
 }
 
 interface UsMapProps {
+  /** The viewer's own claims: what a tap toggles. */
   visited: Set<string>;
+  /** Everyone in the family who has claimed each state, in family order. */
+  family?: Record<string, string[]>;
+  members?: Member[];
+  viewerId?: string;
   selectedCode: string | null;
   onStateTap: (code: string) => void;
+}
+
+const NO_FAMILY: Record<string, string[]> = {};
+const NO_MEMBERS: Member[] = [];
+const MARKER_R = 8.5;
+const MARKER_GAP = 11.5;
+const MAX_MARKERS = 3;
+
+/** Little member badges at a state's centroid; "+n" past three. */
+function MemberMarkers({ x, y, members }: { x: number; y: number; members: Member[] }) {
+  const shown = members.slice(0, MAX_MARKERS);
+  const extra = members.length - shown.length;
+  const count = shown.length + (extra > 0 ? 1 : 0);
+  const startX = x - ((count - 1) * MARKER_GAP) / 2;
+  return (
+    <g>
+      {shown.map((m, i) => (
+        <motion.g
+          key={m.userId}
+          initial={{ opacity: 0, scale: 0.3 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.3 }}
+          transition={SPRING_STAMP}
+          style={{ transformBox: "fill-box", transformOrigin: "center" }}
+        >
+          <circle cx={startX + i * MARKER_GAP} cy={y} r={MARKER_R} fill={m.color} stroke="#ffffff" strokeWidth={1.6} />
+          <text
+            x={startX + i * MARKER_GAP}
+            y={y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={9}
+            fontWeight={700}
+            fill="#ffffff"
+          >
+            {initials(m.displayName).slice(0, 1)}
+          </text>
+        </motion.g>
+      ))}
+      {extra > 0 && (
+        <g>
+          <circle cx={startX + shown.length * MARKER_GAP} cy={y} r={MARKER_R} fill="var(--ink)" stroke="#ffffff" strokeWidth={1.6} />
+          <text
+            x={startX + shown.length * MARKER_GAP}
+            y={y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={7.5}
+            fontWeight={700}
+            fill="#ffffff"
+          >
+            +{extra}
+          </text>
+        </g>
+      )}
+    </g>
+  );
 }
 
 const SPARK_COLORS = ["var(--sun)", "var(--aqua-bright)", "var(--petrol)"];
@@ -114,7 +178,14 @@ function UnclaimFx({ fx }: { fx: Fx }) {
   );
 }
 
-export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps) {
+export default function UsMap({
+  visited,
+  family = NO_FAMILY,
+  members = NO_MEMBERS,
+  viewerId,
+  selectedCode,
+  onStateTap,
+}: UsMapProps) {
   const geo = useMemo(() => getUsGeometry(), []);
   const svgRef = useRef<SVGSVGElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -123,6 +194,15 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
   const [hovered, setHovered] = useState<string | null>(null);
   const [fx, setFx] = useState<Fx[]>([]);
   const [introDone, setIntroDone] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  const isFamily = members.length > 1;
+  const byId = useMemo(() => Object.fromEntries(members.map((m) => [m.userId, m])), [members]);
+  /** Gold: every member of a family of two or more has been. */
+  const everyone = (code: string) => isFamily && members.every((m) => family[code]?.includes(m.userId));
+  const familyOnly = (code: string) => !visited.has(code) && (family[code]?.length ?? 0) > 0;
+  const visitorNames = (code: string) =>
+    (family[code] ?? []).map((id) => (id === viewerId ? "You" : (byId[id]?.displayName ?? "Someone")));
 
   useEffect(() => {
     const t = window.setTimeout(() => setIntroDone(true), INTRO_MS);
@@ -193,6 +273,35 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
             <stop offset="0.55" style={{ stopColor: "var(--aqua)" }} />
             <stop offset="1" style={{ stopColor: "var(--aqua-bright)" }} />
           </linearGradient>
+          {/* Gold for states the whole family has been to: reflected bands that drift like light on metal. */}
+          <linearGradient
+            id="tm-gold"
+            gradientUnits="userSpaceOnUse"
+            x1="0"
+            y1="0"
+            x2="220"
+            y2="140"
+            spreadMethod="reflect"
+          >
+            <stop offset="0" stopColor="#9c6a05" />
+            <stop offset="0.35" stopColor="#e9a818" />
+            <stop offset="0.5" stopColor="#fff4c4" />
+            <stop offset="0.65" stopColor="#f2b624" />
+            <stop offset="1" stopColor="#a87306" />
+            {!reduceMotion && (
+              <animateTransform
+                attributeName="gradientTransform"
+                type="translate"
+                from="0 0"
+                to="440 280"
+                dur="7s"
+                repeatCount="indefinite"
+              />
+            )}
+          </linearGradient>
+          <filter id="tm-gold-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#f5a524" floodOpacity="0.55" />
+          </filter>
         </defs>
 
         {/* Soft coastline emboss for depth. */}
@@ -224,7 +333,9 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
               role="button"
               tabIndex={0}
               aria-pressed={visited.has(s.code)}
-              aria-label={`${s.info.name}, ${visited.has(s.code) ? "claimed" : "not claimed"}`}
+              aria-label={`${s.info.name}, ${visited.has(s.code) ? "claimed" : "not claimed"}${
+                isFamily && family[s.code]?.length ? `. Been here: ${visitorNames(s.code).join(", ")}` : ""
+              }`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
@@ -236,6 +347,28 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
           ))}
         </g>
 
+        {/* Family-only: someone else has been here, you haven't (yet). */}
+        <g>
+          <AnimatePresence>
+            {geo.shapes
+              .filter((s) => familyOnly(s.code))
+              .map((s) => (
+                <motion.path
+                  key={`f-${s.code}`}
+                  d={s.d}
+                  className="state-path cursor-pointer"
+                  fill="var(--aqua-bright)"
+                  aria-hidden
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.42 }}
+                  exit={{ opacity: 0, transition: { duration: 0.2 } }}
+                  transition={{ duration: 0.6, ease: EASE_OUT_EXPO, delay: introDone ? 0 : sweepDelay(s.centroid[0]) + 0.45 }}
+                  {...pathHandlers(s.code)}
+                />
+              ))}
+          </AnimatePresence>
+        </g>
+
         <g>
           <AnimatePresence>
             {geo.shapes
@@ -245,7 +378,8 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
                   key={`v-${s.code}`}
                   d={s.d}
                   className="state-path cursor-pointer"
-                  fill="url(#tm-visited)"
+                  fill={everyone(s.code) ? "url(#tm-gold)" : "url(#tm-visited)"}
+                  filter={everyone(s.code) ? "url(#tm-gold-glow)" : undefined}
                   aria-hidden
                   initial={{ opacity: 0, scale: introDone ? 1.35 : 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -273,6 +407,21 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.3 }}
         />
+
+        {isFamily && (
+          <g pointerEvents="none" aria-hidden>
+            {geo.shapes
+              .filter((s) => (family[s.code]?.length ?? 0) > 0)
+              .map((s) => (
+                <MemberMarkers
+                  key={`m-${s.code}`}
+                  x={s.centroid[0]}
+                  y={s.centroid[1]}
+                  members={(family[s.code] ?? []).map((id) => byId[id]).filter(Boolean)}
+                />
+              ))}
+          </g>
+        )}
 
         <g pointerEvents="none">
           {hoveredShape && hovered !== selectedCode && (
@@ -321,7 +470,11 @@ export default function UsMap({ visited, selectedCode, onStateTap }: UsMapProps)
             >
               <span className="text-[13px] font-medium">{hoveredShape.info.name}</span>
               <span className="ml-2 text-[12px] opacity-65">
-                {visited.has(hoveredShape.code) ? "Claimed" : "Tap to claim"}
+                {isFamily && family[hoveredShape.code]?.length
+                  ? visitorNames(hoveredShape.code).join(", ")
+                  : visited.has(hoveredShape.code)
+                    ? "Claimed"
+                    : "Tap to claim"}
               </span>
             </motion.div>
           )}

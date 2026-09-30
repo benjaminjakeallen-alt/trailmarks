@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import sharp from "sharp";
+import { apiViewer, forbidden, notFound } from "@/lib/auth";
 import { getSupabase, unwrap, getPublicPhotoUrl, PHOTOS_BUCKET } from "@/lib/supabase";
+import { getMemoryOwner } from "@/lib/memories";
 import { STATES_BY_CODE } from "@/lib/statesData";
 
 const MAX_DIMENSION = 2400;
 
 export async function POST(req: NextRequest) {
+  const viewer = await apiViewer();
+  if (viewer instanceof NextResponse) return viewer;
+
   const form = await req.formData().catch(() => null);
   if (!form) {
     return NextResponse.json({ error: "Expected multipart/form-data" }, { status: 400 });
@@ -26,6 +31,11 @@ export async function POST(req: NextRequest) {
   }
 
   const memoryId = memoryIdRaw ? Number(memoryIdRaw) : null;
+  if (memoryId != null) {
+    const owner = Number.isInteger(memoryId) ? await getMemoryOwner(memoryId) : null;
+    if (!owner || owner.familyId !== viewer.familyId) return notFound("That memory doesn't exist");
+    if (owner.userId !== viewer.userId) return forbidden("You can only add photos to your own memories");
+  }
 
   let webpBuffer: Buffer;
   let metadata: { width?: number; height?: number };
@@ -58,6 +68,8 @@ export async function POST(req: NextRequest) {
       await supabase
         .from("photos")
         .insert({
+          user_id: viewer.userId,
+          family_id: viewer.familyId,
           state_code: stateCode,
           memory_id: memoryId,
           file_name: fileName,
@@ -81,6 +93,7 @@ export async function POST(req: NextRequest) {
       {
         photo: {
           id: row.id,
+          userId: viewer.userId,
           stateCode: row.state_code,
           memoryId: row.memory_id,
           fileName: row.file_name,

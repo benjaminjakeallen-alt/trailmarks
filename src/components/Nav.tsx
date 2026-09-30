@@ -6,6 +6,8 @@ import { useId, useState } from "react";
 import { motion, useMotionValueEvent, useScroll } from "framer-motion";
 import { MapTrifoldIcon, PathIcon, ImagesIcon, PlusIcon } from "@phosphor-icons/react";
 import { SPRING_SNAPPY } from "@/lib/motion";
+import Avatar from "@/components/family/Avatar";
+import { useFamily } from "@/components/family/FamilyProvider";
 
 const LINKS = [
   { href: "/", label: "Map", Icon: MapTrifoldIcon },
@@ -47,9 +49,13 @@ export function LogoMark({ className = "h-9 w-9" }: { className?: string }) {
 
 export default function Nav() {
   const pathname = usePathname();
+  const { viewer } = useFamily();
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   useMotionValueEvent(scrollY, "change", (y) => setScrolled(y > 12));
+
+  // Signed out: the sign-in and join pages carry their own branding.
+  if (!viewer) return null;
 
   return (
     <>
@@ -90,15 +96,26 @@ export default function Nav() {
             </div>
           </nav>
 
-          <Link
-            href="/trips/new"
-            className="group hidden items-center gap-2 rounded-full bg-petrol py-1.5 pl-4 pr-1.5 text-[15px] font-medium text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_24px_-14px_var(--petrol)] hover:bg-petrol-strong transition-transform duration-300 active:scale-[0.97] sm:flex"
-          >
-            New trip
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 transition-transform duration-300 group-hover:rotate-90">
-              <PlusIcon size={14} weight="bold" />
-            </span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/trips/new"
+              className="group hidden items-center gap-2 rounded-full bg-petrol py-1.5 pl-4 pr-1.5 text-[15px] font-medium text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_24px_-14px_var(--petrol)] hover:bg-petrol-strong transition-transform duration-300 active:scale-[0.97] sm:flex"
+            >
+              New trip
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 transition-transform duration-300 group-hover:rotate-90">
+                <PlusIcon size={14} weight="bold" />
+              </span>
+            </Link>
+            <Link
+              href="/family"
+              aria-label="Your family"
+              className={`rounded-full p-0.5 transition-shadow ${
+                pathname.startsWith("/family") ? "ring-2 ring-petrol" : "ring-1 ring-line hover:ring-petrol/40"
+              }`}
+            >
+              <Avatar member={viewer} size={36} />
+            </Link>
+          </div>
         </div>
       </header>
 

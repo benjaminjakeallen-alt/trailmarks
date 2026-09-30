@@ -1,4 +1,5 @@
 import { PlusIcon } from "@phosphor-icons/react/dist/ssr";
+import { requireViewer } from "@/lib/auth";
 import { listTrips, getTrip } from "@/lib/trips";
 import TripCard from "@/components/TripCard";
 import RouteSketch from "@/components/trips/RouteSketch";
@@ -26,8 +27,9 @@ function bentoSpan(i: number, total: number) {
 const STATUS_RANK = { active: 0, completed: 1, planned: 2 } as const;
 
 export default async function TripsPage() {
-  const trips = (await listTrips()).sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status]);
-  const details = await Promise.all(trips.map((t) => getTrip(t.id)));
+  const viewer = await requireViewer();
+  const trips = (await listTrips(viewer.familyId)).sort((a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status]);
+  const details = await Promise.all(trips.map((t) => getTrip(t.id, viewer.familyId)));
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 pb-24 pt-8 sm:px-8 lg:pt-16">

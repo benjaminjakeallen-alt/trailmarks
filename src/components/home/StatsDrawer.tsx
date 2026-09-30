@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CaretLeftIcon, CaretRightIcon, ChartBarIcon } from "@phosphor-icons/react";
 import AnimatedNumber from "@/components/motion/AnimatedNumber";
+import Avatar from "@/components/family/Avatar";
+import { useFamily } from "@/components/family/FamilyProvider";
 import { STATES, STATE_COUNT, STATES_BY_CODE, totalAreaSqMi, type Region } from "@/lib/statesData";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
@@ -51,18 +53,36 @@ export function StatsPill({ visitedCodes, onOpen }: { visitedCodes: string[]; on
 export function StatsDrawer({
   open,
   visitedCodes,
+  family,
   onClose,
 }: {
   open: boolean;
   visitedCodes: string[];
+  /** Member ids per state, for the family ranking. */
+  family: Record<string, string[]>;
   onClose: () => void;
 }) {
+  const { viewer, members } = useFamily();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  // The family ranking: members by how many states they've claimed.
+  const isFamily = members.length > 1;
+  const familyRanking = members
+    .map((m) => ({
+      member: m,
+      count: Object.entries(family).filter(([code, ids]) => code !== "DC" && ids.includes(m.userId)).length,
+    }))
+    .sort((a, b) => b.count - a.count);
+  const everyoneCount = isFamily
+    ? Object.entries(family).filter(([code, ids]) => code !== "DC" && members.every((m) => ids.includes(m.userId)))
+        .length
+    : 0;
 
   const claimed = claimedOnly(visitedCodes);
   const count = claimed.length;
@@ -175,6 +195,35 @@ export function StatsDrawer({
                   ))}
                 </ol>
               </div>
+
+              {isFamily && (
+                <div>
+                  <p className="mb-3 text-[12.5px] font-semibold uppercase tracking-[0.1em] text-petrol">
+                    Family ranking
+                  </p>
+                  <ol className="space-y-2.5">
+                    {familyRanking.map(({ member, count: n }, i) => (
+                      <li key={member.userId} className="flex items-center gap-3">
+                        <span className="w-4 text-center text-[13px] font-semibold text-ink-3 tabular">{i + 1}</span>
+                        <Avatar member={member} size={30} />
+                        <span className="min-w-0 flex-1 truncate text-[14.5px] font-medium">
+                          {member.userId === viewer?.userId ? `${member.displayName} (you)` : member.displayName}
+                        </span>
+                        <span className="font-display text-[1.15rem] text-ink tabular">{n}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="mt-4 flex items-center justify-between rounded-2xl bg-sun-soft px-4 py-3">
+                    <span className="flex items-center gap-2 text-[14px] font-medium text-ink-2">
+                      <span className="h-3 w-3 rounded-full bg-gradient-to-br from-[#fff1b8] via-[#f5b929] to-[#b47a06]" />
+                      Everyone&apos;s been
+                    </span>
+                    <span className="font-display text-[1.35rem] text-[#8a5a04] dark:text-sun">
+                      <AnimatedNumber value={everyoneCount} />
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-baseline justify-between rounded-2xl bg-aqua-soft px-4 py-3">
                 <span className="text-[14px] font-medium text-ink-2">U.S. land explored</span>

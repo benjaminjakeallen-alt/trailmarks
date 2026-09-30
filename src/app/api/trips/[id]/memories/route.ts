@@ -1,29 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
+import { apiViewer, forbidden, notFound } from "@/lib/auth";
 import { getSupabase, unwrap } from "@/lib/supabase";
+import { getTripOwner } from "@/lib/trips";
 import { getMemoriesForTrip } from "@/lib/memories";
 import { findStateCodeForPoint } from "@/lib/stateLookup";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const viewer = await apiViewer();
+  if (viewer instanceof NextResponse) return viewer;
+
   const { id } = await params;
   const tripId = Number(id);
   if (!Number.isInteger(tripId)) {
     return NextResponse.json({ error: "Invalid trip id" }, { status: 400 });
   }
+  const owner = await getTripOwner(tripId);
+  if (!owner || owner.familyId !== viewer.familyId) return notFound();
   return NextResponse.json({ memories: await getMemoriesForTrip(tripId) });
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+/** Steps are added by the person recording the trip. */
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const viewer = await apiViewer();
+  if (viewer instanceof NextResponse) return viewer;
+
   const { id } = await params;
   const tripId = Number(id);
   if (!Number.isInteger(tripId)) {
     return NextResponse.json({ error: "Invalid trip id" }, { status: 400 });
   }
+  const owner = await getTripOwner(tripId);
+  if (!owner || owner.familyId !== viewer.familyId) return notFound();
+  if (owner.userId !== viewer.userId) return forbidden("Only the person recording this trip can add steps");
 
   const body = await req.json().catch(() => ({}));
   const title = typeof body.title === "string" ? body.title.trim() : "";
@@ -43,6 +51,8 @@ export async function POST(
     await supabase
       .from("memories")
       .insert({
+        user_id: viewer.userId,
+        family_id: viewer.familyId,
         state_code: stateCode,
         trip_id: tripId,
         lat,

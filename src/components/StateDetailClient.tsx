@@ -6,6 +6,8 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowLeftIcon, LightbulbIcon } from "@phosphor-icons/react";
 import StateSilhouette from "@/components/map/StateSilhouette";
+import Visitors from "@/components/family/Visitors";
+import { useFamily } from "@/components/family/FamilyProvider";
 import MemoryComposer from "@/components/memories/MemoryComposer";
 import MemoryTimeline from "@/components/memories/MemoryTimeline";
 import Switch from "@/components/ui/Switch";
@@ -19,6 +21,8 @@ interface StateDetailClientProps {
   initialMemories: Memory[];
   initialVisited: boolean;
   initialFirstVisitedOn: string | null;
+  /** Other family members who have claimed this state. */
+  otherVisitorIds: string[];
 }
 
 function sinceLabel(date: string | null) {
@@ -32,7 +36,9 @@ export default function StateDetailClient({
   initialMemories,
   initialVisited,
   initialFirstVisitedOn,
+  otherVisitorIds,
 }: StateDetailClientProps) {
+  const { viewer, members } = useFamily();
   const info = STATES_BY_CODE[stateCode];
   const [memories, setMemories] = useState(initialMemories);
   const [visited, setVisited] = useState(initialVisited);
@@ -57,6 +63,10 @@ export default function StateDetailClient({
 
   const since = visited ? sinceLabel(firstVisitedOn) : null;
   const heroPhoto = memories.find((m) => m.photos.length > 0)?.photos[0].url ?? null;
+  const order = new Map(members.map((m, i) => [m.userId, i]));
+  const visitorIds = [...(visited && viewer ? [viewer.userId] : []), ...otherVisitorIds].sort(
+    (a, b) => (order.get(a) ?? 99) - (order.get(b) ?? 99),
+  );
 
   return (
     <>
@@ -116,12 +126,14 @@ export default function StateDetailClient({
                 </div>
                 <Switch on={visited} onChange={toggle} label={`Claim ${info.name}`} />
               </motion.div>
+              <Visitors userIds={visitorIds} onPhoto size={26} className="mt-4" />
             </div>
 
             <div className="order-1 flex items-center justify-center lg:order-2 lg:col-span-5 lg:self-center">
               <StateSilhouette
                 code={stateCode}
                 claimed={visited}
+                gold={members.length > 1 && visitorIds.length === members.length}
                 draw
                 onPhoto
                 width={480}

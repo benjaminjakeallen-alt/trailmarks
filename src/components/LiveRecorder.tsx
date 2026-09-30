@@ -13,6 +13,8 @@ const MIN_MILES_BETWEEN_POINTS = 0.008; // ~13 meters
 
 interface LiveRecorderProps {
   trip: TripDetail;
+  /** Only the person who owns the trip gets the record/finish dock. */
+  canRecord: boolean;
   pins: TripMapPin[];
   onPinClick?: (id: number | string) => void;
   onFinished: (newStateCodes: string[]) => void;
@@ -30,6 +32,7 @@ const GEO_ERRORS: Partial<Record<GeoState, string>> = {
 
 export default function LiveRecorder({
   trip,
+  canRecord,
   pins,
   onPinClick,
   onFinished,
@@ -139,7 +142,7 @@ export default function LiveRecorder({
         <div className="relative h-[62dvh] min-h-[380px] overflow-hidden rounded-[calc(2rem-0.375rem)] bg-sunken sm:h-[560px]">
           <TripMap points={points} pins={pins} onPinClick={onPinClick} followLatest={recording} />
 
-          {!completed && (
+          {!completed && canRecord && (
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center p-3 sm:p-5">
               <motion.div
                 layout

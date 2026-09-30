@@ -10,6 +10,8 @@ import MemoryComposer from "@/components/memories/MemoryComposer";
 import MemoryTimeline from "@/components/memories/MemoryTimeline";
 import AnimatedNumber from "@/components/motion/AnimatedNumber";
 import { TripStatus, formatTripDates } from "@/components/TripCard";
+import Avatar from "@/components/family/Avatar";
+import { useFamily } from "@/components/family/FamilyProvider";
 import { WordReveal } from "@/components/motion/Reveal";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import { findStateCodesForPoints } from "@/lib/stateLookup";
@@ -26,6 +28,9 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
   );
   const [recording, setRecording] = useState(false);
   const [finished, setFinished] = useState<string[] | null>(null);
+  const { viewer, members, byId } = useFamily();
+  const isOwner = !!viewer && trip.userId === viewer.userId;
+  const owner = trip.userId ? byId[trip.userId] : undefined;
 
   const pins: TripMapPin[] = useMemo(
     () =>
@@ -74,6 +79,12 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
         <div className="grid w-full grid-cols-1 content-end gap-6 p-6 sm:p-10 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-8">
             <div className="flex flex-wrap items-center gap-2">
+              {owner && members.length > 1 && (
+                <span className="glass flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-3 text-[12.5px] font-medium">
+                  <Avatar member={owner} size={22} />
+                  {isOwner ? "Your trip" : `${owner.displayName}'s trip`}
+                </span>
+              )}
               <TripStatus status={status} onPhoto />
               <span className="glass rounded-full px-3 py-1 text-[12.5px] font-medium">
                 {formatTripDates(trip.startedAt, trip.endedAt)}
@@ -105,6 +116,7 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
 
       <LiveRecorder
         trip={trip}
+        canRecord={isOwner}
         pins={pins}
         onPointsChange={setLivePoints}
         onRecordingChange={setRecording}
@@ -168,7 +180,7 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
           </span>
         </div>
         <div className="space-y-8">
-          {trip.status !== "completed" && (
+          {trip.status !== "completed" && isOwner && (
             <MemoryComposer
               endpoint={`/api/trips/${trip.id}/memories`}
               captureLocation

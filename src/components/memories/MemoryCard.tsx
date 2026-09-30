@@ -4,6 +4,8 @@ import { useState } from "react";
 import Image from "next/image";
 import { TrashIcon } from "@phosphor-icons/react";
 import Lightbox from "@/components/Lightbox";
+import Avatar from "@/components/family/Avatar";
+import { useFamily, useMemberName } from "@/components/family/FamilyProvider";
 import type { Memory } from "@/lib/types";
 
 export function formatMemoryDate(value: string | null): string | null {
@@ -45,7 +47,11 @@ function Mosaic({ memory, onOpen }: { memory: Memory; onOpen: (i: number) => voi
   };
 
   if (photos.length === 1) {
-    return <div className="mt-5 grid overflow-hidden rounded-2xl">{tile(0, "aspect-[16/10]", "(min-width: 768px) 640px, 100vw")}</div>;
+    return (
+      <div className="mt-5 grid overflow-hidden rounded-2xl">
+        {tile(0, "aspect-[16/10]", "(min-width: 768px) 640px, 100vw")}
+      </div>
+    );
   }
   if (photos.length === 2) {
     return (
@@ -67,6 +73,10 @@ function Mosaic({ memory, onOpen }: { memory: Memory; onOpen: (i: number) => voi
 export default function MemoryCard({ memory, onDelete }: { memory: Memory; onDelete: (id: number) => void }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const { viewer, members, byId } = useFamily();
+  const nameOf = useMemberName();
+  const author = memory.userId ? byId[memory.userId] : undefined;
+  const mine = !!viewer && memory.userId === viewer.userId;
 
   async function remove() {
     if (!confirm(`Delete "${memory.title}"? Its photos go with it.`)) return;
@@ -84,22 +94,29 @@ export default function MemoryCard({ memory, onDelete }: { memory: Memory; onDel
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          {formatMemoryDate(memory.memoryDate ?? memory.createdAt) && (
-            <p className="text-[13px] font-medium text-ink-3">
-              {formatMemoryDate(memory.memoryDate ?? memory.createdAt)}
-            </p>
-          )}
+          <p className="flex items-center gap-2 text-[13px] font-medium text-ink-3">
+            {members.length > 1 && author && (
+              <>
+                <Avatar member={author} size={20} />
+                <span className="text-ink-2">{nameOf(memory.userId)}</span>
+                <span aria-hidden>·</span>
+              </>
+            )}
+            {formatMemoryDate(memory.memoryDate ?? memory.createdAt)}
+          </p>
           <h3 className="mt-1 font-display text-[1.6rem] leading-tight">{memory.title}</h3>
         </div>
-        <button
-          type="button"
-          onClick={remove}
-          disabled={deleting}
-          aria-label={`Delete ${memory.title}`}
-          className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-coral-soft hover:text-coral"
-        >
-          <TrashIcon size={18} />
-        </button>
+        {mine && (
+          <button
+            type="button"
+            onClick={remove}
+            disabled={deleting}
+            aria-label={`Delete ${memory.title}`}
+            className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-coral-soft hover:text-coral"
+          >
+            <TrashIcon size={18} />
+          </button>
+        )}
       </div>
 
       {memory.body && <p className="mt-3 max-w-[62ch] whitespace-pre-wrap leading-[1.7] text-ink-2">{memory.body}</p>}
@@ -107,7 +124,12 @@ export default function MemoryCard({ memory, onDelete }: { memory: Memory; onDel
       <Mosaic memory={memory} onOpen={setLightbox} />
 
       {lightbox !== null && (
-        <Lightbox photos={memory.photos} index={lightbox} onClose={() => setLightbox(null)} onIndexChange={setLightbox} />
+        <Lightbox
+          photos={memory.photos}
+          index={lightbox}
+          onClose={() => setLightbox(null)}
+          onIndexChange={setLightbox}
+        />
       )}
     </article>
   );

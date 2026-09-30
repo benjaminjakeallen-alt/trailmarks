@@ -1,5 +1,6 @@
 export interface Photo {
   id: number;
+  userId: string | null;
   stateCode: string | null;
   memoryId: number | null;
   fileName: string;
@@ -12,6 +13,8 @@ export interface Photo {
 
 export interface Memory {
   id: number;
+  /** Who wrote it. Memories are shared with the whole family. */
+  userId: string | null;
   stateCode: string | null;
   tripId: number | null;
   lat: number | null;
@@ -40,6 +43,8 @@ export interface TripPoint {
 
 export interface Trip {
   id: number;
+  /** Who recorded it. Only they can record, finish or delete it; the family can view it. */
+  userId: string | null;
   title: string;
   description: string | null;
   status: TripStatus;
@@ -55,4 +60,31 @@ export interface TripDetail extends Trip {
   memories: Memory[];
   stateCodes: string[];
   distanceMiles: number;
+}
+
+/** A family member as everyone else sees them. */
+export interface Member {
+  userId: string;
+  displayName: string;
+  color: string;
+}
+
+export interface Family {
+  id: string;
+  name: string;
+  inviteCode: string;
+  members: Member[];
+}
+
+/** The signed-in person. */
+export interface Viewer extends Member {
+  email: string;
+  familyId: string;
+}
+
+/** One person's claim on one state. */
+export interface FamilyVisit {
+  userId: string;
+  stateCode: string;
+  firstVisitedOn: string | null;
 }

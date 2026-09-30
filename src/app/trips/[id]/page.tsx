@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { requireViewer } from "@/lib/auth";
 import { getTrip } from "@/lib/trips";
 import TripDetailClient from "@/components/TripDetailClient";
 
@@ -13,7 +14,8 @@ export default async function TripPage({ params }: TripPageProps) {
   const tripId = Number(id);
   if (!Number.isInteger(tripId)) notFound();
 
-  const trip = await getTrip(tripId);
+  const viewer = await requireViewer();
+  const trip = await getTrip(tripId, viewer.familyId);
   if (!trip) notFound();
 
   return <TripDetailClient trip={trip} />;

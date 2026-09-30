@@ -82,12 +82,37 @@ Tokens live in `src/app/globals.css`; never hard-code hex values in components.
 - `src/lib/statesData.ts` — the 50 states + DC, keyed by USPS code, with a
   FIPS code for matching against the TopoJSON `id`, region, land area (for
   the "% of North America explored" stat), and a fun fact.
-- Data model: `state_visits` (one row per state, visited flag + first-visited
-  date), `memories` (title/body/date, optionally linked to a state and/or a
-  trip, with `lat`/`lng` for trip "steps"), `photos` (file name + caption,
-  linked to a memory), `trips` (title/status/dates), `trip_points` (the raw
-  GPS breadcrumb trail for a trip). No user accounts in this first version —
-  it's a personal/family travel log, not a multi-tenant app.
+- Data model: `families` (name + invite code), `profiles` (one per person:
+  family, display name, map color), `state_visits` (one row per person per
+  state, visited flag + first-visited date), `memories` (title/body/date,
+  optionally linked to a state and/or a trip, with `lat`/`lng` for trip
+  "steps"), `photos` (file name + caption, linked to a memory), `trips`
+  (title/status/dates), `trip_points` (the raw GPS breadcrumb trail for a
+  trip). Trips, memories and photos carry `user_id` (author) and `family_id`.
+
+## Family accounts
+
+- Everyone has their own login (Supabase Auth, email + password) and belongs
+  to one family. `/join` starts a new family; `/join?code=XXXXXXXX` joins one
+  from its invite link (on `/family`). Accounts are created server-side as
+  already-confirmed users (`src/lib/family.ts` → `createAccount`), so no
+  confirmation email or Supabase email setup is needed.
+- Claims are per person; trips, memories and photos are shared with the whole
+  family and show who added them. Only the author can delete a memory or
+  photo, and only a trip's owner can record, add steps to, finish or delete
+  it. Nothing crosses families.
+- On the map: your states are solid aqua, states only other family members
+  have claimed are a lighter tint, each state shows its members' badges, and
+  a state everyone in the family has claimed turns shimmering gold. The stats
+  drawer adds a family ranking and an "everyone's been" count.
+- `src/proxy.ts` refreshes the session cookie on every request and sends
+  anyone signed out to `/login` (API routes get a 401). Pages call
+  `requireViewer()` and API routes `apiViewer()` (`src/lib/auth.ts`), then
+  scope every query by the viewer's family and check ownership on writes.
+- Auth uses the project's publishable key (`src/lib/supabaseConfig.ts`,
+  overridable with `SUPABASE_PUBLISHABLE_KEY`). It is public by design and
+  reads nothing on its own, since every table has RLS on with no policies;
+  data access stays on the server-side service role client.
 
 ## Trips: auto-generated maps from GPS
 
@@ -122,9 +147,9 @@ just continues appending to the same trip.
 The `trailmarks` Supabase project (org: `benjaminjakeallen-alt's Org`) already
 has this schema applied via migration:
 
-- `state_visits`, `trips`, `trip_points`, `memories`, `photos` — same shape
-  described above, Postgres types (`bigint identity` primary keys,
-  `timestamptz`/`date` instead of SQLite's text columns).
+- `families`, `profiles`, `state_visits`, `trips`, `trip_points`,
+  `memories`, `photos` — the shapes described above. Migrations since
+  family accounts live in `supabase/migrations/`.
 - A public Storage bucket named `photos`.
 - RLS enabled on every table with no policies — nothing but the
   service_role key (used only server-side by this app) can read or write.
@@ -166,10 +191,9 @@ Detailed feature ideas awaiting a go-ahead live in [`docs/BACKLOG.md`](docs/BACK
 - **Canada & Mexico** — the data model and map component are built to
   extend beyond the US 50; adding provinces/states just means new entries
   in `statesData.ts` and swapping in a North America TopoJSON.
-- **Multi-user / family accounts** — shared trip tracking, so a family can
-  fill in the same map together. Now that the backend is Supabase, this is
-  Supabase Auth + per-row `user_id` columns and real RLS policies, rather
-  than hand-rolling it.
+- **Password reset** — "forgot password" emails need Supabase's Site URL
+  set to the live domain (Authentication → URL Configuration) and ideally a
+  custom SMTP sender.
 - **Background GPS tracking** — a native app or PWA with background
   geolocation, so a trip keeps recording without the page staying open.
   This is the biggest gap versus Polarsteps' actual app.

@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import UsMap from "@/components/map/UsMap";
 import { StatsDrawer, StatsPill } from "@/components/home/StatsDrawer";
 import SelectedStateBar from "@/components/home/SelectedStateBar";
 import { StateSheet } from "@/components/home/StateCard";
+import { useFamily } from "@/components/family/FamilyProvider";
 import { Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 import { EASE_OUT_EXPO } from "@/lib/motion";
+import type { FamilyVisit } from "@/lib/types";
 
 const barMotion = {
   initial: { opacity: 0, y: 8 },
@@ -17,43 +19,73 @@ const barMotion = {
   transition: { duration: 0.35, ease: EASE_OUT_EXPO },
 };
 
-export default function HomeExperience({
-  initialVisited,
-}: {
-  initialVisited: string[];
-}) {
-  const [visited, setVisited] = useState<Set<string>>(
-    () => new Set(initialVisited),
+function Legend({ family }: { family: boolean }) {
+  const chip = "flex items-center gap-1.5 rounded-full px-3 py-1";
+  const dot = "h-2.5 w-2.5 rounded-full";
+  if (!family) {
+    return (
+      <>
+        <span className={`${chip} bg-aqua-soft`}>
+          <span className={`${dot} bg-gradient-to-br from-aqua-bright to-petrol`} /> Claimed
+        </span>
+        <span className={`${chip} hidden bg-bg sm:flex`}>
+          <span className={`${dot} bg-land ring-1 ring-line-strong`} /> Not yet
+        </span>
+      </>
+    );
+  }
+  return (
+    <>
+      <span className={`${chip} bg-aqua-soft`}>
+        <span className={`${dot} bg-gradient-to-br from-aqua-bright to-petrol`} /> You
+      </span>
+      <span className={`${chip} hidden bg-bg sm:flex`}>
+        <span className={`${dot} bg-aqua-bright/45`} /> Family
+      </span>
+      <span className={`${chip} bg-sun-soft`}>
+        <span className={`${dot} bg-gradient-to-br from-[#fff1b8] via-[#f5b929] to-[#b47a06]`} /> Everyone
+      </span>
+    </>
   );
+}
+
+export default function HomeExperience({ initialVisits }: { initialVisits: FamilyVisit[] }) {
+  const { viewer, members } = useFamily();
+  const me = viewer?.userId ?? "";
+  const [visits, setVisits] = useState(initialVisits);
   const [selected, setSelected] = useState<string | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
 
-  async function toggle(code: string) {
-    const claim = !visited.has(code);
-    const apply = (on: boolean) =>
-      setVisited((prev) => {
-        const next = new Set(prev);
-        if (on) next.add(code);
-        else next.delete(code);
-        return next;
-      });
+  // Mine drives claiming; byState (member ids per state, in family order) drives the family view.
+  const { mine, byState } = useMemo(() => {
+    const order = new Map(members.map((m, i) => [m.userId, i]));
+    const grouped: Record<string, string[]> = {};
+    for (const v of visits) (grouped[v.stateCode] ??= []).push(v.userId);
+    for (const ids of Object.values(grouped)) ids.sort((a, b) => (order.get(a) ?? 99) - (order.get(b) ?? 99));
+    return { mine: new Set(visits.filter((v) => v.userId === me).map((v) => v.stateCode)), byState: grouped };
+  }, [visits, members, me]);
 
-    apply(claim);
+  async function toggle(code: string) {
+    const claim = !mine.has(code);
+    const before = visits;
+    setVisits(
+      claim
+        ? [...visits, { userId: me, stateCode: code, firstVisitedOn: new Date().toISOString().slice(0, 10) }]
+        : visits.filter((v) => !(v.userId === me && v.stateCode === code)),
+    );
     setSelected(code);
 
     const res = await fetch(`/api/states/${code}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        visited: claim,
-        firstVisitedOn: claim ? new Date().toISOString().slice(0, 10) : null,
-      }),
+      body: JSON.stringify({ visited: claim, firstVisitedOn: claim ? new Date().toISOString().slice(0, 10) : null }),
     }).catch(() => null);
 
-    if (!res?.ok) apply(!claim);
+    if (!res?.ok) setVisits(before);
   }
 
-  const visitedList = Array.from(visited);
+  const mineList = Array.from(mine);
+  const isFamily = members.length > 1;
 
   return (
     <>
@@ -72,12 +104,7 @@ export default function HomeExperience({
             <div className="flex min-h-[76px] items-center gap-4 border-b border-line px-3 py-3 sm:px-6">
               {/* Holds the pill's footprint while it is expanded, so the bar never jumps. */}
               <div className="w-[176px] shrink-0">
-                {!statsOpen && (
-                  <StatsPill
-                    visitedCodes={visitedList}
-                    onOpen={() => setStatsOpen(true)}
-                  />
-                )}
+                {!statsOpen && <StatsPill visitedCodes={mineList} onOpen={() => setStatsOpen(true)} />}
               </div>
 
               <div className="hidden min-w-0 flex-1 lg:block">
@@ -86,17 +113,14 @@ export default function HomeExperience({
                     <motion.div key={selected} {...barMotion}>
                       <SelectedStateBar
                         code={selected}
-                        claimed={visited.has(selected)}
+                        claimed={mine.has(selected)}
+                        visitorIds={byState[selected] ?? []}
                         onToggle={toggle}
                         onClose={() => setSelected(null)}
                       />
                     </motion.div>
                   ) : (
-                    <motion.p
-                      key="hint"
-                      {...barMotion}
-                      className="text-[14px] text-ink-3"
-                    >
+                    <motion.p key="hint" {...barMotion} className="text-[14px] text-ink-3">
                       Tap a state to claim it. Tap again to undo.
                     </motion.p>
                   )}
@@ -104,27 +128,22 @@ export default function HomeExperience({
               </div>
 
               <div
-                className={`ml-auto items-center gap-2 text-[13px] font-medium text-ink-2 ${selected ? "flex lg:hidden" : "flex"}`}
+                className={`ml-auto items-center gap-2 text-[13px] font-medium text-ink-2 ${
+                  selected ? "flex lg:hidden" : "flex"
+                }`}
               >
-                <span className="flex items-center gap-1.5 rounded-full bg-aqua-soft px-3 py-1">
-                  <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-aqua-bright to-petrol" />{" "}
-                  Claimed
-                </span>
-                <span className="hidden items-center gap-1.5 rounded-full bg-bg px-3 py-1 sm:flex">
-                  <span className="h-2.5 w-2.5 rounded-full bg-land ring-1 ring-line-strong" />{" "}
-                  Not yet
-                </span>
+                <Legend family={isFamily} />
               </div>
             </div>
 
             <div className="px-2 pb-3 pt-3 sm:px-6 sm:pb-6 sm:pt-5 lg:px-10">
               {/* Sized so the whole map fits above the fold on a laptop. */}
-              <div
-                className="mx-auto w-full"
-                style={{ maxWidth: "max(560px, calc((100dvh - 19rem) * 1.6))" }}
-              >
+              <div className="mx-auto w-full" style={{ maxWidth: "max(560px, calc((100dvh - 19rem) * 1.6))" }}>
                 <UsMap
-                  visited={visited}
+                  visited={mine}
+                  family={byState}
+                  members={members}
+                  viewerId={me}
                   selectedCode={selected}
                   onStateTap={toggle}
                 />
@@ -136,7 +155,8 @@ export default function HomeExperience({
 
             <StatsDrawer
               open={statsOpen}
-              visitedCodes={visitedList}
+              visitedCodes={mineList}
+              family={byState}
               onClose={() => setStatsOpen(false)}
             />
           </Panel>
@@ -145,7 +165,8 @@ export default function HomeExperience({
 
       <StateSheet
         code={selected}
-        claimed={selected ? visited.has(selected) : false}
+        claimed={selected ? mine.has(selected) : false}
+        visitorIds={selected ? (byState[selected] ?? []) : []}
         onToggle={toggle}
         onClose={() => setSelected(null)}
       />

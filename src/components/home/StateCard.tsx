@@ -6,17 +6,20 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Panel";
 import Switch from "@/components/ui/Switch";
 import StateSilhouette from "@/components/map/StateSilhouette";
+import Visitors from "@/components/family/Visitors";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
 interface StateCardProps {
   code: string | null;
   claimed: boolean;
+  /** Family members who have claimed this state. */
+  visitorIds?: string[];
   onToggle: (code: string) => void;
   compact?: boolean;
 }
 
-export function StateCardBody({ code, claimed, onToggle, compact = false }: StateCardProps) {
+export function StateCardBody({ code, claimed, visitorIds = [], onToggle, compact = false }: StateCardProps) {
   const info = code ? STATES_BY_CODE[code] : null;
 
   return (
@@ -40,6 +43,8 @@ export function StateCardBody({ code, claimed, onToggle, compact = false }: Stat
             </div>
             <StateSilhouette code={info.code} claimed={claimed} width={96} height={72} className="h-16 w-24 shrink-0" />
           </div>
+
+          <Visitors userIds={visitorIds} className="mt-3" />
 
           <div className={`flex items-center justify-between rounded-2xl bg-bg px-4 py-3 ring-1 ring-line ${compact ? "mt-4" : "mt-6"}`}>
             <div>
@@ -77,6 +82,7 @@ export function StateCardBody({ code, claimed, onToggle, compact = false }: Stat
 export function StateSheet({
   code,
   claimed,
+  visitorIds,
   onToggle,
   onClose,
 }: StateCardProps & { onClose: () => void }) {
@@ -99,7 +105,7 @@ export function StateSheet({
         >
           <div className="rounded-[1.75rem] bg-elevated/95 p-5 shadow-[var(--shadow-float)] ring-1 ring-line backdrop-blur-xl">
             <div className="mx-auto -mt-2 mb-3 h-1 w-10 rounded-full bg-ink/15" />
-            <StateCardBody code={code} claimed={claimed} onToggle={onToggle} compact />
+            <StateCardBody code={code} claimed={claimed} visitorIds={visitorIds} onToggle={onToggle} compact />
           </div>
         </motion.div>
       )}

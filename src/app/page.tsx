@@ -1,16 +1,18 @@
+import { requireViewer } from "@/lib/auth";
 import { getAllMemories } from "@/lib/memories";
-import { getVisitedStateCodes } from "@/lib/stateVisits";
+import { getFamilyVisits } from "@/lib/stateVisits";
 import HomeExperience from "@/components/home/HomeExperience";
 import MemoryRail from "@/components/home/MemoryRail";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [visitedCodes, memories] = await Promise.all([getVisitedStateCodes(), getAllMemories()]);
+  const viewer = await requireViewer();
+  const [visits, memories] = await Promise.all([getFamilyVisits(viewer.familyId), getAllMemories(viewer.familyId)]);
 
   return (
     <>
-      <HomeExperience initialVisited={visitedCodes} />
+      <HomeExperience initialVisits={visits} />
       <MemoryRail memories={memories.slice(0, 8)} />
     </>
   );

@@ -16,6 +16,7 @@ export default function StateSilhouette({
   height = 240,
   draw = false,
   onPhoto = false,
+  gold = false,
   className,
 }: {
   code: string;
@@ -25,6 +26,8 @@ export default function StateSilhouette({
   draw?: boolean;
   /** White outline and translucent land, for sitting on a photo or the brand gradient. */
   onPhoto?: boolean;
+  /** The whole family has been: gold instead of aqua. */
+  gold?: boolean;
   className?: string;
 }) {
   const rawId = useId();
@@ -36,8 +39,19 @@ export default function StateSilhouette({
     <svg viewBox={`0 0 ${width} ${height}`} className={className} aria-hidden>
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" style={{ stopColor: onPhoto ? "var(--aqua-bright)" : "var(--petrol)" }} />
-          <stop offset="1" style={{ stopColor: onPhoto ? "var(--aqua)" : "var(--aqua-bright)" }} />
+          {gold ? (
+            <>
+              <stop offset="0" stopColor="#a87306" />
+              <stop offset="0.45" stopColor="#f2b624" />
+              <stop offset="0.6" stopColor="#fff4c4" />
+              <stop offset="1" stopColor="#c68a09" />
+            </>
+          ) : (
+            <>
+              <stop offset="0" style={{ stopColor: onPhoto ? "var(--aqua-bright)" : "var(--petrol)" }} />
+              <stop offset="1" style={{ stopColor: onPhoto ? "var(--aqua)" : "var(--aqua-bright)" }} />
+            </>
+          )}
         </linearGradient>
       </defs>
 

@@ -7,6 +7,7 @@ import Image from "next/image";
 import { MapPinIcon, PauseIcon, PlayIcon, XIcon } from "@phosphor-icons/react";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import { formatMemoryDate } from "@/components/memories/MemoryCard";
+import { useFamily, useMemberName } from "@/components/family/FamilyProvider";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 import type { GalleryItem } from "@/lib/galleryItem";
 
@@ -23,6 +24,8 @@ export default function Slideshow({
   onClose: () => void;
 }) {
   const [index, setIndex] = useState(startIndex);
+  const { members } = useFamily();
+  const nameOf = useMemberName();
   const [playing, setPlaying] = useState(true);
 
   const next = useCallback(() => setIndex((i) => (i + 1) % items.length), [items.length]);
@@ -152,6 +155,7 @@ export default function Slideshow({
               <MapPinIcon size={15} weight="fill" className="text-sun" />
               {state?.name ?? "On the road"}
               {formatMemoryDate(item.memoryDate) && <> · {formatMemoryDate(item.memoryDate)}</>}
+              {members.length > 1 && item.userId && <> · {nameOf(item.userId)}</>}
             </p>
             <h2 className="mt-2 max-w-[20ch] font-display text-[clamp(2rem,5vw,3.75rem)] leading-[1] tracking-[-0.035em]">
               {item.memoryTitle}

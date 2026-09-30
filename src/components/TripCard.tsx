@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { ArrowUpRightIcon, CalendarBlankIcon, MapPinIcon, PathIcon } from "@phosphor-icons/react";
 import RouteSketch from "@/components/trips/RouteSketch";
 import { STATES_BY_CODE } from "@/lib/statesData";
+import Avatar from "@/components/family/Avatar";
+import { useFamily } from "@/components/family/FamilyProvider";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 import type { Trip } from "@/lib/types";
 
@@ -65,6 +67,8 @@ export default function TripCard({
   wide?: boolean;
   index?: number;
 }) {
+  const { members, byId } = useFamily();
+  const owner = members.length > 1 && trip.userId ? byId[trip.userId] : undefined;
   const miles = distanceMiles >= 10 ? Math.round(distanceMiles) : distanceMiles.toFixed(1);
   const size = featured
     ? "min-h-[420px] h-full md:min-h-[560px]"
@@ -103,7 +107,10 @@ export default function TripCard({
         </div>
 
         <div className="absolute inset-x-4 top-4 flex items-center justify-between">
-          <TripStatus status={trip.status} onPhoto />
+          <span className="flex items-center gap-2">
+            {owner && <Avatar member={owner} size={28} ring />}
+            <TripStatus status={trip.status} onPhoto />
+          </span>
           <span className="glass flex h-10 w-10 items-center justify-center rounded-full transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
             <ArrowUpRightIcon size={17} />
           </span>

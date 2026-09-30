@@ -2,11 +2,13 @@ import { getSupabase, unwrap, getPublicPhotoUrl } from "@/lib/supabase";
 import { getMemoriesForTrip } from "@/lib/memories";
 import { findStateCodesForPoints } from "@/lib/stateLookup";
 import { trackDistanceMiles } from "@/lib/geo";
-import { mergeVisitedStates, getVisitedStateCodes } from "@/lib/stateVisits";
+import { mergeVisitedStates, getVisitedStateCodes, type VisitOwner } from "@/lib/stateVisits";
 import type { Trip, TripDetail, TripPoint, TripStatus } from "@/lib/types";
 
 interface TripRow {
   id: number;
+  user_id: string | null;
+  family_id: string | null;
   title: string;
   description: string | null;
   status: TripStatus;
@@ -30,6 +32,7 @@ interface PhotoFileRow {
 function toTrip(row: TripRow): Trip {
   return {
     id: row.id,
+    userId: row.user_id,
     title: row.title,
     description: row.description,
     status: row.status,
@@ -58,21 +61,30 @@ function sortTripKey(row: TripRow): string {
   return row.started_at ?? row.created_at;
 }
 
-export async function listTrips(): Promise<Trip[]> {
+export async function listTrips(familyId: string): Promise<Trip[]> {
   const supabase = getSupabase();
-  const rows = unwrap(await supabase.from("trips").select("*")) as TripRow[];
+  const rows = unwrap(await supabase.from("trips").select("*").eq("family_id", familyId)) as TripRow[];
   const sorted = [...rows].sort((a, b) => sortTripKey(b).localeCompare(sortTripKey(a)) || b.id - a.id);
   return Promise.all(
     sorted.map(async (row) => ({ ...toTrip(row), coverPhotoUrl: await resolveCoverPhotoUrl(row) })),
   );
 }
 
-export async function createTrip(input: { title: string; description: string | null }): Promise<Trip> {
+export async function createTrip(
+  owner: VisitOwner,
+  input: { title: string; description: string | null },
+): Promise<Trip> {
   const supabase = getSupabase();
   const row = unwrap(
     await supabase
       .from("trips")
-      .insert({ title: input.title, description: input.description, status: "planned" })
+      .insert({
+        user_id: owner.userId,
+        family_id: owner.familyId,
+        title: input.title,
+        description: input.description,
+        status: "planned",
+      })
       .select()
       .single(),
   ) as TripRow;
@@ -107,10 +119,19 @@ export async function addTripPoint(
   return toTripPoint(row);
 }
 
-export async function getTrip(tripId: number): Promise<TripDetail | null> {
+/** Who owns a trip and which family can see it, for permission checks. */
+export async function getTripOwner(tripId: number): Promise<VisitOwner | null> {
+  const row = unwrap(
+    await getSupabase().from("trips").select("user_id, family_id").eq("id", tripId).maybeSingle(),
+  ) as { user_id: string | null; family_id: string | null } | null;
+  return row?.user_id && row.family_id ? { userId: row.user_id, familyId: row.family_id } : null;
+}
+
+/** The trip, if it belongs to this family; otherwise null, as if it didn't exist. */
+export async function getTrip(tripId: number, familyId: string): Promise<TripDetail | null> {
   const supabase = getSupabase();
   const row = unwrap(
-    await supabase.from("trips").select("*").eq("id", tripId).maybeSingle(),
+    await supabase.from("trips").select("*").eq("id", tripId).eq("family_id", familyId).maybeSingle(),
   ) as TripRow | null;
   if (!row) return null;
 
@@ -150,10 +171,13 @@ export async function startTrip(tripId: number): Promise<void> {
 
 /**
  * Ends the trip, auto-detects every state its recorded points passed
- * through, and merges those into state_visits (without clobbering an
- * earlier first-visited date for a state already marked).
+ * through, and merges those into the trip owner's state_visits (without
+ * clobbering an earlier first-visited date for a state already marked).
  */
-export async function finishTrip(tripId: number): Promise<{ trip: TripDetail; newStateCodes: string[] }> {
+export async function finishTrip(
+  tripId: number,
+  owner: VisitOwner,
+): Promise<{ trip: TripDetail; newStateCodes: string[] }> {
   const supabase = getSupabase();
   const points = await getTripPoints(tripId);
   const stateCodes = findStateCodesForPoints(points.map((p) => [p.lng, p.lat]));
@@ -163,17 +187,22 @@ export async function finishTrip(tripId: number): Promise<{ trip: TripDetail; ne
   ) as { started_at: string | null } | null;
   const visitDate = (tripRow?.started_at ?? new Date().toISOString()).slice(0, 10);
 
-  const existing = new Set(await getVisitedStateCodes());
+  const existing = new Set(await getVisitedStateCodes(owner.userId));
   const newStateCodes = stateCodes.filter((c) => !existing.has(c));
 
-  await mergeVisitedStates(stateCodes, visitDate);
+  await mergeVisitedStates(owner, stateCodes, visitDate);
 
   await supabase
     .from("trips")
-    .update({ status: "completed", ended_at: new Date().toISOString() })
+    .update({
+      status: "completed",
+      // A trip finished without a formal start still gets a start date: its first point.
+      started_at: tripRow?.started_at ?? points[0]?.recordedAt ?? new Date().toISOString(),
+      ended_at: new Date().toISOString(),
+    })
     .eq("id", tripId);
 
-  const trip = (await getTrip(tripId))!;
+  const trip = (await getTrip(tripId, owner.familyId))!;
   return { trip, newStateCodes };
 }
 

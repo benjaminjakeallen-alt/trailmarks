@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { requireViewer } from "@/lib/auth";
 import { getMemoriesForState } from "@/lib/memories";
-import { getStateVisit } from "@/lib/stateVisits";
+import { getFamilyVisits, getStateVisit } from "@/lib/stateVisits";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import StateDetailClient from "@/components/StateDetailClient";
 
@@ -21,7 +22,15 @@ export default async function StatePage({ params }: StatePageProps) {
   const code = rawCode.toUpperCase();
   if (!STATES_BY_CODE[code]) notFound();
 
-  const [visit, memories] = await Promise.all([getStateVisit(code), getMemoriesForState(code)]);
+  const viewer = await requireViewer();
+  const [visit, memories, familyVisits] = await Promise.all([
+    getStateVisit(viewer.userId, code),
+    getMemoriesForState(viewer.familyId, code),
+    getFamilyVisits(viewer.familyId),
+  ]);
+  const otherVisitorIds = familyVisits
+    .filter((v) => v.stateCode === code && v.userId !== viewer.userId)
+    .map((v) => v.userId);
 
   return (
     <StateDetailClient
@@ -29,6 +38,7 @@ export default async function StatePage({ params }: StatePageProps) {
       initialMemories={memories}
       initialVisited={!!visit?.visited}
       initialFirstVisitedOn={visit?.firstVisitedOn ?? null}
+      otherVisitorIds={otherVisitorIds}
     />
   );
 }
