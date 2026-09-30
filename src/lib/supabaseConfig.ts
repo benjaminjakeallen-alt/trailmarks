@@ -20,4 +20,4 @@ export function supabaseUrl(): string {
 }
 
 /** Paths reachable without signing in. Everything else sends you to /login. */
-export const PUBLIC_PATHS = ["/login", "/join", "/api/auth/"];
+export const PUBLIC_PATHS = ["/login", "/join", "/reset", "/api/auth/"];

@@ -12,6 +12,7 @@ export default function LoginForm({ next }: { next: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [forgot, setForgot] = useState(false);
   const router = useRouter();
 
   async function submit(e: React.FormEvent) {
@@ -60,6 +61,20 @@ export default function LoginForm({ next }: { next: string }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+        <button
+          type="button"
+          onClick={() => setForgot((v) => !v)}
+          aria-expanded={forgot}
+          className="mt-2 text-[14px] font-semibold text-petrol hover:text-petrol-strong"
+        >
+          Forgot your password?
+        </button>
+        {forgot && (
+          <p className="mt-2 rounded-2xl bg-sun-soft px-4 py-3 text-[14px] leading-relaxed text-ink-2">
+            Ask anyone in your family to open <strong>Family</strong> in Trailmarks and tap{" "}
+            <strong>Reset password</strong> under your name. They&apos;ll send you a link to pick a new one.
+          </p>
+        )}
       </div>
       {error && (
         <p role="alert" className="rounded-2xl bg-coral-soft px-4 py-3 text-[14px] text-ink">

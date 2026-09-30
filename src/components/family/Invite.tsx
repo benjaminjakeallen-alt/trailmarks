@@ -198,7 +198,7 @@ export function InviteOptions({ compact = false }: { compact?: boolean }) {
 
 /** The invite, as a sheet any screen can open with `useFamily().openInvite()`. */
 export function InviteSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { members, family } = useFamily();
+  const { members } = useFamily();
   return (
     <Sheet open={open} onClose={onClose} label="Invite the family">
       <div className="pr-10">
