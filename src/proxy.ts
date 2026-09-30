@@ -41,6 +41,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except build assets and the static files the sign-in page itself needs.
-  // /p/ (photos) and /a/ (avatars) check the viewer themselves, so a page of thumbnails skips a session round trip each.
-  matcher: ["/((?!_next/static|_next/image|vendor/|p/|a/|icon.svg|apple-icon.png|favicon.ico).*)"],
+  // /p/ (photos), /a/ (avatars) and /v/ (voice notes) check the viewer themselves, so a page of thumbnails skips a session round trip each.
+  matcher: ["/((?!_next/static|_next/image|vendor/|p/|a/|v/|icon.svg|apple-icon.png|favicon.ico).*)"],
 };

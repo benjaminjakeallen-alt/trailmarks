@@ -5,6 +5,7 @@ import Image from "next/image";
 import { TrashIcon } from "@phosphor-icons/react";
 import Lightbox from "@/components/Lightbox";
 import Avatar from "@/components/family/Avatar";
+import VoiceNote from "@/components/memories/VoiceNote";
 import { useFamily, useMemberName } from "@/components/family/FamilyProvider";
 import type { Memory } from "@/lib/types";
 
@@ -79,7 +80,7 @@ export default function MemoryCard({ memory, onDelete }: { memory: Memory; onDel
   const mine = !!viewer && memory.userId === viewer.userId;
 
   async function remove() {
-    if (!confirm(`Delete "${memory.title}"? Its photos go with it.`)) return;
+    if (!confirm(`Delete "${memory.title}"? Its photos${memory.audioUrl ? " and recording" : ""} go with it.`)) return;
     setDeleting(true);
     const res = await fetch(`/api/memories/${memory.id}`, { method: "DELETE" });
     if (res.ok) onDelete(memory.id);
@@ -118,6 +119,15 @@ export default function MemoryCard({ memory, onDelete }: { memory: Memory; onDel
           </button>
         )}
       </div>
+
+      {memory.audioUrl && (
+        <VoiceNote
+          src={memory.audioUrl}
+          seconds={memory.audioSeconds}
+          label={`voice note for ${memory.title}`}
+          className="mt-3 max-w-md"
+        />
+      )}
 
       {memory.body && <p className="mt-3 max-w-[62ch] whitespace-pre-wrap leading-[1.7] text-ink-2">{memory.body}</p>}
 

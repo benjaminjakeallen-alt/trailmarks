@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiViewer, forbidden, notFound } from "@/lib/auth";
-import { getSupabase, unwrap, PHOTOS_BUCKET } from "@/lib/supabase";
+import { getSupabase, unwrap, PHOTOS_BUCKET, VOICE_BUCKET } from "@/lib/supabase";
 import { getMemoryOwner } from "@/lib/memories";
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -25,6 +25,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (photos.length > 0) {
     await supabase.storage.from(PHOTOS_BUCKET).remove(photos.map((p) => p.file_name));
   }
+
+  const { data: audio } = await supabase.from("memories").select("audio_file").eq("id", memoryId).maybeSingle();
+  if (audio?.audio_file) await supabase.storage.from(VOICE_BUCKET).remove([audio.audio_file]);
 
   await supabase.from("photos").delete().eq("memory_id", memoryId);
   await supabase.from("memories").delete().eq("id", memoryId);

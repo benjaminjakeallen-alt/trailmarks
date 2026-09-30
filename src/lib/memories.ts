@@ -1,4 +1,4 @@
-import { getSupabase, unwrap, photoUrl } from "@/lib/supabase";
+import { getSupabase, unwrap, photoUrl, voiceUrl } from "@/lib/supabase";
 import type { Memory, Photo } from "@/lib/types";
 
 interface MemoryRow {
@@ -11,6 +11,8 @@ interface MemoryRow {
   title: string;
   body: string | null;
   memory_date: string | null;
+  audio_file: string | null;
+  audio_seconds: number | null;
   created_at: string;
 }
 
@@ -60,6 +62,8 @@ function toMemory(row: MemoryRow, photos: Photo[]): Memory {
     memoryDate: row.memory_date,
     createdAt: row.created_at,
     photos,
+    audioUrl: voiceUrl(row.audio_file),
+    audioSeconds: row.audio_seconds,
   };
 }
 

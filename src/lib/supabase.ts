@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const PHOTOS_BUCKET = "photos";
 export const AVATARS_BUCKET = "avatars";
+export const VOICE_BUCKET = "voice";
 
 let client: SupabaseClient | null = null;
 
@@ -44,4 +45,9 @@ export function photoUrl(fileName: string): string {
 /** Adventurer avatars, served by /a/<file> to the owner's family. */
 export function avatarUrl(fileName: string | null): string | null {
   return fileName ? `/a/${fileName}` : null;
+}
+
+/** Voice notes, served (with range requests) by /v/<file> to the memory's family. */
+export function voiceUrl(fileName: string | null): string | null {
+  return fileName ? `/v/${fileName}` : null;
 }

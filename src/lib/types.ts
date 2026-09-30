@@ -28,6 +28,9 @@ export interface Memory {
   memoryDate: string | null;
   createdAt: string;
   photos: Photo[];
+  /** The voice recording it was dictated from, if kept. */
+  audioUrl: string | null;
+  audioSeconds: number | null;
 }
 
 export interface StateVisit {
