@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeftIcon, CheckIcon } from "@phosphor-icons/react";
+import { ArrowLeftIcon, CheckIcon, ImagesSquareIcon } from "@phosphor-icons/react";
 import LiveRecorder from "@/components/LiveRecorder";
 import MemoryComposer from "@/components/memories/MemoryComposer";
 import MemoryTimeline from "@/components/memories/MemoryTimeline";
+import PhotoImport from "@/components/trips/PhotoImport";
+import { Button } from "@/components/ui/Button";
 import AnimatedNumber from "@/components/motion/AnimatedNumber";
 import { TripStatus, formatTripDates } from "@/components/TripCard";
 import Avatar from "@/components/family/Avatar";
@@ -31,6 +33,13 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
   const { viewer, members, byId } = useFamily();
   const isOwner = !!viewer && trip.userId === viewer.userId;
   const owner = trip.userId ? byId[trip.userId] : undefined;
+  const [importFiles, setImportFiles] = useState<File[] | null>(null);
+  const importInput = useRef<HTMLInputElement>(null);
+
+  async function refreshSteps() {
+    const res = await fetch(`/api/trips/${trip.id}/memories`).catch(() => null);
+    if (res?.ok) setMemories((await res.json()).memories);
+  }
 
   const pins: TripMapPin[] = useMemo(
     () =>
@@ -173,12 +182,47 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
       )}
 
       <section className="mx-auto mt-16 max-w-3xl">
-        <div className="mb-6 flex items-baseline justify-between">
-          <h2 className="font-display text-3xl">Steps</h2>
-          <span className="text-[14px] font-medium text-ink-3 tabular">
-            {memories.length} {memories.length === 1 ? "stop" : "stops"}
-          </span>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-baseline gap-3">
+            <h2 className="font-display text-3xl">Steps</h2>
+            <span className="text-[14px] font-medium text-ink-3 tabular">
+              {memories.length} {memories.length === 1 ? "stop" : "stops"}
+            </span>
+          </div>
+          {isOwner && (
+            <>
+              <Button
+                variant="secondary"
+                icon={<ImagesSquareIcon size={18} />}
+                onClick={() => importInput.current?.click()}
+              >
+                Import photos
+              </Button>
+              <input
+                ref={importInput}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  e.target.value = "";
+                  if (files.length) setImportFiles(files);
+                }}
+              />
+            </>
+          )}
         </div>
+        {importFiles && (
+          <PhotoImport
+            tripId={trip.id}
+            trip={{ startedAt: trip.startedAt, endedAt: trip.endedAt }}
+            steps={memories}
+            files={importFiles}
+            onClose={() => setImportFiles(null)}
+            onImported={refreshSteps}
+          />
+        )}
         <div className="space-y-8">
           {trip.status !== "completed" && isOwner && (
             <MemoryComposer

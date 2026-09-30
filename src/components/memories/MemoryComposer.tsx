@@ -6,6 +6,7 @@ import { PencilSimpleIcon, MapPinIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { DateInput, Label, TextArea } from "@/components/ui/Field";
 import PhotoDropzone from "@/components/memories/PhotoDropzone";
+import { appendMeta, localDay, readPhotoMeta } from "@/lib/photoMeta";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 import type { Memory, Photo } from "@/lib/types";
 
@@ -91,6 +92,7 @@ export default function MemoryComposer({
         setStatus(`Uploading photo ${i + 1} of ${files.length}…`);
         const form = new FormData();
         form.append("file", file);
+        appendMeta(form, await readPhotoMeta(file));
         form.append("memoryId", String(memory.id));
         if (photoStateCode) form.append("stateCode", photoStateCode);
         const up = await fetch("/api/photos", { method: "POST", body: form });
@@ -163,7 +165,21 @@ export default function MemoryComposer({
               </div>
               <div>
                 <Label>Photos</Label>
-                <PhotoDropzone files={files} onChange={setFiles} />
+                <PhotoDropzone
+                  files={files}
+                  onChange={async (next) => {
+                    setFiles(next);
+                    // No date yet? Use the day the earliest photo was taken.
+                    if (!memoryDate && next.length) {
+                      const dates = (await Promise.all(next.map(readPhotoMeta)))
+                        .map((m) => m.takenAt)
+                        .filter((d): d is Date => d != null);
+                      if (dates.length) {
+                        setMemoryDate((current) => current || localDay(new Date(Math.min(...dates.map(Number)))));
+                      }
+                    }
+                  }}
+                />
               </div>
             </div>
 

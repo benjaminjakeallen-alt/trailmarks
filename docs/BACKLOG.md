@@ -49,23 +49,25 @@ the memory.
 - Data model: add `audio_file` and `transcript` columns to `memories`, and
   let the transcript become an editable memory body.
 
-## 7. Import photos by metadata
+## 7. Import photos by metadata — done (web version)
 
-Pick photos and have them auto-sort into the right trip and step, using the
-EXIF capture date and GPS, with no scrolling or manual tagging.
+On a trip page, the owner picks a batch of photos. The browser reads each
+photo's EXIF capture time and GPS (`src/lib/photoMeta.ts`, exifr) before
+upload, since the server's WebP re-encode strips EXIF. `src/lib/photoImport.ts`
+then sorts them: same day and within 5 miles of an existing step joins it;
+the rest cluster into new stops (3 hours or 8 miles starts a new one), named
+by state and day; photos with no date go last; photos outside the trip's
+dates are set aside. The review sheet lets you rename stops or leave groups
+out before uploading. Photos now store `taken_at`, `lat`, `lng`, and the
+regular composer fills the memory date from its photos.
 
-- Read EXIF on the client before upload (for example with `exifr`, which
-  handles JPEG and HEIC). The server currently re-encodes to WebP with
-  `sharp`, which strips metadata, so it must be read first and stored
-  (`taken_at`, `lat`, `lng` on `photos`).
-- Match each photo to a trip by date range, attach it to the nearest step in
-  time and place, and suggest new steps for clusters with no step.
-- **Platform limits:**
-  - The iOS web photo picker can strip location unless the user turns on
-    "Location" in the picker's Options.
-  - A website can't query the photo library by date, so "show me only this
-    trip's photos" without scrolling really needs the native app (PhotoKit).
-  - The web version can still do multi-select plus automatic sorting.
+Still true, and worth a native app later:
+
+- The iOS web photo picker strips location unless "Location" is on in the
+  picker's Options (and converts HEIC to JPEG, which the server needs;
+  HEIC files picked from Files are skipped).
+- A website can't browse the photo library by date, so "show me only this
+  trip's photos" needs the native app (PhotoKit).
 
 ## 8. The whole world, with a globe that turns to each continent
 

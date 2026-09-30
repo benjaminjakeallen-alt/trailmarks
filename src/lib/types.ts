@@ -7,6 +7,10 @@ export interface Photo {
   caption: string | null;
   width: number | null;
   height: number | null;
+  /** From the photo's EXIF, when it had one. */
+  takenAt: string | null;
+  lat: number | null;
+  lng: number | null;
   createdAt: string;
   url: string;
 }

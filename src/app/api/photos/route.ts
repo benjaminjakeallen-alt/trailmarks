@@ -22,6 +22,18 @@ export async function POST(req: NextRequest) {
   const stateCode = STATES_BY_CODE[stateCodeRaw] ? stateCodeRaw : null;
   const memoryIdRaw = form.get("memoryId");
   const caption = typeof form.get("caption") === "string" ? String(form.get("caption")).trim() : null;
+  // Camera metadata read in the browser (the WebP re-encode below strips EXIF).
+  const takenAtRaw = String(form.get("takenAt") || "");
+  const takenAt = takenAtRaw && !Number.isNaN(Date.parse(takenAtRaw)) ? new Date(takenAtRaw).toISOString() : null;
+  const latNum = Number(form.get("lat"));
+  const lngNum = Number(form.get("lng"));
+  const hasGps =
+    form.get("lat") !== null &&
+    form.get("lng") !== null &&
+    Number.isFinite(latNum) &&
+    Number.isFinite(lngNum) &&
+    Math.abs(latNum) <= 90 &&
+    Math.abs(lngNum) <= 180;
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "file is required" }, { status: 400 });
@@ -76,6 +88,9 @@ export async function POST(req: NextRequest) {
           caption: caption || null,
           width: metadata.width ?? null,
           height: metadata.height ?? null,
+          taken_at: takenAt,
+          lat: hasGps ? latNum : null,
+          lng: hasGps ? lngNum : null,
         })
         .select()
         .single(),
@@ -87,6 +102,10 @@ export async function POST(req: NextRequest) {
       caption: string | null;
       width: number | null;
       height: number | null;
+      taken_at: string | null;
+      lat: number | null;
+      lng: number | null;
+      created_at: string;
     };
 
     return NextResponse.json(
@@ -100,6 +119,10 @@ export async function POST(req: NextRequest) {
           caption: row.caption,
           width: row.width,
           height: row.height,
+          takenAt: row.taken_at,
+          lat: row.lat,
+          lng: row.lng,
+          createdAt: row.created_at,
           url: getPublicPhotoUrl(row.file_name),
         },
       },

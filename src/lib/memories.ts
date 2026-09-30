@@ -23,6 +23,9 @@ interface PhotoRow {
   caption: string | null;
   width: number | null;
   height: number | null;
+  taken_at: string | null;
+  lat: number | null;
+  lng: number | null;
   created_at: string;
 }
 
@@ -36,6 +39,9 @@ function toPhoto(row: PhotoRow): Photo {
     caption: row.caption,
     width: row.width,
     height: row.height,
+    takenAt: row.taken_at,
+    lat: row.lat,
+    lng: row.lng,
     createdAt: row.created_at,
     url: getPublicPhotoUrl(row.file_name),
   };

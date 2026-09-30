@@ -183,6 +183,13 @@ photos.
 Geolocation requires a "secure context" (HTTPS, or `localhost` — which
 `npm run dev` already is) or the browser will refuse it outright.
 
+## Photo import
+
+On a trip page, **Import photos** reads each photo's capture time and GPS in
+the browser, joins photos to nearby same-day steps, groups the rest into new
+stops, and shows the plan for review before uploading. See
+`docs/BACKLOG.md` item 7 for the rules and the iPhone picker's limits.
+
 ## Roadmap
 
 Detailed feature ideas awaiting a go-ahead live in [`docs/BACKLOG.md`](docs/BACKLOG.md).
