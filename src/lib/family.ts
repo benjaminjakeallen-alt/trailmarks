@@ -12,7 +12,7 @@ export const MEMBER_COLORS = ["#e5483a", "#2f6fde", "#7c4ddb", "#138a4a", "#d633
 
 const INVITE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
-function newInviteCode(): string {
+export function newInviteCode(): string {
   const bytes = crypto.randomBytes(8);
   return Array.from(bytes, (b) => INVITE_ALPHABET[b % INVITE_ALPHABET.length]).join("");
 }
@@ -50,6 +50,13 @@ export async function getFamily(familyId: string): Promise<Family> {
     await getSupabase().from("families").select("id, name, invite_code").eq("id", familyId).single(),
   ) as FamilyRow;
   return { id: row.id, name: row.name, inviteCode: row.invite_code, members: await getMembers(familyId) };
+}
+
+/** A fresh invite code for the family; the old link stops working. */
+export async function rotateInviteCode(familyId: string): Promise<string> {
+  const code = newInviteCode();
+  unwrap(await getSupabase().from("families").update({ invite_code: code }).eq("id", familyId).select("id").single());
+  return code;
 }
 
 export async function findFamilyByInvite(code: string): Promise<{ id: string; name: string } | null> {

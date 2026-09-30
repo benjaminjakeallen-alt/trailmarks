@@ -6,13 +6,22 @@ import { useRouter } from "next/navigation";
 import { ArrowRightIcon, UsersThreeIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Label, TextInput } from "@/components/ui/Field";
+import { AvatarStack } from "@/components/family/Avatar";
+import type { Member } from "@/lib/types";
+
+function alreadyHere(members: Member[]) {
+  const names = members.map((m) => m.displayName);
+  if (names.length === 1) return `${names[0]} is already on the map`;
+  if (names.length === 2) return `${names[0]} and ${names[1]} are already on the map`;
+  return `${names.slice(0, 2).join(", ")} and ${names.length - 2} more are already on the map`;
+}
 
 /** Start a new family map, or join one from an invite link. */
 export default function JoinForm({
   invite,
   inviteInvalid,
 }: {
-  invite: { code: string; familyName: string } | null;
+  invite: { code: string; familyName: string; members: Member[] } | null;
   inviteInvalid: boolean;
 }) {
   const [displayName, setDisplayName] = useState("");
@@ -55,7 +64,13 @@ export default function JoinForm({
             <UsersThreeIcon size={15} weight="fill" /> You&apos;re invited
           </span>
           <h2 className="mt-3 font-display text-[2rem] leading-tight">Join {invite.familyName}</h2>
-          <p className="mt-1 text-[15px] text-ink-3">
+          {invite.members.length > 0 && (
+            <div className="mt-3 flex items-center gap-3">
+              <AvatarStack members={invite.members} size={32} max={5} />
+              <p className="text-[14px] text-ink-2">{alreadyHere(invite.members)}</p>
+            </div>
+          )}
+          <p className="mt-3 text-[15px] text-ink-3">
             Make your own account. Your states are yours; trips and photos are shared with the family.
           </p>
         </div>

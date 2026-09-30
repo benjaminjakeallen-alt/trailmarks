@@ -3,7 +3,7 @@ import { Outfit } from "next/font/google";
 import Nav from "@/components/Nav";
 import FamilyProvider from "@/components/family/FamilyProvider";
 import { getViewer } from "@/lib/auth";
-import { getMembers } from "@/lib/family";
+import { getFamily } from "@/lib/family";
 import Providers from "@/components/Providers";
 import "./globals.css";
 
@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const viewer = await getViewer();
-  const members = viewer ? await getMembers(viewer.familyId) : [];
+  const family = viewer ? await getFamily(viewer.familyId) : null;
 
   return (
     <html
@@ -34,7 +34,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-[100dvh] flex-col bg-bg text-ink">
         <Providers>
-          <FamilyProvider viewer={viewer} members={members}>
+          <FamilyProvider
+            viewer={viewer}
+            members={family?.members ?? []}
+            family={family ? { name: family.name, inviteCode: family.inviteCode } : null}
+          >
             <Nav />
             <main className={`flex-1 ${viewer ? "pb-[calc(env(safe-area-inset-bottom)+6rem)] sm:pb-0" : ""}`}>
               {children}

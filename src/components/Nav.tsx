@@ -8,6 +8,7 @@ import { MapTrifoldIcon, PathIcon, ImagesIcon, PlusIcon } from "@phosphor-icons/
 import { SPRING_SNAPPY } from "@/lib/motion";
 import Avatar from "@/components/family/Avatar";
 import { useFamily } from "@/components/family/FamilyProvider";
+import { InviteButton } from "@/components/family/Invite";
 
 const LINKS = [
   { href: "/", label: "Map", Icon: MapTrifoldIcon },
@@ -96,7 +97,8 @@ export default function Nav() {
             </div>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <InviteButton />
             <Link
               href="/trips/new"
               className="group hidden items-center gap-2 rounded-full bg-petrol py-1.5 pl-4 pr-1.5 text-[15px] font-medium text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_24px_-14px_var(--petrol)] hover:bg-petrol-strong transition-transform duration-300 active:scale-[0.97] sm:flex"

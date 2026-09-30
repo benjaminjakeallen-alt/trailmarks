@@ -8,6 +8,7 @@ import SelectedStateBar from "@/components/home/SelectedStateBar";
 import { StateSheet } from "@/components/home/StateCard";
 import JournalPanel, { type JournalOrigin } from "@/components/home/JournalPanel";
 import { useFamily } from "@/components/family/FamilyProvider";
+import { InviteNudge } from "@/components/family/Invite";
 import { Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 import { EASE_OUT_EXPO } from "@/lib/motion";
@@ -176,6 +177,7 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
             />
           </Panel>
         </motion.div>
+        {!isFamily && <InviteNudge />}
       </section>
 
       <StateSheet

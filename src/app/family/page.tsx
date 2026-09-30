@@ -2,7 +2,8 @@ import { requireViewer } from "@/lib/auth";
 import { getFamily } from "@/lib/family";
 import { getFamilyVisits } from "@/lib/stateVisits";
 import Avatar from "@/components/family/Avatar";
-import { InviteLink, SignOutButton } from "@/components/family/FamilyActions";
+import { SignOutButton } from "@/components/family/FamilyActions";
+import { InviteOptions } from "@/components/family/Invite";
 import { Eyebrow, Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 
@@ -66,11 +67,11 @@ export default async function FamilyPage() {
 
       <Panel className="mt-5" innerClassName="p-5 sm:p-7">
         <h2 className="font-display text-xl">Invite the family</h2>
-        <p className="mb-4 mt-1 text-[15px] leading-relaxed text-ink-3">
-          Send this link. Everyone gets their own login and their own states; trips, memories and photos are shared with
-          the whole family.
+        <p className="mb-5 mt-1 text-[15px] leading-relaxed text-ink-3">
+          Everyone gets their own login and their own states; trips, memories and photos are shared with the whole
+          family.
         </p>
-        <InviteLink code={family.inviteCode} familyName={family.name} />
+        <InviteOptions />
       </Panel>
 
       <div className="mt-8">
