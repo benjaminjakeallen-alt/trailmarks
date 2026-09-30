@@ -2,13 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**.supabase.co",
-        pathname: "/storage/v1/object/public/**",
-      },
-    ],
+    // Photos are private: they're resized by our own /p/ route, which checks who's asking.
+    loader: "custom",
+    loaderFile: "./src/lib/photoLoader.ts",
   },
 };
 

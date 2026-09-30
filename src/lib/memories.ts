@@ -1,4 +1,4 @@
-import { getSupabase, unwrap, getPublicPhotoUrl } from "@/lib/supabase";
+import { getSupabase, unwrap, photoUrl } from "@/lib/supabase";
 import type { Memory, Photo } from "@/lib/types";
 
 interface MemoryRow {
@@ -43,7 +43,7 @@ function toPhoto(row: PhotoRow): Photo {
     lat: row.lat,
     lng: row.lng,
     createdAt: row.created_at,
-    url: getPublicPhotoUrl(row.file_name),
+    url: photoUrl(row.file_name),
   };
 }
 

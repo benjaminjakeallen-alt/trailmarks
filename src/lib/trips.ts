@@ -1,4 +1,4 @@
-import { getSupabase, unwrap, getPublicPhotoUrl } from "@/lib/supabase";
+import { getSupabase, unwrap, photoUrl } from "@/lib/supabase";
 import { getMemoriesForTrip } from "@/lib/memories";
 import { findStateCodesForPoints } from "@/lib/stateLookup";
 import { trackDistanceMiles } from "@/lib/geo";
@@ -50,7 +50,7 @@ async function resolveCoverPhotoUrl(row: TripRow): Promise<string | null> {
   const photo = unwrap(
     await supabase.from("photos").select("file_name").eq("id", row.cover_photo_id).maybeSingle(),
   ) as PhotoFileRow | null;
-  return photo ? getPublicPhotoUrl(photo.file_name) : null;
+  return photo ? photoUrl(photo.file_name) : null;
 }
 
 function toTripPoint(row: TripPointRow): TripPoint {

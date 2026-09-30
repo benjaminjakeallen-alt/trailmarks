@@ -32,6 +32,10 @@ export function unwrap<T>({ data, error }: { data: T | null; error: { message: s
   return data as T;
 }
 
-export function getPublicPhotoUrl(fileName: string): string {
-  return getSupabase().storage.from(PHOTOS_BUCKET).getPublicUrl(fileName).data.publicUrl;
+/**
+ * Photos live in a private bucket. Pages link to our own /p/<file> route,
+ * which checks the viewer is in the photo's family before serving it.
+ */
+export function photoUrl(fileName: string): string {
+  return `/p/${fileName}`;
 }

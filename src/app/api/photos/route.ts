@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
 import sharp from "sharp";
 import { apiViewer, forbidden, notFound } from "@/lib/auth";
-import { getSupabase, unwrap, getPublicPhotoUrl, PHOTOS_BUCKET } from "@/lib/supabase";
+import { getSupabase, unwrap, photoUrl, PHOTOS_BUCKET } from "@/lib/supabase";
 import { getMemoryOwner } from "@/lib/memories";
 import { STATES_BY_CODE } from "@/lib/statesData";
 
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
           lat: row.lat,
           lng: row.lng,
           createdAt: row.created_at,
-          url: getPublicPhotoUrl(row.file_name),
+          url: photoUrl(row.file_name),
         },
       },
       { status: 201 },
