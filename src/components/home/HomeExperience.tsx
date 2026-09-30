@@ -8,7 +8,7 @@ import SelectedStateBar from "@/components/home/SelectedStateBar";
 import { StateSheet } from "@/components/home/StateCard";
 import JournalPanel, { type JournalOrigin } from "@/components/home/JournalPanel";
 import { useFamily } from "@/components/family/FamilyProvider";
-import { AdventurerNudge, InviteNudge } from "@/components/family/Invite";
+import CrewDock from "@/components/family/CrewDock";
 import { Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 import { EASE_OUT_EXPO } from "@/lib/motion";
@@ -30,7 +30,7 @@ function Legend({ family }: { family: boolean }) {
         <span className={`${chip} bg-aqua-soft`}>
           <span className={`${dot} bg-gradient-to-br from-aqua-bright to-petrol`} /> Claimed
         </span>
-        <span className={`${chip} hidden bg-bg sm:flex`}>
+        <span className={`${chip} bg-bg`}>
           <span className={`${dot} bg-land ring-1 ring-line-strong`} /> Not yet
         </span>
       </>
@@ -41,7 +41,7 @@ function Legend({ family }: { family: boolean }) {
       <span className={`${chip} bg-aqua-soft`}>
         <span className={`${dot} bg-gradient-to-br from-aqua-bright to-petrol`} /> You
       </span>
-      <span className={`${chip} hidden bg-bg sm:flex`}>
+      <span className={`${chip} bg-bg`}>
         <span className={`${dot} bg-aqua-bright/45`} /> Family
       </span>
       <span className={`${chip} bg-sun-soft`}>
@@ -143,12 +143,8 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
                 </AnimatePresence>
               </div>
 
-              <div
-                className={`ml-auto items-center gap-2 text-[13px] font-medium text-ink-2 ${
-                  selected ? "flex lg:hidden" : "flex"
-                }`}
-              >
-                <Legend family={isFamily} />
+              <div className="ml-auto shrink-0">
+                <CrewDock />
               </div>
             </div>
 
@@ -166,9 +162,12 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
                   onSelect={setSelected}
                 />
               </div>
-              <p className="mt-2 text-center text-[13px] text-ink-3 lg:hidden">
-                Tap a state to claim it. Press and hold to unclaim.
-              </p>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[13px] font-medium text-ink-2 lg:justify-between">
+                <p className="font-normal text-ink-3 lg:hidden">Tap a state to claim it. Press and hold to unclaim.</p>
+                <div className="flex items-center gap-2 lg:ml-auto">
+                  <Legend family={isFamily} />
+                </div>
+              </div>
             </div>
 
             <StatsDrawer
@@ -179,8 +178,6 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
             />
           </Panel>
         </motion.div>
-        <AdventurerNudge />
-        {!isFamily && <InviteNudge />}
       </section>
 
       <StateSheet

@@ -4,7 +4,6 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowsClockwiseIcon,
-  CameraIcon,
   ChatCircleTextIcon,
   CheckIcon,
   CopyIcon,
@@ -14,7 +13,7 @@ import {
   UserPlusIcon,
 } from "@phosphor-icons/react";
 import { encode } from "uqr";
-import Avatar, { AvatarStack } from "@/components/family/Avatar";
+import { AvatarStack } from "@/components/family/Avatar";
 import { useFamily } from "@/components/family/FamilyProvider";
 import { Button } from "@/components/ui/Button";
 import Sheet from "@/components/ui/Sheet";
@@ -233,90 +232,5 @@ export function InviteButton({ className = "" }: { className?: string }) {
       <UserPlusIcon size={19} weight="bold" />
       <span className="hidden md:inline">Invite</span>
     </button>
-  );
-}
-
-/** Shown under the map while the viewer is the only one in the family. */
-export function InviteNudge() {
-  const { viewer, openInvite } = useFamily();
-  if (!viewer) return null;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, ease: EASE_OUT_EXPO, delay: 0.6 }}
-      className="mt-4 flex flex-col gap-4 rounded-[1.75rem] bg-elevated p-4 shadow-[var(--shadow-card)] ring-1 ring-line sm:flex-row sm:items-center sm:px-6"
-    >
-      <div className="flex items-center gap-4">
-        <span className="flex shrink-0 items-center">
-          <Avatar member={viewer} size={40} ring />
-          {[0, 1].map((i) => (
-            <span
-              key={i}
-              className="-ml-2 flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-line-strong bg-bg text-ink-3"
-            >
-              <UserPlusIcon size={16} />
-            </span>
-          ))}
-        </span>
-        <div className="min-w-0">
-          <p className="text-[16px] font-semibold">Just you on the map so far</p>
-          <p className="text-[14px] leading-snug text-ink-3">
-            Invite the family: their states show up here too, and the places you&apos;ve all been turn gold.
-          </p>
-        </div>
-      </div>
-      <Button
-        onClick={() => {
-          haptic(HAPTICS.select);
-          openInvite();
-        }}
-        icon={<UserPlusIcon size={17} weight="bold" />}
-        className="shrink-0 sm:ml-auto"
-      >
-        Invite family
-      </Button>
-    </motion.div>
-  );
-}
-
-/** Shown under the map until the viewer has made their adventurer avatar. */
-export function AdventurerNudge() {
-  const { viewer, openAdventurer } = useFamily();
-  if (!viewer || viewer.avatarUrl) return null;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.7, ease: EASE_OUT_EXPO, delay: 0.5 }}
-      className="mt-4 flex flex-col gap-4 rounded-[1.75rem] bg-elevated p-4 shadow-[var(--shadow-card)] ring-1 ring-line sm:flex-row sm:items-center sm:px-6"
-    >
-      <div className="flex items-center gap-4">
-        <span className="relative shrink-0">
-          <Avatar member={viewer} size={48} />
-          <CameraIcon
-            size={22}
-            weight="fill"
-            className="absolute -bottom-1 -right-1 rounded-full bg-elevated p-0.5 text-petrol"
-          />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[16px] font-semibold">Be an adventurer on the map</p>
-          <p className="text-[14px] leading-snug text-ink-3">
-            Snap a selfie and get an explorer avatar. Tap a state to see who&apos;s been, gathered round the campfire.
-          </p>
-        </div>
-      </div>
-      <Button
-        onClick={() => {
-          haptic(HAPTICS.select);
-          openAdventurer();
-        }}
-        icon={<CameraIcon size={17} weight="fill" />}
-        className="shrink-0 sm:ml-auto"
-      >
-        Take a selfie
-      </Button>
-    </motion.div>
   );
 }

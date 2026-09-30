@@ -98,7 +98,8 @@ export default function Nav() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <InviteButton />
+            {/* The map has its own invite seat in the crew dock. */}
+            {pathname !== "/" && <InviteButton />}
             <Link
               href="/trips/new"
               className="group hidden items-center gap-2 rounded-full bg-petrol py-1.5 pl-4 pr-1.5 text-[15px] font-medium text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_24px_-14px_var(--petrol)] hover:bg-petrol-strong transition-transform duration-300 active:scale-[0.97] sm:flex"
