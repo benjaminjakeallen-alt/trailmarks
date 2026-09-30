@@ -60,8 +60,10 @@ Tokens live in `src/app/globals.css`; never hard-code hex values in components.
   `prefers-reduced-motion` (handled globally via `MotionConfig`).
 - The home map (`src/components/map/UsMap.tsx`) is hand-built on `d3-geo` +
   us-atlas's pre-projected Albers file, so every state is its own animatable
-  path. It has a sunrise-sweep intro, a stamp + ripple + spark burst on claim,
-  a collapsing ring on unclaim, haptics, and an amber outline trace on select.
+  path. It has a sunrise-sweep intro; tap to claim (the edge glows and the
+  color blooms outward from your finger, gold when it completes the family),
+  press and hold to unclaim (a ring fills under your finger); haptics; and an
+  amber outline trace on select.
 
 ## Architecture
 

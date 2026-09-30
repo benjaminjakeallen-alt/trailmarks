@@ -50,7 +50,7 @@ export function StateCardBody({ code, claimed, visitorIds = [], onToggle, compac
             <div>
               <p className="text-[15px] font-semibold">{claimed ? "Claimed" : "Not yet"}</p>
               <p className="text-[13px] text-ink-3">
-                {claimed ? "On your map. Tap again to undo." : "Flip it once you've been."}
+                {claimed ? "On your map. Hold the state, or flip this, to undo." : "Flip it once you've been."}
               </p>
             </div>
             <Switch on={claimed} onChange={() => onToggle(info.code)} label={`Claim ${info.name}`} />

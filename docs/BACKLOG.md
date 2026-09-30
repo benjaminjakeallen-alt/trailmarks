@@ -3,31 +3,26 @@
 Ideas captured 2026-09-28 after the first design pass. Not started — each
 entry notes what it changes and the open questions to settle before building.
 
-## 1. Long-press to deselect a state
+## 1. Long-press to deselect a state — done
 
-Tap claims a state; a long press (~500 ms) unclaims it. Replaces today's
-tap-to-toggle, which makes accidental unclaims too easy.
+Tap claims; tapping a claimed state only selects it; press and hold
+(550 ms, with a ring filling under the finger) unclaims. Moving the finger
+cancels, so scrolling never unclaims. Keyboard: Enter claims, Delete
+unclaims; the switch in the state bar/sheet still works both ways.
 
-- Show a progress ring filling under the finger during the press so it's
-  discoverable, and cancel if the finger moves.
-- Keyboard and screen-reader users still need a non-press path (the state
-  card's switch already covers this).
+## 2. Stronger haptics — done
 
-## 2. Stronger haptics
+Named patterns in `src/lib/motion.ts` (select, claim, hold threshold,
+unclaim, everyone). Android vibrates the pattern; iOS Safari gets a single
+system tick through a hidden `<input type="checkbox" switch>` (Safari
+17.4+), which only fires inside a user gesture.
 
-Distinct patterns for claim, unclaim and long-press threshold.
+## 3. Claim hero animation: glow + outward gradient fill — done
 
-- `navigator.vibrate` works on Android only; **iOS Safari has no web haptics
-  API**. Real haptics on iPhone need the native app (see the native
-  companion note in the README).
-
-## 3. Claim hero animation: glow + outward gradient fill
-
-When a state is claimed, the fill should bloom outward from the tap point to
-the state's edges, with a soft glow, instead of the current stamp/spark burst.
-
-- Likely approach: a radial gradient or expanding circle clipped to the
-  state's own path, plus a blurred copy of the path for the glow.
+The state's edge glows while a radial gradient blooms from the tap point to
+its borders (clipped to the state's own path), then the solid fill settles
+beneath it. A claim that completes the family blooms gold with a "The whole
+family's been here" pill.
 
 ## 4. Remove the background contour lines — done
 

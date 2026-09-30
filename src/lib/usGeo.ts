@@ -14,6 +14,8 @@ export interface StateShape {
   info: StateInfo;
   d: string;
   centroid: [number, number];
+  /** [[x0, y0], [x1, y1]] in map units. */
+  bounds: [[number, number], [number, number]];
   feature: Feature<Geometry>;
 }
 
@@ -43,6 +45,7 @@ export function getUsGeometry(): UsGeometry {
       info,
       d: path(f) ?? "",
       centroid: path.centroid(f) as [number, number],
+      bounds: path.bounds(f) as [[number, number], [number, number]],
       feature: f,
     });
   }

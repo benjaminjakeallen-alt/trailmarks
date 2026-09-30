@@ -13,7 +13,7 @@ import MemoryTimeline from "@/components/memories/MemoryTimeline";
 import Switch from "@/components/ui/Switch";
 import { WordReveal } from "@/components/motion/Reveal";
 import { STATES_BY_CODE } from "@/lib/statesData";
-import { EASE_OUT_EXPO, haptic } from "@/lib/motion";
+import { EASE_OUT_EXPO, HAPTICS, haptic } from "@/lib/motion";
 import type { Memory } from "@/lib/types";
 
 interface StateDetailClientProps {
@@ -47,7 +47,7 @@ export default function StateDetailClient({
   async function toggle() {
     const next = !visited;
     setVisited(next);
-    haptic(next ? [10, 40, 18] : 8);
+    haptic(next ? HAPTICS.claim : HAPTICS.unclaim);
     const res = await fetch(`/api/states/${stateCode}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

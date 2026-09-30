@@ -65,8 +65,8 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
     return { mine: new Set(visits.filter((v) => v.userId === me).map((v) => v.stateCode)), byState: grouped };
   }, [visits, members, me]);
 
-  async function toggle(code: string) {
-    const claim = !mine.has(code);
+  async function setClaimed(code: string, claim: boolean) {
+    if (claim === mine.has(code)) return;
     const before = visits;
     setVisits(
       claim
@@ -83,6 +83,9 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
 
     if (!res?.ok) setVisits(before);
   }
+
+  /** The switch in the state bar/sheet: the keyboard- and screen-reader-friendly way to undo. */
+  const toggle = (code: string) => setClaimed(code, !mine.has(code));
 
   const mineList = Array.from(mine);
   const isFamily = members.length > 1;
@@ -121,7 +124,7 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
                     </motion.div>
                   ) : (
                     <motion.p key="hint" {...barMotion} className="text-[14px] text-ink-3">
-                      Tap a state to claim it. Tap again to undo.
+                      Tap a state to claim it. Press and hold to unclaim.
                     </motion.p>
                   )}
                 </AnimatePresence>
@@ -145,11 +148,13 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
                   members={members}
                   viewerId={me}
                   selectedCode={selected}
-                  onStateTap={toggle}
+                  onClaim={(code) => setClaimed(code, true)}
+                  onUnclaim={(code) => setClaimed(code, false)}
+                  onSelect={setSelected}
                 />
               </div>
               <p className="mt-2 text-center text-[13px] text-ink-3 lg:hidden">
-                Tap a state to claim it. Tap again to undo.
+                Tap a state to claim it. Press and hold to unclaim.
               </p>
             </div>
 
