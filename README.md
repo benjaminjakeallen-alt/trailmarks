@@ -186,7 +186,7 @@ Geolocation requires a "secure context" (HTTPS, or `localhost` — which
 ## Journal and voice
 
 On the map, a state's **Open journal** grows a slide-over panel out of the
-button: that state's family memories plus the composer, without leaving the
+button, docked on the right: that state's family memories plus the composer, without leaving the
 map (the full `/states/[code]` page is a link away). Every composer has a
 mic: speak and the words stream into the entry (browser speech recognition,
 `src/lib/useDictation.ts`).

@@ -37,14 +37,16 @@ export function originOf(el: Element): JournalOrigin {
 
 const MORPH = { type: "spring", stiffness: 210, damping: 30, mass: 1 } as const;
 
+/** Docked to the right edge, the side the "Open journal" button lives on. Full-screen on phones. */
 function panelSize() {
   const vw = window.innerWidth;
-  return { w: vw >= 640 ? Math.min(560, vw * 0.92) : vw, h: window.innerHeight, radius: vw >= 640 ? 32 : 0 };
+  const w = vw >= 640 ? Math.min(560, vw * 0.92) : vw;
+  return { w, h: window.innerHeight, x: vw - w, radius: vw >= 640 ? 32 : 0 };
 }
 
 /**
  * The panel's window. It animates its own box (not a scale, so nothing
- * stretches) from the opening button to the left edge, while the content
+ * stretches) from the opening button to the right edge, while the content
  * stays pinned in place and is revealed through it. A petrol wash carrying
  * the button's label fades as it grows, so it reads as the button opening.
  * Closing runs the same path back into the button.
@@ -53,7 +55,7 @@ function JournalShell({ origin, children }: { origin: JournalOrigin | null; chil
   const [isPresent, safeToRemove] = usePresence();
   const reduce = useReducedMotion();
   const [size, setSize] = useState(panelSize);
-  const start = origin ?? { x: -size.w, y: 0, w: size.w, h: size.h };
+  const start = origin ?? { x: window.innerWidth, y: 0, w: size.w, h: size.h };
 
   const left = useMotionValue(start.x);
   const top = useMotionValue(start.y);
@@ -61,8 +63,9 @@ function JournalShell({ origin, children }: { origin: JournalOrigin | null; chil
   const height = useMotionValue(start.h);
   const radius = useMotionValue(origin ? origin.h / 2 : size.radius);
   const wash = useMotionValue(origin ? 1 : 0);
-  // Counter-move the content so it stays put while the window around it moves.
-  const contentX = useTransform(left, (v) => -v);
+  // Counter-move the content so it stays put (at its docked spot) while the window around it moves.
+  const dockX = useMotionValue(size.x);
+  const contentX = useTransform(() => dockX.get() - left.get());
   const contentY = useTransform(top, (v) => -v);
 
   useEffect(() => {
@@ -75,7 +78,7 @@ function JournalShell({ origin, children }: { origin: JournalOrigin | null; chil
     const t = reduce ? { duration: 0 } : MORPH;
     if (isPresent) {
       const runs = [
-        animate(left, 0, t),
+        animate(left, size.x, t),
         animate(top, 0, t),
         animate(width, size.w, t),
         animate(height, size.h, t),
@@ -97,6 +100,8 @@ function JournalShell({ origin, children }: { origin: JournalOrigin | null; chil
 
   useEffect(() => {
     if (!isPresent) return;
+    dockX.set(size.x);
+    left.set(size.x);
     width.set(size.w);
     height.set(size.h);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,7 +110,7 @@ function JournalShell({ origin, children }: { origin: JournalOrigin | null; chil
   return (
     <motion.div
       className="fixed z-[71] overflow-hidden bg-bg shadow-[var(--shadow-float)]"
-      style={{ left, top, width, height, borderRadius: radius, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+      style={{ left, top, width, height, borderRadius: radius, borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
     >
       <motion.div className="absolute left-0 top-0" style={{ x: contentX, y: contentY, width: size.w, height: size.h }}>
         {children}
@@ -122,7 +127,7 @@ function JournalShell({ origin, children }: { origin: JournalOrigin | null; chil
 }
 
 /**
- * A state's journal, slid in from the left over the map, so writing (or
+ * A state's journal, docked on the right over the map, so writing (or
  * speaking) a memory never leaves the map. The full page at /states/[code]
  * is a link away.
  */
