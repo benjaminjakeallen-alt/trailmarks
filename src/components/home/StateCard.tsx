@@ -2,12 +2,13 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpRightIcon } from "@phosphor-icons/react";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Panel";
 import Switch from "@/components/ui/Switch";
 import StateSilhouette from "@/components/map/StateSilhouette";
 import Visitors from "@/components/family/Visitors";
 import { STATES_BY_CODE } from "@/lib/statesData";
+import { originOf, type JournalOrigin } from "@/components/home/JournalPanel";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
 interface StateCardProps {
@@ -16,10 +17,19 @@ interface StateCardProps {
   /** Family members who have claimed this state. */
   visitorIds?: string[];
   onToggle: (code: string) => void;
+  /** Open the journal in place (the map's slide-over) instead of navigating. */
+  onOpenJournal?: (code: string, origin: JournalOrigin) => void;
   compact?: boolean;
 }
 
-export function StateCardBody({ code, claimed, visitorIds = [], onToggle, compact = false }: StateCardProps) {
+export function StateCardBody({
+  code,
+  claimed,
+  visitorIds = [],
+  onToggle,
+  onOpenJournal,
+  compact = false,
+}: StateCardProps) {
   const info = code ? STATES_BY_CODE[code] : null;
 
   return (
@@ -63,14 +73,24 @@ export function StateCardBody({ code, claimed, visitorIds = [], onToggle, compac
           )}
 
           <div className={`mt-auto ${compact ? "pt-4" : "pt-6"}`}>
-            <ButtonLink
-              href={`/states/${info.code.toLowerCase()}`}
-              variant="primary"
-              trailingIcon={<ArrowUpRightIcon size={14} />}
-              className="w-full justify-between"
-            >
-              Open {info.name} journal
-            </ButtonLink>
+            {onOpenJournal ? (
+              <Button
+                onClick={(e) => onOpenJournal(info.code, originOf(e.currentTarget))}
+                trailingIcon={<ArrowUpRightIcon size={14} />}
+                className="w-full justify-between"
+              >
+                Open {info.name} journal
+              </Button>
+            ) : (
+              <ButtonLink
+                href={`/states/${info.code.toLowerCase()}`}
+                variant="primary"
+                trailingIcon={<ArrowUpRightIcon size={14} />}
+                className="w-full justify-between"
+              >
+                Open {info.name} journal
+              </ButtonLink>
+            )}
           </div>
         </motion.div>
       )}
@@ -84,6 +104,7 @@ export function StateSheet({
   claimed,
   visitorIds,
   onToggle,
+  onOpenJournal,
   onClose,
 }: StateCardProps & { onClose: () => void }) {
   return (
@@ -105,7 +126,14 @@ export function StateSheet({
         >
           <div className="rounded-[1.75rem] bg-elevated/95 p-5 shadow-[var(--shadow-float)] ring-1 ring-line backdrop-blur-xl">
             <div className="mx-auto -mt-2 mb-3 h-1 w-10 rounded-full bg-ink/15" />
-            <StateCardBody code={code} claimed={claimed} visitorIds={visitorIds} onToggle={onToggle} compact />
+            <StateCardBody
+              code={code}
+              claimed={claimed}
+              visitorIds={visitorIds}
+              onToggle={onToggle}
+              onOpenJournal={onOpenJournal}
+              compact
+            />
           </div>
         </motion.div>
       )}

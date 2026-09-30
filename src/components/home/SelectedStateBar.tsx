@@ -1,12 +1,13 @@
 "use client";
 
 import { ArrowUpRightIcon, XIcon } from "@phosphor-icons/react";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import Switch from "@/components/ui/Switch";
 import StateSilhouette from "@/components/map/StateSilhouette";
 import Visitors from "@/components/family/Visitors";
 import { useFamily } from "@/components/family/FamilyProvider";
 import { STATES_BY_CODE } from "@/lib/statesData";
+import { originOf, type JournalOrigin } from "@/components/home/JournalPanel";
 
 /** Desktop: the tapped state takes over the map's top bar instead of a side panel, so the map keeps its full width. */
 export default function SelectedStateBar({
@@ -14,12 +15,15 @@ export default function SelectedStateBar({
   claimed,
   visitorIds,
   onToggle,
+  onOpenJournal,
   onClose,
 }: {
   code: string;
   claimed: boolean;
   visitorIds: string[];
   onToggle: (code: string) => void;
+  /** With the button's box, so the journal can grow out of it. */
+  onOpenJournal: (code: string, origin: JournalOrigin) => void;
   onClose: () => void;
 }) {
   const { members } = useFamily();
@@ -51,9 +55,12 @@ export default function SelectedStateBar({
           <span className="text-[14px] font-semibold">{claimed ? "Claimed" : "Not yet"}</span>
           <Switch on={claimed} onChange={() => onToggle(info.code)} label={`Claim ${info.name}`} />
         </div>
-        <ButtonLink href={`/states/${info.code.toLowerCase()}`} trailingIcon={<ArrowUpRightIcon size={14} />}>
+        <Button
+          onClick={(e) => onOpenJournal(info.code, originOf(e.currentTarget))}
+          trailingIcon={<ArrowUpRightIcon size={14} />}
+        >
           Open journal
-        </ButtonLink>
+        </Button>
         <button
           type="button"
           onClick={onClose}

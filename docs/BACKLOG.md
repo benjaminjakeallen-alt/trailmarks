@@ -35,19 +35,21 @@ Replaced "Golden Hour" with "Glacier", built from the owner's three reference
 shots: deep petrol teal, glacier aqua, amber highlights, and photo-first
 cards with frosted-glass chips. See the README's design system section.
 
-## 6. Voice journal with transcription
+## 6. Voice journal with transcription — done (dictation); audio kept is next
 
-Record an audio journal entry, keep the audio, and transcribe it to text on
-the memory.
+Every memory composer has a mic ("Speak it", or the mic in the story box).
+It uses the browser's own speech recognition (`src/lib/useDictation.ts`):
+Apple's dictation on iPhone/Safari, Google's in Chrome; free, no API key,
+text streams in while you talk, and a dictated entry with no title takes
+its first sentence. Firefox has no speech recognition, so the mic hides there.
 
-- Record in the browser with `MediaRecorder` and store the audio in Supabase
-  Storage next to the photos.
-- Transcription needs a speech-to-text provider (for example OpenAI Whisper,
-  Deepgram or AssemblyAI). The provider and API key are still open; the
-  browser's built-in Web Speech API is free but unreliable and doesn't work
-  on uploaded files.
-- Data model: add `audio_file` and `transcript` columns to `memories`, and
-  let the transcript become an editable memory body.
+Still open, if wanted:
+
+- Keep the audio itself: record with `MediaRecorder`, store it in Supabase
+  Storage beside the photos, add `audio_file` to `memories`.
+- Server transcription for better accuracy and punctuation (OpenAI Whisper /
+  gpt-4o-transcribe, Deepgram, AssemblyAI, or via Vercel AI Gateway): a paid
+  provider decision.
 
 ## 7. Import photos by metadata — done (web version)
 

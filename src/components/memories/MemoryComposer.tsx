@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { PencilSimpleIcon, MapPinIcon } from "@phosphor-icons/react";
+import { MicrophoneIcon, PencilSimpleIcon, MapPinIcon, StopIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { DateInput, Label, TextArea } from "@/components/ui/Field";
 import PhotoDropzone from "@/components/memories/PhotoDropzone";
 import { appendMeta, localDay, readPhotoMeta } from "@/lib/photoMeta";
-import { EASE_OUT_EXPO } from "@/lib/motion";
+import { EASE_OUT_EXPO, HAPTICS, haptic } from "@/lib/motion";
+import { joinText, useDictation } from "@/lib/useDictation";
 import type { Memory, Photo } from "@/lib/types";
 
 interface MemoryComposerProps {
@@ -21,6 +22,15 @@ interface MemoryComposerProps {
   prompt: string;
   titlePlaceholder: string;
   onCreated: (memory: Memory) => void;
+  /** Open straight into the form (e.g. inside the journal panel). */
+  startOpen?: boolean;
+}
+
+/** A dictated entry with no title gets its first sentence (trimmed) as one. */
+function titleFrom(body: string) {
+  const first = body.trim().split(/(?<=[.!?])\s/)[0] ?? "";
+  const words = first.replace(/[.!?]+$/, "").split(/\s+/);
+  return words.length > 8 ? `${words.slice(0, 8).join(" ")}…` : words.join(" ");
 }
 
 function currentPosition(): Promise<GeolocationPosition | null> {
@@ -42,16 +52,24 @@ export default function MemoryComposer({
   prompt,
   titlePlaceholder,
   onCreated,
+  startOpen = false,
 }: MemoryComposerProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [memoryDate, setMemoryDate] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const dictation = useDictation((text) => setBody((prev) => joinText(prev, text)));
+
+  function toggleDictation() {
+    haptic(dictation.listening ? HAPTICS.select : HAPTICS.holdThreshold);
+    dictation.toggle();
+  }
 
   function reset() {
+    dictation.stop();
     setTitle("");
     setBody("");
     setMemoryDate("");
@@ -61,8 +79,10 @@ export default function MemoryComposer({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) {
-      setError("Give it a title first.");
+    dictation.stop();
+    const finalTitle = title.trim() || titleFrom(body);
+    if (!finalTitle) {
+      setError("Give it a title, or say a few words.");
       return;
     }
     setError(null);
@@ -82,7 +102,7 @@ export default function MemoryComposer({
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body, memoryDate: memoryDate || null, ...coords }),
+        body: JSON.stringify({ title: finalTitle, body, memoryDate: memoryDate || null, ...coords }),
       });
       if (!res.ok) throw new Error();
       const { memory } = (await res.json()) as { memory: Memory };
@@ -116,21 +136,33 @@ export default function MemoryComposer({
     >
       <AnimatePresence mode="popLayout" initial={false}>
         {!open ? (
-          <motion.button
+          <motion.div
             key="closed"
-            type="button"
-            onClick={() => setOpen(true)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex w-full items-center gap-3 p-3 pr-5 text-left"
+            className="flex items-center gap-2 p-3"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-petrol text-white">
-              <PencilSimpleIcon size={18} weight="regular" />
-            </span>
-            <span className="flex-1 text-[15px] text-ink-3">{prompt}</span>
-            {captureLocation && <MapPinIcon size={18} className="text-ink-3" />}
-          </motion.button>
+            <button type="button" onClick={() => setOpen(true)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-petrol text-white">
+                <PencilSimpleIcon size={18} weight="regular" />
+              </span>
+              <span className="flex-1 truncate text-[15px] text-ink-3">{prompt}</span>
+              {captureLocation && <MapPinIcon size={18} className="shrink-0 text-ink-3" />}
+            </button>
+            {dictation.supported && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(true);
+                  toggleDictation();
+                }}
+                className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-coral-soft px-4 text-[14px] font-semibold text-coral transition-transform active:scale-95"
+              >
+                <MicrophoneIcon size={18} weight="fill" /> Speak it
+              </button>
+            )}
+          </motion.div>
         ) : (
           <motion.form
             key="open"
@@ -150,13 +182,58 @@ export default function MemoryComposer({
               className="w-full bg-transparent font-display text-[1.7rem] leading-tight outline-none placeholder:text-ink-3/70"
             />
 
-            <TextArea
-              rows={3}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="What happened here? Write it while it's fresh."
-              aria-label="Story"
-            />
+            <div>
+              <div className="relative">
+                <TextArea
+                  rows={4}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder={
+                    dictation.listening
+                      ? "Listening… say what happened."
+                      : "What happened here? Write it, or tap the mic and say it."
+                  }
+                  aria-label="Story"
+                  className="pr-16"
+                />
+                {dictation.supported && (
+                  <button
+                    type="button"
+                    onClick={toggleDictation}
+                    aria-label={dictation.listening ? "Stop dictation" : "Dictate with your voice"}
+                    aria-pressed={dictation.listening}
+                    className={`absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+                      dictation.listening ? "bg-coral text-white" : "bg-coral-soft text-coral hover:bg-coral hover:text-white"
+                    }`}
+                  >
+                    {dictation.listening && <span className="record-pulse absolute inset-0 rounded-full bg-coral" />}
+                    <span className="relative">
+                      {dictation.listening ? <StopIcon size={16} weight="fill" /> : <MicrophoneIcon size={19} weight="fill" />}
+                    </span>
+                  </button>
+                )}
+              </div>
+              <AnimatePresence>
+                {(dictation.listening || dictation.error) && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className={`mt-2 flex items-start gap-2 text-[13.5px] ${dictation.error ? "text-coral" : "text-ink-3"}`}
+                  >
+                    {dictation.error ?? (
+                      <>
+                        <span className="mt-1.5 flex h-2 w-2 shrink-0">
+                          <span className="record-pulse absolute h-2 w-2 rounded-full bg-coral" />
+                          <span className="relative h-2 w-2 rounded-full bg-coral" />
+                        </span>
+                        <span className="italic">{dictation.interim || "Listening…"}</span>
+                      </>
+                    )}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-[200px_1fr]">
               <div>

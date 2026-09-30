@@ -6,6 +6,7 @@ import UsMap from "@/components/map/UsMap";
 import { StatsDrawer, StatsPill } from "@/components/home/StatsDrawer";
 import SelectedStateBar from "@/components/home/SelectedStateBar";
 import { StateSheet } from "@/components/home/StateCard";
+import JournalPanel, { type JournalOrigin } from "@/components/home/JournalPanel";
 import { useFamily } from "@/components/family/FamilyProvider";
 import { Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
@@ -55,6 +56,8 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
   const [visits, setVisits] = useState(initialVisits);
   const [selected, setSelected] = useState<string | null>(null);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [journal, setJournal] = useState<{ code: string; origin: JournalOrigin | null } | null>(null);
+  const openJournal = (code: string, origin: JournalOrigin) => setJournal({ code, origin });
 
   // Mine drives claiming; byState (member ids per state, in family order) drives the family view.
   const { mine, byState } = useMemo(() => {
@@ -82,6 +85,12 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
     }).catch(() => null);
 
     if (!res?.ok) setVisits(before);
+  }
+
+  /** Writing a memory claims the state for its author on the server; mirror that here. */
+  function markWritten(code: string) {
+    if (mine.has(code)) return;
+    setVisits((prev) => [...prev, { userId: me, stateCode: code, firstVisitedOn: new Date().toISOString().slice(0, 10) }]);
   }
 
   /** The switch in the state bar/sheet: the keyboard- and screen-reader-friendly way to undo. */
@@ -119,6 +128,7 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
                         claimed={mine.has(selected)}
                         visitorIds={byState[selected] ?? []}
                         onToggle={toggle}
+                        onOpenJournal={openJournal}
                         onClose={() => setSelected(null)}
                       />
                     </motion.div>
@@ -169,11 +179,21 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
       </section>
 
       <StateSheet
-        code={selected}
+        code={journal ? null : selected}
         claimed={selected ? mine.has(selected) : false}
         visitorIds={selected ? (byState[selected] ?? []) : []}
         onToggle={toggle}
+        onOpenJournal={openJournal}
         onClose={() => setSelected(null)}
+      />
+
+      <JournalPanel
+        code={journal?.code ?? null}
+        origin={journal?.origin ?? null}
+        claimed={journal ? mine.has(journal.code) : false}
+        visitorIds={journal ? (byState[journal.code] ?? []) : []}
+        onClose={() => setJournal(null)}
+        onWrote={markWritten}
       />
     </>
   );
