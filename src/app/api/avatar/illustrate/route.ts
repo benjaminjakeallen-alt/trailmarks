@@ -44,7 +44,14 @@ export async function POST(req: NextRequest) {
     const png = await sharp(Buffer.from(image.uint8Array)).resize(512, 512).png().toBuffer();
     return NextResponse.json({ image: `data:image/png;base64,${png.toString("base64")}` });
   } catch (err) {
-    console.error("avatar illustrate failed:", err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: "The illustrator isn't available right now." }, { status: 503 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("avatar illustrate failed:", message);
+    // Say why (without details), so "AI Gateway isn't set up for this project" is easy to spot.
+    const reason = /authenticat|api key|oidc/i.test(message)
+      ? "not-configured"
+      : /credit|quota|payment|billing|insufficient/i.test(message)
+        ? "no-credits"
+        : "failed";
+    return NextResponse.json({ error: "The illustrator isn't available right now.", reason }, { status: 503 });
   }
 }
