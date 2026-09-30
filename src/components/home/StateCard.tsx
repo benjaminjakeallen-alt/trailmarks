@@ -6,7 +6,7 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Panel";
 import Switch from "@/components/ui/Switch";
 import StateSilhouette from "@/components/map/StateSilhouette";
-import Visitors from "@/components/family/Visitors";
+import { VisitorsCamp } from "@/components/family/Visitors";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import { originOf, type JournalOrigin } from "@/components/home/JournalPanel";
 import { EASE_OUT_EXPO } from "@/lib/motion";
@@ -16,6 +16,8 @@ interface StateCardProps {
   claimed: boolean;
   /** Family members who have claimed this state. */
   visitorIds?: string[];
+  /** When each of them first went. */
+  visitorDates?: Record<string, string | null>;
   onToggle: (code: string) => void;
   /** Open the journal in place (the map's slide-over) instead of navigating. */
   onOpenJournal?: (code: string, origin: JournalOrigin) => void;
@@ -26,6 +28,7 @@ export function StateCardBody({
   code,
   claimed,
   visitorIds = [],
+  visitorDates,
   onToggle,
   onOpenJournal,
   compact = false,
@@ -54,7 +57,7 @@ export function StateCardBody({
             <StateSilhouette code={info.code} claimed={claimed} width={96} height={72} className="h-16 w-24 shrink-0" />
           </div>
 
-          <Visitors userIds={visitorIds} className="mt-3" />
+          <VisitorsCamp userIds={visitorIds} dates={visitorDates} className="mt-3" />
 
           <div className={`flex items-center justify-between rounded-2xl bg-bg px-4 py-3 ring-1 ring-line ${compact ? "mt-4" : "mt-6"}`}>
             <div>
@@ -103,6 +106,7 @@ export function StateSheet({
   code,
   claimed,
   visitorIds,
+  visitorDates,
   onToggle,
   onOpenJournal,
   onClose,
@@ -130,6 +134,7 @@ export function StateSheet({
               code={code}
               claimed={claimed}
               visitorIds={visitorIds}
+              visitorDates={visitorDates}
               onToggle={onToggle}
               onOpenJournal={onOpenJournal}
               compact

@@ -16,7 +16,7 @@ import { ArrowUpRightIcon, NotebookIcon, XIcon } from "@phosphor-icons/react";
 import StateSilhouette from "@/components/map/StateSilhouette";
 import MemoryComposer from "@/components/memories/MemoryComposer";
 import MemoryTimeline from "@/components/memories/MemoryTimeline";
-import Visitors from "@/components/family/Visitors";
+import { VisitorsCamp } from "@/components/family/Visitors";
 import { useFamily } from "@/components/family/FamilyProvider";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import { EASE_OUT_EXPO } from "@/lib/motion";
@@ -136,6 +136,7 @@ export default function JournalPanel({
   origin,
   claimed,
   visitorIds,
+  visitorDates,
   onClose,
   onWrote,
 }: {
@@ -143,6 +144,7 @@ export default function JournalPanel({
   origin: JournalOrigin | null;
   claimed: boolean;
   visitorIds: string[];
+  visitorDates?: Record<string, string | null>;
   onClose: () => void;
   /** A new memory claims the state for its author; the map should show it. */
   onWrote: (code: string) => void;
@@ -226,8 +228,8 @@ export default function JournalPanel({
                   transition={{ duration: 0.5, ease: EASE_OUT_EXPO, delay: 0.22 }}
                   className="space-y-6"
                 >
+                  <VisitorsCamp userIds={visitorIds} dates={visitorDates} />
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <Visitors userIds={visitorIds} />
                     <Link
                       href={`/states/${info.code.toLowerCase()}`}
                       className="group ml-auto inline-flex items-center gap-1 text-[14px] font-semibold text-petrol hover:text-petrol-strong"

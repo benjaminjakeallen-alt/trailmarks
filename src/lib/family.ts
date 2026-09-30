@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { cache } from "react";
-import { getSupabase, unwrap } from "@/lib/supabase";
+import { avatarUrl, getSupabase, unwrap } from "@/lib/supabase";
 import type { Family, Member } from "@/lib/types";
 
 /**
@@ -27,18 +27,19 @@ interface ProfileRow {
   user_id: string;
   display_name: string;
   color: string;
+  avatar_file: string | null;
   created_at: string;
 }
 
 function toMember(row: ProfileRow): Member {
-  return { userId: row.user_id, displayName: row.display_name, color: row.color };
+  return { userId: row.user_id, displayName: row.display_name, color: row.color, avatarUrl: avatarUrl(row.avatar_file) };
 }
 
 export const getMembers = cache(async (familyId: string): Promise<Member[]> => {
   const rows = unwrap(
     await getSupabase()
       .from("profiles")
-      .select("user_id, display_name, color, created_at")
+      .select("user_id, display_name, color, avatar_file, created_at")
       .eq("family_id", familyId)
       .order("created_at", { ascending: true }),
   ) as ProfileRow[];

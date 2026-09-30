@@ -4,7 +4,7 @@ import { getFamilyVisits } from "@/lib/stateVisits";
 import Avatar from "@/components/family/Avatar";
 import { SignOutButton } from "@/components/family/FamilyActions";
 import { InviteOptions } from "@/components/family/Invite";
-import { ChangePasswordButton, ResetPasswordButton } from "@/components/family/MemberActions";
+import { AdventurerButton, ChangePasswordButton, ResetPasswordButton } from "@/components/family/MemberActions";
 import { Eyebrow, Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 
@@ -49,16 +49,19 @@ export default async function FamilyPage() {
         <ul className="mt-4 divide-y divide-line">
           {family.members.map((m) => (
             <li key={m.userId} className="flex items-start gap-4 py-4">
-              <Avatar member={m} size={42} />
+              <Avatar member={m} size={52} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[16px] font-semibold">
                   {m.displayName}
                   {m.userId === viewer.userId && <span className="ml-2 text-[13px] font-medium text-ink-3">You</span>}
                 </p>
                 {m.userId === viewer.userId && <p className="truncate text-[13px] text-ink-3">{viewer.email}</p>}
-                <div className="mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {m.userId === viewer.userId ? (
-                    <ChangePasswordButton />
+                    <>
+                      <AdventurerButton hasAvatar={Boolean(m.avatarUrl)} />
+                      <ChangePasswordButton />
+                    </>
                   ) : (
                     <ResetPasswordButton userId={m.userId} name={m.displayName} />
                   )}

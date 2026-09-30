@@ -71,6 +71,8 @@ export interface Member {
   userId: string;
   displayName: string;
   color: string;
+  /** Their adventurer avatar (made from a selfie), if they've made one. */
+  avatarUrl: string | null;
 }
 
 export interface Family {

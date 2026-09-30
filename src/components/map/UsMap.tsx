@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MAP_HEIGHT, MAP_WIDTH, getUsGeometry } from "@/lib/usGeo";
 import { EASE_OUT_EXPO, HAPTICS, SPRING_SNAPPY, SPRING_STAMP, haptic } from "@/lib/motion";
-import { initials } from "@/components/family/Avatar";
+import Campfire from "@/components/family/Campfire";
 import type { Member } from "@/lib/types";
 
 type FxKind = "claim" | "unclaim";
@@ -42,61 +42,6 @@ const PRESS_SLOP_PX = 10;
 
 const NO_FAMILY: Record<string, string[]> = {};
 const NO_MEMBERS: Member[] = [];
-const MARKER_R = 8.5;
-const MARKER_GAP = 11.5;
-const MAX_MARKERS = 3;
-
-/** Little member badges at a state's centroid; "+n" past three. */
-function MemberMarkers({ x, y, members }: { x: number; y: number; members: Member[] }) {
-  const shown = members.slice(0, MAX_MARKERS);
-  const extra = members.length - shown.length;
-  const count = shown.length + (extra > 0 ? 1 : 0);
-  const startX = x - ((count - 1) * MARKER_GAP) / 2;
-  return (
-    <g>
-      {shown.map((m, i) => (
-        <motion.g
-          key={m.userId}
-          initial={{ opacity: 0, scale: 0.3 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.3 }}
-          transition={SPRING_STAMP}
-          style={{ transformBox: "fill-box", transformOrigin: "center" }}
-        >
-          <circle cx={startX + i * MARKER_GAP} cy={y} r={MARKER_R} fill={m.color} stroke="#ffffff" strokeWidth={1.6} />
-          <text
-            x={startX + i * MARKER_GAP}
-            y={y}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={9}
-            fontWeight={700}
-            fill="#ffffff"
-          >
-            {initials(m.displayName).slice(0, 1)}
-          </text>
-        </motion.g>
-      ))}
-      {extra > 0 && (
-        <g>
-          <circle cx={startX + shown.length * MARKER_GAP} cy={y} r={MARKER_R} fill="var(--ink)" stroke="#ffffff" strokeWidth={1.6} />
-          <text
-            x={startX + shown.length * MARKER_GAP}
-            y={y}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={7.5}
-            fontWeight={700}
-            fill="#ffffff"
-          >
-            +{extra}
-          </text>
-        </g>
-      )}
-    </g>
-  );
-}
-
 const INTRO_MS = 1700;
 
 /** Sunrise sweep: eastern states light up first. */
@@ -404,6 +349,7 @@ export default function UsMap({
   // Hide the tooltip while that state's claim animation plays, so it doesn't cover the moment.
   const hoveredShape = hovered && !fx.some((f) => f.code === hovered) ? geo.byCode[hovered] : null;
   const selectedShape = selectedCode ? geo.byCode[selectedCode] : null;
+  const campers = selectedCode ? (family[selectedCode] ?? []).map((id) => byId[id]).filter(Boolean) : [];
 
   return (
     <div
@@ -570,20 +516,6 @@ export default function UsMap({
           transition={{ duration: 1, delay: 0.3 }}
         />
 
-        {isFamily && (
-          <g pointerEvents="none" aria-hidden>
-            {geo.shapes
-              .filter((s) => (family[s.code]?.length ?? 0) > 0)
-              .map((s) => (
-                <MemberMarkers
-                  key={`m-${s.code}`}
-                  x={s.centroid[0]}
-                  y={s.centroid[1]}
-                  members={(family[s.code] ?? []).map((id) => byId[id]).filter(Boolean)}
-                />
-              ))}
-          </g>
-        )}
 
         <g pointerEvents="none">
           {hoveredShape && hovered !== selectedCode && (
@@ -615,6 +547,29 @@ export default function UsMap({
         </g>
       </svg>
 
+      {/* Who's been to the selected state: their adventurers round a campfire, right on the map. */}
+      <AnimatePresence>
+        {selectedShape && campers.length > 0 && (
+          <motion.div
+            key={`camp-${selectedShape.code}`}
+            className="pointer-events-none absolute z-[5]"
+            style={{
+              left: `${(selectedShape.centroid[0] / MAP_WIDTH) * 100}%`,
+              top: `${(selectedShape.centroid[1] / MAP_HEIGHT) * 100}%`,
+            }}
+            initial={{ opacity: 0, scale: 0.4 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.18 } }}
+            transition={SPRING_STAMP}
+          >
+            <div className="-translate-x-1/2 -translate-y-[64%] max-sm:scale-[0.82]">
+              <div className="absolute left-1/2 top-[62%] h-9 w-28 -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgb(8_40_44/0.35),transparent)]" />
+              <Campfire members={campers} variant="map" gold={everyone(selectedShape.code)} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>{hold && <HoldRing key={`${hold.code}-${hold.x}`} x={hold.x} y={hold.y} />}</AnimatePresence>
       <AnimatePresence>{cheer && <Cheer key={cheer.id} x={cheer.x} y={cheer.y} />}</AnimatePresence>
 
@@ -624,7 +579,7 @@ export default function UsMap({
         aria-hidden
       >
         <AnimatePresence>
-          {hoveredShape && (
+          {hoveredShape && !(hoveredShape.code === selectedCode && campers.length > 0) && (
             <motion.div
               key={hoveredShape.code}
               initial={{ opacity: 0, y: 4, scale: 0.96 }}

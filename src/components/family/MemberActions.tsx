@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import {
+  CameraIcon,
   ChatCircleTextIcon,
   CheckIcon,
   CopyIcon,
@@ -12,10 +13,11 @@ import { Button } from "@/components/ui/Button";
 import { Label, TextInput } from "@/components/ui/Field";
 import Sheet from "@/components/ui/Sheet";
 import { HAPTICS, haptic } from "@/lib/motion";
+import { useFamily } from "@/components/family/FamilyProvider";
 
 const noSubscribe = () => () => {};
 const pill =
-  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-petrol ring-1 ring-line hover:bg-bg hover:ring-petrol/40";
+  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold text-petrol ring-1 ring-line hover:bg-bg hover:ring-petrol/40";
 
 /** For someone else in the family: make them a one-time reset link and send it. */
 export function ResetPasswordButton({ userId, name }: { userId: string; name: string }) {
@@ -184,5 +186,15 @@ export function ChangePasswordButton() {
         )}
       </Sheet>
     </>
+  );
+}
+
+/** Opens the selfie → adventurer maker. */
+export function AdventurerButton({ hasAvatar }: { hasAvatar: boolean }) {
+  const { openAdventurer } = useFamily();
+  return (
+    <button type="button" onClick={openAdventurer} className={pill}>
+      <CameraIcon size={14} weight="fill" /> {hasAvatar ? "New adventurer" : "Make your adventurer"}
+    </button>
   );
 }

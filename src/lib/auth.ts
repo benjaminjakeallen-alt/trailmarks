@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { getSupabase, unwrap } from "@/lib/supabase";
+import { avatarUrl, getSupabase, unwrap } from "@/lib/supabase";
 import { SUPABASE_PUBLISHABLE_KEY, supabaseUrl } from "@/lib/supabaseConfig";
 import type { Viewer } from "@/lib/types";
 
@@ -32,6 +32,7 @@ interface ProfileRow {
   family_id: string;
   display_name: string;
   color: string;
+  avatar_file: string | null;
 }
 
 /** The signed-in person with their family, or null. Cached for the request. */
@@ -43,7 +44,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!user) return null;
 
   const profile = unwrap(
-    await getSupabase().from("profiles").select("family_id, display_name, color").eq("user_id", user.id).maybeSingle(),
+    await getSupabase().from("profiles").select("family_id, display_name, color, avatar_file").eq("user_id", user.id).maybeSingle(),
   ) as ProfileRow | null;
   if (!profile) return null;
 
@@ -53,6 +54,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     familyId: profile.family_id,
     displayName: profile.display_name,
     color: profile.color,
+    avatarUrl: avatarUrl(profile.avatar_file),
   };
 });
 

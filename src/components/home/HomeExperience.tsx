@@ -8,7 +8,7 @@ import SelectedStateBar from "@/components/home/SelectedStateBar";
 import { StateSheet } from "@/components/home/StateCard";
 import JournalPanel, { type JournalOrigin } from "@/components/home/JournalPanel";
 import { useFamily } from "@/components/family/FamilyProvider";
-import { InviteNudge } from "@/components/family/Invite";
+import { AdventurerNudge, InviteNudge } from "@/components/family/Invite";
 import { Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 import { EASE_OUT_EXPO } from "@/lib/motion";
@@ -61,12 +61,14 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
   const openJournal = (code: string, origin: JournalOrigin) => setJournal({ code, origin });
 
   // Mine drives claiming; byState (member ids per state, in family order) drives the family view.
-  const { mine, byState } = useMemo(() => {
+  const { mine, byState, datesByState } = useMemo(() => {
     const order = new Map(members.map((m, i) => [m.userId, i]));
     const grouped: Record<string, string[]> = {};
     for (const v of visits) (grouped[v.stateCode] ??= []).push(v.userId);
     for (const ids of Object.values(grouped)) ids.sort((a, b) => (order.get(a) ?? 99) - (order.get(b) ?? 99));
-    return { mine: new Set(visits.filter((v) => v.userId === me).map((v) => v.stateCode)), byState: grouped };
+    const dates: Record<string, Record<string, string | null>> = {};
+    for (const v of visits) (dates[v.stateCode] ??= {})[v.userId] = v.firstVisitedOn;
+    return { mine: new Set(visits.filter((v) => v.userId === me).map((v) => v.stateCode)), byState: grouped, datesByState: dates };
   }, [visits, members, me]);
 
   async function setClaimed(code: string, claim: boolean) {
@@ -177,6 +179,7 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
             />
           </Panel>
         </motion.div>
+        <AdventurerNudge />
         {!isFamily && <InviteNudge />}
       </section>
 
@@ -184,6 +187,7 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
         code={journal ? null : selected}
         claimed={selected ? mine.has(selected) : false}
         visitorIds={selected ? (byState[selected] ?? []) : []}
+        visitorDates={selected ? datesByState[selected] : undefined}
         onToggle={toggle}
         onOpenJournal={openJournal}
         onClose={() => setSelected(null)}
@@ -194,6 +198,7 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
         origin={journal?.origin ?? null}
         claimed={journal ? mine.has(journal.code) : false}
         visitorIds={journal ? (byState[journal.code] ?? []) : []}
+        visitorDates={journal ? datesByState[journal.code] : undefined}
         onClose={() => setJournal(null)}
         onWrote={markWritten}
       />

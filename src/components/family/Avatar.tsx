@@ -5,18 +5,31 @@ export function initials(name: string) {
   return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "")).toUpperCase() || "?";
 }
 
-/** A member's initials on their color. */
+/** A member's adventurer avatar, or their initials on their color until they make one. */
 export default function Avatar({
   member,
   size = 28,
   ring = false,
   className = "",
 }: {
-  member: Pick<Member, "displayName" | "color">;
+  member: Pick<Member, "displayName" | "color"> & { avatarUrl?: string | null };
   size?: number;
   ring?: boolean;
   className?: string;
 }) {
+  if (member.avatarUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- tiny, fixed-size, already 512px webp
+      <img
+        src={member.avatarUrl}
+        alt=""
+        title={member.displayName}
+        draggable={false}
+        className={`inline-block shrink-0 select-none rounded-full object-cover ${ring ? "ring-2 ring-elevated" : ""} ${className}`}
+        style={{ width: size, height: size, background: member.color }}
+      />
+    );
+  }
   return (
     <span
       title={member.displayName}

@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 export const PHOTOS_BUCKET = "photos";
+export const AVATARS_BUCKET = "avatars";
 
 let client: SupabaseClient | null = null;
 
@@ -38,4 +39,9 @@ export function unwrap<T>({ data, error }: { data: T | null; error: { message: s
  */
 export function photoUrl(fileName: string): string {
   return `/p/${fileName}`;
+}
+
+/** Adventurer avatars, served by /a/<file> to the owner's family. */
+export function avatarUrl(fileName: string | null): string | null {
+  return fileName ? `/a/${fileName}` : null;
 }
