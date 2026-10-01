@@ -1,18 +1,40 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Slab, TILT, useCast } from "@/components/scenes/diorama";
+import { Slab, TILT } from "@/components/scenes/diorama";
 import { CAMPFIRE, DIORAMAS, type Diorama } from "@/components/scenes/dioramaScenes";
 import { MAP_WIDTH, type StateShape } from "@/lib/usGeo";
 import type { Member } from "@/lib/types";
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-function Cast({ scene, members }: { scene: Diorama; members: Member[] }) {
-  const cast = useCast(members);
-  const { Play } = scene;
-  return <Play cast={cast} />;
-}
+/** The same fills as the map: aqua for claimed, gold when the whole family has been. */
+const CLAIMED_GROUND = (
+  <>
+    <defs>
+      <linearGradient id="slab-claimed" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" style={{ stopColor: "var(--petrol)" }} />
+        <stop offset="0.55" style={{ stopColor: "var(--aqua)" }} />
+        <stop offset="1" style={{ stopColor: "var(--aqua-bright)" }} />
+      </linearGradient>
+    </defs>
+    <rect x="-10" y="-10" width="120" height="120" fill="url(#slab-claimed)" />
+  </>
+);
+const GOLD_GROUND = (
+  <>
+    <defs>
+      <linearGradient id="slab-gold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#9c6a05" />
+        <stop offset="0.35" stopColor="#e9a818" />
+        <stop offset="0.5" stopColor="#fff4c4" />
+        <stop offset="0.65" stopColor="#f2b624" />
+        <stop offset="1" stopColor="#a87306" />
+      </linearGradient>
+    </defs>
+    <rect x="-10" y="-10" width="120" height="120" fill="url(#slab-gold)" />
+  </>
+);
 
 /** Which scene a state plays (states with two take turns per tap); the rest get the campfire. */
 export function sceneFor(code: string, turn: number): Diorama {
@@ -28,17 +50,15 @@ export function sceneFor(code: string, turn: number): Diorama {
 export default function StateDiorama({
   shape,
   size,
-  members,
   gold,
-  turn,
 }: {
   shape: StateShape;
   size: { w: number; h: number };
+  /** Who's been (their 3D characters will stand on it). */
   members: Member[];
   gold: boolean;
   turn: number;
 }) {
-  const scene = sceneFor(shape.code, turn);
   const ppu = size.w / MAP_WIDTH;
   const [[x0, y0], [x1, y1]] = shape.bounds;
   const bw = (x1 - x0) * ppu;
@@ -58,7 +78,7 @@ export default function StateDiorama({
   const ty = clamp(cy0 - h * 0.1, h * 0.6, size.h - h * 0.5);
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[6]" aria-label={`${shape.info.name}: ${scene.title}`} role="img">
+    <div className="pointer-events-none absolute inset-0 z-[6]" aria-label={`${shape.info.name}, lifted`} role="img">
       <motion.div
         className="absolute inset-0 bg-bg/45"
         initial={{ opacity: 0 }}
@@ -75,20 +95,19 @@ export default function StateDiorama({
           exit={{ x: cx0 - tx, y: cy0 - ty, scale: 1 / k, rotateX: 0, z: 0, opacity: 0, transition: { duration: 0.35 } }}
           transition={{ type: "spring", stiffness: 130, damping: 18 }}
         >
-          <Slab d={shape.d} bounds={shape.bounds} centroid={shape.centroid} w={w} h={h} ground={scene.ground} edge={gold ? "#b47a06" : scene.edge}>
-            <Cast key={`${shape.code}-${turn}-${members.map((m) => m.userId).join(",")}`} scene={scene} members={members} />
+          {/* Solid, in the map's own colors. (The family's 3D characters will stand on it.) */}
+          <Slab
+            d={shape.d}
+            bounds={shape.bounds}
+            centroid={shape.centroid}
+            w={w}
+            h={h}
+            ground={gold ? GOLD_GROUND : CLAIMED_GROUND}
+            edge={gold ? "#a87306" : "#0b5c63"}
+          >
+            {null}
           </Slab>
         </motion.div>
-        <motion.p
-          className="absolute left-1/2 top-[88%] -translate-x-1/2 whitespace-nowrap rounded-full bg-elevated/95 px-3 py-1 text-[12.5px] font-semibold text-ink shadow-[var(--shadow-card)] ring-1 ring-line"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          {gold && <span className="mr-1">✨</span>}
-          {scene.title}
-        </motion.p>
       </div>
     </div>
   );
