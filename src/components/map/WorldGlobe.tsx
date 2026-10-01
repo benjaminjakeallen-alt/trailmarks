@@ -6,7 +6,7 @@ import { geoArea, geoCentroid, geoDistance, geoGraticule10, geoOrthographic, geo
 import { feature } from "topojson-client";
 import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
 import type { GeometryObject, Topology } from "topojson-specification";
-import { MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowLeftIcon, MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import Campfire from "@/components/family/Campfire";
 import { Cheer, HoldRing, LONG_PRESS_MS, PRESS_SLOP_PX } from "@/components/map/UsMap";
 import { COUNTRIES, COUNTRIES_BY_CODE, type ContinentCode } from "@/lib/countriesData";
@@ -24,7 +24,7 @@ const H = 600;
 const R = 270;
 
 export const CONTINENTS: { key: "WORLD" | ContinentCode; label: string; lon: number; lat: number; zoom: number }[] = [
-  { key: "WORLD", label: "World", lon: -40, lat: 20, zoom: 1 },
+  { key: "WORLD", label: "Globe", lon: -40, lat: 20, zoom: 1 },
   { key: "NA", label: "North America", lon: -98, lat: 38, zoom: 1.7 },
   { key: "SA", label: "South America", lon: -60, lat: -18, zoom: 1.75 },
   { key: "EU", label: "Europe", lon: 14, lat: 51, zoom: 2.9 },
@@ -158,9 +158,16 @@ export default function WorldGlobe({
     });
   }
 
+  /** The whole globe only picks continents; countries are claimed once you're in one. */
+  const atGlobe = continent === "WORLD";
+  const [hoverContinent, setHoverContinent] = useState<string | null>(null);
+
   function pickContinent(key: string) {
-    const c = CONTINENTS.find((x) => x.key === key)!;
+    const c = CONTINENTS.find((x) => x.key === key);
+    if (!c) return;
     setContinent(key);
+    setHoverContinent(null);
+    if (key === "WORLD") onSelect(null);
     haptic(HAPTICS.select);
     flyTo({ lon: c.lon, lat: c.lat, zoom: c.zoom });
   }
@@ -171,7 +178,9 @@ export default function WorldGlobe({
     setQuery("");
     setSearching(false);
     onSelect(code);
-    const zoom = Math.max(viewRef.current.zoom, 2.4);
+    const home = CONTINENTS.find((c) => c.key === info.continent);
+    if (home) setContinent(home.key);
+    const zoom = Math.max(home?.zoom ?? 1, 2.4);
     flyTo({ lon: info.latlng[1], lat: info.latlng[0], zoom });
   }
 
@@ -220,7 +229,7 @@ export default function WorldGlobe({
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
       const code = codeAt(e.clientX, e.clientY);
       const p = { x: e.clientX, y: e.clientY, view: viewRef.current, moved: false, code, timer: null as number | null, held: false };
-      if (code && visited.has(code) && code !== "US") {
+      if (!atGlobe && code && visited.has(code) && code !== "US") {
         const at = wrapPoint(e.clientX, e.clientY);
         p.timer = window.setTimeout(() => {
           if (!press.current || press.current.moved) return;
@@ -235,7 +244,14 @@ export default function WorldGlobe({
     },
     onPointerMove: (e: React.PointerEvent) => {
       const p = press.current;
-      if (!p) return;
+      if (!p) {
+        // On the whole globe, light up the continent under the pointer.
+        if (atGlobe && e.pointerType === "mouse") {
+          const code = codeAt(e.clientX, e.clientY);
+          setHoverContinent(code ? (COUNTRIES_BY_CODE[code]?.continent ?? null) : null);
+        }
+        return;
+      }
       const dx = e.clientX - p.x;
       const dy = e.clientY - p.y;
       if (!p.moved && Math.hypot(dx, dy) > PRESS_SLOP_PX) {
@@ -256,12 +272,17 @@ export default function WorldGlobe({
     onPointerUp: (e: React.PointerEvent) => {
       const p = press.current;
       if (p && !p.moved && !p.held) {
-        if (p.code) claim(p.code, e.clientX, e.clientY);
+        if (atGlobe) {
+          // A tap on the globe zooms into that continent.
+          const key = p.code ? COUNTRIES_BY_CODE[p.code]?.continent : null;
+          if (key) pickContinent(key);
+        } else if (p.code) claim(p.code, e.clientX, e.clientY);
         else onSelect(null);
       }
       endPress();
     },
     onPointerCancel: endPress,
+    onPointerLeave: () => setHoverContinent(null),
     onWheel: (e: React.WheelEvent) => {
       spin.current?.stop();
       setView((v) => ({ ...v, zoom: Math.max(0.9, Math.min(8, v.zoom * (e.deltaY < 0 ? 1.1 : 0.91))) }));
@@ -373,7 +394,16 @@ export default function WorldGlobe({
             if (!d) return null;
             const mine = visited.has(code);
             const fam = !mine && (family[code]?.length ?? 0) > 0;
-            const fill = everyone(code) ? "url(#wg-gold)" : mine ? "url(#wg-visited)" : fam ? "color-mix(in srgb, var(--aqua-bright) 45%, var(--land))" : "var(--land)";
+            const lit = atGlobe && hoverContinent !== null && COUNTRIES_BY_CODE[code]?.continent === hoverContinent;
+            const fill = everyone(code)
+              ? "url(#wg-gold)"
+              : mine
+                ? "url(#wg-visited)"
+                : fam
+                  ? "color-mix(in srgb, var(--aqua-bright) 45%, var(--land))"
+                  : lit
+                    ? "var(--land-hover)"
+                    : "var(--land)";
             return (
               <path
                 key={`${code}-${i}`}
@@ -383,7 +413,7 @@ export default function WorldGlobe({
                 stroke="var(--land-edge)"
                 strokeWidth={0.7}
                 strokeLinejoin="round"
-                className="transition-[fill] duration-300 hover:brightness-95"
+                className={`transition-[fill] duration-300 ${atGlobe ? "cursor-pointer" : "hover:brightness-95"}`}
               >
                 <title>{COUNTRIES_BY_CODE[code]?.name ?? code}</title>
               </path>
@@ -462,6 +492,16 @@ export default function WorldGlobe({
         </AnimatePresence>
         <AnimatePresence>{hold && <HoldRing key={`${hold.code}-${hold.x}`} x={hold.x} y={hold.y} />}</AnimatePresence>
         <AnimatePresence>{cheer && <Cheer key={cheer.id} x={cheer.x} y={cheer.y} />}</AnimatePresence>
+
+        {!atGlobe && (
+          <button
+            type="button"
+            onClick={() => pickContinent("WORLD")}
+            className="absolute left-2 top-2 z-10 flex h-10 items-center gap-1.5 rounded-full bg-elevated/90 pl-2.5 pr-3.5 text-[14px] font-semibold text-ink-2 shadow-[var(--shadow-card)] ring-1 ring-line backdrop-blur-xl hover:text-ink sm:left-3 sm:top-3"
+          >
+            <ArrowLeftIcon size={16} weight="bold" /> Globe
+          </button>
+        )}
 
         {/* Find a country: the way to reach the small ones. */}
         <div className="absolute right-2 top-2 z-10 sm:right-3 sm:top-3">

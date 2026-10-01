@@ -242,7 +242,7 @@ export default function HomeExperience({
                       </motion.div>
                     ) : (
                       <motion.p key="world-hint" {...barMotion} className="text-[14px] text-ink-3">
-                        Drag to spin. Tap a country to claim it, hold to unclaim.
+                        Tap a continent to zoom in, then a country to claim it.
                       </motion.p>
                     )
                   ) : selected ? (
@@ -387,7 +387,7 @@ export default function HomeExperience({
                 <p className="font-normal text-ink-3 lg:hidden">
                   {view === "us"
                     ? "Tap a state to claim it. Press and hold to unclaim."
-                    : "Drag to spin. Tap a country to claim it, hold to unclaim."}
+                    : "Tap a continent to zoom in, then a country to claim it."}
                 </p>
                 <div className="flex items-center gap-2 lg:ml-auto">
                   <Legend family={isFamily} />
