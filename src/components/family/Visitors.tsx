@@ -1,7 +1,6 @@
 "use client";
 
 import { AvatarStack } from "@/components/family/Avatar";
-import Campfire from "@/components/family/Campfire";
 import { useFamily, useMemberName } from "@/components/family/FamilyProvider";
 
 function sentence(names: string[]) {
@@ -42,31 +41,6 @@ export default function Visitors({
     <div className={`flex items-center gap-2 ${className}`}>
       {visitors.length > 0 && <AvatarStack members={visitors} size={size} />}
       <span className={`text-[13px] leading-snug ${onPhoto ? "text-white/80" : "text-ink-3"}`}>{line}</span>
-    </div>
-  );
-}
-
-/** The same, as the campfire scene: everyone who's been, sitting round the fire. Tap one to see who. */
-export function VisitorsCamp({
-  userIds,
-  dates,
-  className = "",
-}: {
-  userIds: string[];
-  dates?: Record<string, string | null>;
-  className?: string;
-}) {
-  const { members, visitors, everyone, line } = useVisitorLine(userIds);
-  if (!visitors.length) {
-    return members.length > 1 ? <p className={`text-[13px] text-ink-3 ${className}`}>{line}</p> : null;
-  }
-  return (
-    <div className={`flex flex-col items-center rounded-3xl bg-gradient-to-b from-[#12343a] to-[#0b2327] px-3 pb-3 pt-2 ${className}`}>
-      <Campfire members={visitors} gold={everyone} dates={dates} />
-      <p className="-mt-1 text-center text-[13px] font-medium text-white/80">
-        {members.length > 1 ? line : "Your camp"}
-        {visitors.length > 1 && <span className="text-white/50"> · tap someone</span>}
-      </p>
     </div>
   );
 }

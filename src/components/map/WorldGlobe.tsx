@@ -158,16 +158,6 @@ export default function WorldGlobe({
     });
   }
 
-  // Phones: the country sheet covers the lower half, so turn the selected country up into view.
-  useEffect(() => {
-    const info = selectedCode ? COUNTRIES_BY_CODE[selectedCode] : null;
-    if (!info || window.innerWidth >= 1024) return;
-    const zoom = Math.max(viewRef.current.zoom, 1.6);
-    const lift = (Math.asin(Math.min(1, (0.2 * H) / (R * zoom))) * 180) / Math.PI;
-    flyTo({ lon: info.latlng[1], lat: Math.max(-70, Math.min(75, info.latlng[0] - lift)), zoom });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCode]);
-
   function pickContinent(key: string) {
     const c = CONTINENTS.find((x) => x.key === key)!;
     setContinent(key);

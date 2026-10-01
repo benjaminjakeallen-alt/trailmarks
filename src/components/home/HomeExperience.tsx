@@ -4,13 +4,13 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import UsMap from "@/components/map/UsMap";
 import WorldGlobe from "@/components/map/WorldGlobe";
-import { CountryBar, CountrySheet } from "@/components/home/CountryCard";
+import { CountryBar } from "@/components/home/CountryCard";
 import { COUNTRIES_BY_CODE, COUNTRY_COUNT } from "@/lib/countriesData";
-import { GlobeHemisphereWestIcon } from "@phosphor-icons/react";
+import { GlobeHemisphereWestIcon, MapTrifoldIcon, NotebookIcon, XIcon } from "@phosphor-icons/react";
 import { StatsDrawer, StatsPill } from "@/components/home/StatsDrawer";
 import SelectedStateBar from "@/components/home/SelectedStateBar";
-import { StateSheet } from "@/components/home/StateCard";
-import JournalPanel, { type JournalOrigin } from "@/components/home/JournalPanel";
+import JournalPanel, { originOf, type JournalOrigin } from "@/components/home/JournalPanel";
+import { STATES_BY_CODE } from "@/lib/statesData";
 import { useFamily } from "@/components/family/FamilyProvider";
 import CrewDock from "@/components/family/CrewDock";
 import { Panel } from "@/components/ui/Panel";
@@ -113,14 +113,12 @@ export default function HomeExperience({
   const onTap = (code: string) => setPlayed((p) => ({ code, n: (p?.n ?? -1) + 1 }));
 
   // Mine drives claiming; byState (member ids per state, in family order) drives the family view.
-  const { mine, byState, datesByState } = useMemo(() => {
+  const { mine, byState } = useMemo(() => {
     const order = new Map(members.map((m, i) => [m.userId, i]));
     const grouped: Record<string, string[]> = {};
     for (const v of visits) (grouped[v.stateCode] ??= []).push(v.userId);
     for (const ids of Object.values(grouped)) ids.sort((a, b) => (order.get(a) ?? 99) - (order.get(b) ?? 99));
-    const dates: Record<string, Record<string, string | null>> = {};
-    for (const v of visits) (dates[v.stateCode] ??= {})[v.userId] = v.firstVisitedOn;
-    return { mine: new Set(visits.filter((v) => v.userId === me).map((v) => v.stateCode)), byState: grouped, datesByState: dates };
+    return { mine: new Set(visits.filter((v) => v.userId === me).map((v) => v.stateCode)), byState: grouped };
   }, [visits, members, me]);
 
   // The world: country claims, plus the US for anyone who has claimed a state.
@@ -273,7 +271,11 @@ export default function HomeExperience({
 
             <div className="px-2 pb-3 pt-3 sm:px-6 sm:pb-6 sm:pt-5 lg:px-10">
               {/* Sized so the whole map fits above the fold on a laptop. */}
-              <div className="mb-2 flex justify-center sm:mb-0 sm:justify-start">
+              <div
+                className={`mb-2 flex min-h-11 items-center gap-2 sm:mb-0 ${
+                  (view === "us" ? selected : selectedCountry) ? "justify-between lg:justify-start" : "justify-center sm:justify-start"
+                }`}
+              >
                 <ViewSwitch
                   view={view}
                   onChange={(v) => {
@@ -283,6 +285,56 @@ export default function HomeExperience({
                     setStatsOpen(false);
                   }}
                 />
+                {/* Phones: the selected place, with its journal, right here on the map (desktop has the header bar). */}
+                <AnimatePresence mode="wait" initial={false}>
+                  {view === "us" && selected && STATES_BY_CODE[selected] && (
+                    <motion.div key={`m-${selected}`} {...barMotion} className="flex min-w-0 items-center gap-1.5 lg:hidden">
+                      <span className="truncate font-display text-[1.15rem] leading-none">{STATES_BY_CODE[selected].name}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => openJournal(selected, originOf(e.currentTarget))}
+                        className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-petrol pl-3 pr-2.5 text-[13.5px] font-semibold text-white active:scale-95"
+                      >
+                        <NotebookIcon size={15} weight="fill" /> Journal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelected(null)}
+                        aria-label="Deselect"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-3"
+                      >
+                        <XIcon size={16} />
+                      </button>
+                    </motion.div>
+                  )}
+                  {view === "world" && selectedCountry && COUNTRIES_BY_CODE[selectedCountry] && (
+                    <motion.div key={`m-${selectedCountry}`} {...barMotion} className="flex min-w-0 items-center gap-1.5 lg:hidden">
+                      <span className="text-[1.4rem] leading-none" aria-hidden>
+                        {COUNTRIES_BY_CODE[selectedCountry].flag}
+                      </span>
+                      <span className="truncate font-display text-[1.15rem] leading-none">
+                        {COUNTRIES_BY_CODE[selectedCountry].name}
+                      </span>
+                      {selectedCountry === "US" && (
+                        <button
+                          type="button"
+                          onClick={openStates}
+                          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-petrol px-3 text-[13.5px] font-semibold text-white active:scale-95"
+                        >
+                          <MapTrifoldIcon size={15} weight="fill" /> States
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCountry(null)}
+                        aria-label="Deselect"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-3"
+                      >
+                        <XIcon size={16} />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               <AnimatePresence mode="wait" initial={false}>
                 {view === "us" ? (
@@ -352,28 +404,6 @@ export default function HomeExperience({
           </Panel>
         </motion.div>
       </section>
-
-      <CountrySheet
-        code={view === "world" ? selectedCountry : null}
-        claimed={selectedCountry ? world.mine.has(selectedCountry) : false}
-        visitorIds={selectedCountry ? (world.byCountry[selectedCountry] ?? []) : []}
-        visitorDates={selectedCountry ? world.dates[selectedCountry] : undefined}
-        stateCount={mine.size}
-        onToggle={toggleCountry}
-        onOpenStates={openStates}
-        onClose={() => setSelectedCountry(null)}
-      />
-
-      <StateSheet
-        code={journal || view !== "us" ? null : selected}
-        claimed={selected ? mine.has(selected) : false}
-        visitorIds={selected ? (byState[selected] ?? []) : []}
-        visitorDates={selected ? datesByState[selected] : undefined}
-        played={played && played.code === selected ? played : null}
-        onToggle={toggle}
-        onOpenJournal={openJournal}
-        onClose={() => setSelected(null)}
-      />
 
       <JournalPanel
         code={journal?.code ?? null}
