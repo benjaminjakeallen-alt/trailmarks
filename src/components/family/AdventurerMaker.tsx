@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -19,15 +19,13 @@ import { BADGE_SIZE, HAT, makePhotoBadge } from "@/lib/photoBadge";
 import { EASE_OUT_EXPO, HAPTICS, haptic } from "@/lib/motion";
 
 const VIEW = 272;
+/** Matches MAX_ADVENTURERS on the server. */
+const MAX = 5;
 
-type Choice = "illustrated" | "badge";
-/** The one AI illustration each person gets: on offer, being drawn, made (and stored), used up, or unavailable. */
-type Illustration =
-  | { state: "offer" }
-  | { state: "loading" }
-  | { state: "ready"; url: string }
-  | { state: "used" }
-  | { state: "unavailable" };
+type Saved = { id: number; url: string };
+/** What's picked in the choose step: the free photo badge, or one of the adventurers. */
+type Choice = { kind: "badge" } | { kind: "adventurer"; id: number };
+type Drawing = "idle" | "loading" | "unavailable";
 
 /** Pan (drag) and zoom (slider, wheel, pinch) a photo inside a circle, with the hat as a guide. */
 function Cropper({ image, onDone }: { image: HTMLImageElement; onDone: (crop: HTMLCanvasElement) => void }) {
@@ -162,34 +160,52 @@ function OptionCard({
   );
 }
 
-/** Selfie → crop → two adventurers to pick from (AI illustration, or the in-browser photo badge) → save. */
+/**
+ * Your adventurers: wear any of the ones you've made, or snap a selfie for a
+ * new one. A new one can be the free photo badge or, up to five times, an AI
+ * illustration. Every illustration is kept to switch back to.
+ */
 export default function AdventurerMaker({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { viewer } = useFamily();
   const router = useRouter();
+  const [saved, setSaved] = useState<Saved[] | null>(null);
+  const [left, setLeft] = useState(MAX);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [badge, setBadge] = useState<{ url: string; blob: Blob } | null>(null);
-  const initialIllustration = (): Illustration =>
-    viewer?.illustratedUrl
-      ? { state: "ready", url: viewer.illustratedUrl }
-      : viewer?.illustrationUsed
-        ? { state: "used" }
-        : { state: "offer" };
-  const [illustration, setIllustration] = useState<Illustration>(initialIllustration);
-  const crop = useRef<HTMLCanvasElement | null>(null);
-  const [choice, setChoice] = useState<Choice>("badge");
+  const [fresh, setFresh] = useState<Saved | null>(null);
+  const [drawing, setDrawing] = useState<Drawing>("idle");
+  const [choice, setChoice] = useState<Choice>({ kind: "badge" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
+  const crop = useRef<HTMLCanvasElement | null>(null);
   const run = useRef(0);
+
+  // Load their adventurers when the sheet opens (it's remounted fresh each time).
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/avatar")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d || cancelled) return;
+        setSaved(d.adventurers);
+        setLeft(d.left);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   function reset() {
     run.current++;
     setImage(null);
     setBadge(null);
-    // A made illustration stays on offer; only an unfinished attempt resets.
-    setIllustration((i) => (i.state === "ready" || i.state === "used" ? i : { state: "offer" }));
-    setChoice("badge");
+    setFresh(null);
+    setDrawing("idle");
+    setChoice({ kind: "badge" });
     setError(null);
     setSaving(false);
   }
@@ -211,50 +227,41 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
     const b = await makePhotoBadge(canvas, viewer.color);
     if (id !== run.current) return;
     setBadge({ url: URL.createObjectURL(b), blob: b });
-    if (illustration.state === "ready") setChoice("illustrated");
   }
 
-  /** Spends the person's one AI illustration (only when they ask). The server stores the result. */
+  /** Spends one of the five AI illustrations (only when asked). The server keeps the result. */
   async function illustrate() {
     const canvas = crop.current;
-    if (!canvas || (illustration.state !== "offer" && illustration.state !== "unavailable")) return;
+    if (!canvas || drawing === "loading" || left <= 0) return;
     haptic(HAPTICS.select);
-    setIllustration({ state: "loading" });
+    setDrawing("loading");
     const jpeg = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.9));
     const form = new FormData();
     if (jpeg) form.append("file", jpeg, "selfie.jpg");
     const res = await fetch("/api/avatar/illustrate", { method: "POST", body: form }).catch(() => null);
     const data = await res?.json().catch(() => null);
-    if (res?.ok && data?.illustratedUrl) {
-      setIllustration({ state: "ready", url: data.illustratedUrl });
-      setChoice("illustrated");
+    if (res?.ok && data?.adventurer) {
+      setFresh(data.adventurer);
+      setSaved((s) => [...(s ?? []), data.adventurer]);
+      setLeft(data.left);
+      setChoice({ kind: "adventurer", id: data.adventurer.id });
+      setDrawing("idle");
       haptic(HAPTICS.everyone);
-      router.refresh();
-    } else if (res?.status === 409) {
-      setIllustration({ state: "used" });
     } else {
-      setIllustration({ state: "unavailable" });
+      if (res?.status === 409) setLeft(0);
+      setDrawing(res?.status === 409 ? "idle" : "unavailable");
     }
   }
 
-  async function wearIllustration() {
+  async function wear(id: number) {
     return fetch("/api/avatar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ use: "illustration" }),
+      body: JSON.stringify({ adventurer: id }),
     }).catch(() => null);
   }
 
-  async function save() {
-    setSaving(true);
-    let res: Response | null = null;
-    if (choice === "illustrated" && illustration.state === "ready") {
-      res = await wearIllustration();
-    } else if (badge) {
-      const form = new FormData();
-      form.append("file", badge.blob, "avatar.png");
-      res = await fetch("/api/avatar", { method: "POST", body: form }).catch(() => null);
-    }
+  async function finish(res: Response | null) {
     if (!res?.ok) {
       setError("That didn't save. Check your connection and try again.");
       setSaving(false);
@@ -265,6 +272,15 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
     onClose();
   }
 
+  async function save() {
+    setSaving(true);
+    if (choice.kind === "adventurer") return finish(await wear(choice.id));
+    if (!badge) return setSaving(false);
+    const form = new FormData();
+    form.append("file", badge.blob, "avatar.png");
+    finish(await fetch("/api/avatar", { method: "POST", body: form }).catch(() => null));
+  }
+
   async function remove() {
     setSaving(true);
     await fetch("/api/avatar", { method: "DELETE" }).catch(() => null);
@@ -273,18 +289,19 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
   }
 
   const stage = badge ? "choose" : image ? "crop" : "pick";
+  const wearing = viewer?.avatarUrl ?? null;
 
   return (
-    <Sheet open={open} onClose={onClose} label="Make your adventurer">
+    <Sheet open={open} onClose={onClose} label="Your adventurers">
       <div className="pr-10">
         <h2 className="font-display text-[1.8rem] leading-tight">
-          {stage === "choose" ? "Meet your adventurer" : "Make your adventurer"}
+          {stage === "choose" ? "Meet your adventurer" : stage === "crop" ? "Line yourself up" : "Your adventurers"}
         </h2>
         <p className="mt-1 text-[15px] leading-relaxed text-ink-3">
           {stage === "pick"
-            ? "Snap a selfie and you'll get an explorer version of you. It stands in for you on the family map."
+            ? "Pick who you are on the family map, or snap a selfie for a new one."
             : stage === "crop"
-              ? "Line yourself up."
+              ? "Drag and pinch so your face fills the oval."
               : "Pick the one that feels like you."}
         </p>
       </div>
@@ -303,18 +320,67 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
         >
           {stage === "pick" && viewer && (
             <div>
-              <div className="flex items-center justify-center gap-3 py-2">
-                <Avatar member={viewer} size={84} className="ring-4 ring-bg" />
-                <SparkleIcon size={22} weight="fill" className="text-sun" />
-                <span className="flex h-[84px] w-[84px] items-center justify-center rounded-full border-2 border-dashed border-line-strong bg-bg">
-                  <svg viewBox="0 0 512 512" className="h-14 w-14" aria-hidden>
-                    <path d={HAT.crown} fill="#d9b77e" stroke="#10262a" strokeWidth={14} strokeLinejoin="round" />
-                    <path d={HAT.band} fill={viewer.color} stroke="#10262a" strokeWidth={14} strokeLinejoin="round" />
-                    <path d={HAT.brim} fill="#c9a266" stroke="#10262a" strokeWidth={14} strokeLinejoin="round" />
-                  </svg>
+              {saved && saved.length > 0 ? (
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+                  {saved.map((a) => {
+                    const on = wearing === a.url;
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        disabled={saving}
+                        aria-pressed={on}
+                        aria-label={on ? "Wearing this adventurer" : "Wear this adventurer"}
+                        onClick={async () => {
+                          if (on) return;
+                          setSaving(true);
+                          finish(await wear(a.id));
+                        }}
+                        className={`relative aspect-square rounded-full transition-transform active:scale-95 ${
+                          on ? "ring-4 ring-petrol" : "ring-1 ring-line hover:ring-petrol/50"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- small stored avatar */}
+                        <img src={a.url} alt="" className="h-full w-full rounded-full object-cover" />
+                        {on && (
+                          <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-petrol text-white ring-2 ring-elevated">
+                            <CheckIcon size={13} weight="bold" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {Array.from({ length: left }, (_, k) => (
+                    <span
+                      key={`empty-${k}`}
+                      className="flex aspect-square items-center justify-center rounded-full border-2 border-dashed border-line-strong text-ink-3"
+                      aria-hidden
+                    >
+                      <SparkleIcon size={18} />
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-3 py-2">
+                  <Avatar member={viewer} size={84} className="ring-4 ring-bg" />
+                  <SparkleIcon size={22} weight="fill" className="text-sun" />
+                  <span className="flex h-[84px] w-[84px] items-center justify-center rounded-full border-2 border-dashed border-line-strong bg-bg">
+                    <svg viewBox="0 0 512 512" className="h-14 w-14" aria-hidden>
+                      <path d={HAT.crown} fill="#d9b77e" stroke="#10262a" strokeWidth={14} strokeLinejoin="round" />
+                      <path d={HAT.band} fill={viewer.color} stroke="#10262a" strokeWidth={14} strokeLinejoin="round" />
+                      <path d={HAT.brim} fill="#c9a266" stroke="#10262a" strokeWidth={14} strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                </div>
+              )}
+
+              <p className="mt-5 text-[13.5px] font-semibold text-ink-2">
+                {saved && saved.length > 0 ? "Make a new one" : "Make your first"}
+                <span className="ml-2 font-normal text-ink-3">
+                  {left > 0 ? `${left} of ${MAX} illustrations left` : `All ${MAX} illustrations made; photo badges are unlimited`}
                 </span>
-              </div>
-              <div className="mt-5 grid gap-2">
+              </p>
+              <div className="mt-2 grid gap-2">
                 <Button onClick={() => cameraRef.current?.click()} icon={<CameraIcon size={18} weight="fill" />}>
                   Take a selfie
                 </Button>
@@ -322,31 +388,14 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                   Choose a photo
                 </Button>
               </div>
-              {viewer.illustratedUrl && viewer.avatarUrl !== viewer.illustratedUrl && (
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={async () => {
-                    setSaving(true);
-                    await wearIllustration();
-                    router.refresh();
-                    onClose();
-                  }}
-                  className="mt-4 flex w-full items-center gap-3 rounded-2xl bg-bg p-2.5 text-left ring-1 ring-line hover:ring-petrol/40"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- small stored avatar */}
-                  <img src={viewer.illustratedUrl} alt="" className="h-12 w-12 rounded-full" />
-                  <span className="flex-1 text-[14.5px] font-semibold">Wear your illustrated adventurer again</span>
-                </button>
-              )}
               {viewer.avatarUrl && (
                 <button type="button" onClick={remove} disabled={saving} className="mx-auto mt-4 block text-[14px] font-semibold text-ink-3 hover:text-coral">
                   Go back to initials
                 </button>
               )}
               <p className="mt-4 text-center text-[12.5px] leading-relaxed text-ink-3">
-                Your selfie isn&apos;t kept, only the adventurer you pick. Photo badges are free and unlimited; everyone
-                gets one AI-illustrated adventurer.
+                Your selfie isn&apos;t kept, only the adventurers. Photo badges are free; each person can make {MAX} AI
+                illustrations.
               </p>
             </div>
           )}
@@ -358,48 +407,50 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
               <div className="grid grid-cols-2 gap-3">
                 <OptionCard
                   label="Illustrated"
-                  selected={choice === "illustrated"}
-                  disabled={illustration.state === "loading" || illustration.state === "used"}
-                  onSelect={() => (illustration.state === "ready" ? setChoice("illustrated") : illustrate())}
+                  selected={choice.kind === "adventurer"}
+                  disabled={drawing === "loading" || (!fresh && left <= 0)}
+                  onSelect={() => (fresh ? setChoice({ kind: "adventurer", id: fresh.id }) : illustrate())}
                 >
                   <div className="relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-sunken">
-                    {illustration.state === "offer" ? (
-                      <span className="flex flex-col items-center gap-1.5 px-3 text-center">
-                        <MagicWandIcon size={26} weight="fill" className="text-petrol" />
-                        <span className="text-[13px] font-semibold text-petrol">Illustrate me</span>
-                        <span className="text-[11.5px] leading-tight text-ink-3">One per person, so use your best selfie</span>
-                      </span>
-                    ) : illustration.state === "ready" ? (
+                    {fresh ? (
                       <motion.img
-                        src={illustration.url}
+                        src={fresh.url}
                         alt="Illustrated adventurer"
                         initial={{ scale: 0.6, opacity: 0, rotate: -8 }}
                         animate={{ scale: 1, opacity: 1, rotate: 0 }}
                         transition={{ type: "spring", stiffness: 260, damping: 18 }}
                         className="h-full w-full object-cover"
                       />
-                    ) : illustration.state === "loading" ? (
+                    ) : drawing === "loading" ? (
                       <span className="flex flex-col items-center gap-2 px-3 text-center text-[12.5px] font-medium text-ink-3">
                         <MagicWandIcon size={26} className="animate-pulse text-petrol" />
                         Sketching you…
                       </span>
-                    ) : (
+                    ) : left <= 0 ? (
+                      <span className="px-4 text-center text-[12.5px] text-ink-3">All {MAX} illustrations made</span>
+                    ) : drawing === "unavailable" ? (
                       <span className="px-4 text-center text-[12.5px] text-ink-3">
-                        {illustration.state === "used"
-                          ? "You've made your one illustration"
-                          : "The illustrator is out right now. Your try wasn't used: tap to try again."}
+                        The illustrator is out right now. That try wasn&apos;t used: tap to try again.
+                      </span>
+                    ) : (
+                      <span className="flex flex-col items-center gap-1.5 px-3 text-center">
+                        <MagicWandIcon size={26} weight="fill" className="text-petrol" />
+                        <span className="text-[13px] font-semibold text-petrol">Illustrate me</span>
+                        <span className="text-[11.5px] leading-tight text-ink-3">
+                          {left} of {MAX} left
+                        </span>
                       </span>
                     )}
                   </div>
                 </OptionCard>
-                <OptionCard label="Photo badge" selected={choice === "badge"} onSelect={() => setChoice("badge")}>
+                <OptionCard label="Photo badge" selected={choice.kind === "badge"} onSelect={() => setChoice({ kind: "badge" })}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
                   <img src={badge.url} alt="Photo badge adventurer" className="h-32 w-32" />
                 </OptionCard>
               </div>
               {error && <p className="mt-4 rounded-2xl bg-coral-soft px-4 py-3 text-[14px]">{error}</p>}
               <Button onClick={save} disabled={saving} icon={<CheckIcon size={18} weight="bold" />} className="mt-5 w-full">
-                {saving ? "Saving…" : "Save my adventurer"}
+                {saving ? "Saving…" : "Wear this one"}
               </Button>
               <button
                 type="button"

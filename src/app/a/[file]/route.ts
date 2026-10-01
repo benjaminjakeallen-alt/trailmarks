@@ -13,12 +13,18 @@ export async function GET(_req: Request, { params }: { params: Promise<{ file: s
   if (!userId) return new NextResponse(null, { status: 401 });
 
   const supabase = getSupabase();
-  const [{ data: owner }, { data: viewer }] = await Promise.all([
-    // The file name is checked above, so it's safe inside the filter.
-    supabase.from("profiles").select("family_id").or(`avatar_file.eq.${file},illustrated_file.eq.${file}`).limit(1).maybeSingle(),
+  // Whose is it: someone wearing it, or one of someone's saved adventurers.
+  const [{ data: wearer }, { data: made }, { data: viewer }] = await Promise.all([
+    supabase.from("profiles").select("family_id").eq("avatar_file", file).limit(1).maybeSingle(),
+    supabase.from("adventurers").select("user_id").eq("file_name", file).maybeSingle(),
     supabase.from("profiles").select("family_id").eq("user_id", userId).maybeSingle(),
   ]);
-  if (!owner || !viewer || owner.family_id !== viewer.family_id) return new NextResponse(null, { status: 404 });
+  let ownerFamily = wearer?.family_id as string | undefined;
+  if (!ownerFamily && made?.user_id) {
+    const { data: maker } = await supabase.from("profiles").select("family_id").eq("user_id", made.user_id).maybeSingle();
+    ownerFamily = maker?.family_id;
+  }
+  if (!ownerFamily || !viewer || ownerFamily !== viewer.family_id) return new NextResponse(null, { status: 404 });
 
   const { data: blob, error } = await supabase.storage.from(AVATARS_BUCKET).download(file);
   if (error || !blob) return new NextResponse(null, { status: 404 });

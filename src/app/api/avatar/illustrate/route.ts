@@ -5,6 +5,7 @@ import sharp from "sharp";
 import crypto from "node:crypto";
 import { apiViewer } from "@/lib/auth";
 import { AVATARS_BUCKET, avatarUrl, getSupabase } from "@/lib/supabase";
+import { finishAdventurer, listAdventurers, MAX_ADVENTURERS, releaseAdventurer, reserveAdventurer } from "@/lib/adventurers";
 
 /** Image editing can take a while. */
 export const maxDuration = 120;
@@ -23,10 +24,9 @@ function prompt(color: string) {
 
 /**
  * Selfie in, illustrated adventurer out (through Vercel AI Gateway, medium
- * quality, about a cent). Each person gets one: the try is claimed before the
- * call and handed back if the call fails, and the result is stored straight
- * away so it's never lost. The selfie itself isn't kept. If the illustrator
- * is unavailable the app falls back to its in-browser photo badge.
+ * quality, about a cent). Each person can make five: a try is reserved
+ * before the call and handed back if the call fails, and every result is
+ * kept so they can switch between them. The selfie itself isn't stored.
  */
 export async function POST(req: NextRequest) {
   const viewer = await apiViewer();
@@ -37,15 +37,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Send a photo under 4 MB" }, { status: 400 });
   }
 
-  const supabase = getSupabase();
-  const { data: claimed } = await supabase
-    .from("profiles")
-    .update({ illustrated_at: new Date().toISOString() })
-    .eq("user_id", viewer.userId)
-    .is("illustrated_at", null)
-    .select("user_id");
-  if (!claimed?.length) {
-    return NextResponse.json({ error: "You've already made your illustrated adventurer.", reason: "used" }, { status: 409 });
+  const slot = await reserveAdventurer(viewer.userId);
+  if (slot === null) {
+    return NextResponse.json(
+      { error: `You've made all ${MAX_ADVENTURERS} of your adventurers.`, reason: "used" },
+      { status: 409 },
+    );
   }
 
   try {
@@ -60,13 +57,14 @@ export async function POST(req: NextRequest) {
     });
     const webp = await sharp(Buffer.from(image.uint8Array)).resize(512, 512).webp({ quality: 88 }).toBuffer();
     const name = `${crypto.randomUUID()}.webp`;
-    const { error } = await supabase.storage.from(AVATARS_BUCKET).upload(name, webp, { contentType: "image/webp" });
+    const { error } = await getSupabase().storage.from(AVATARS_BUCKET).upload(name, webp, { contentType: "image/webp" });
     if (error) throw new Error(`storage: ${error.message}`);
-    await supabase.from("profiles").update({ illustrated_file: name }).eq("user_id", viewer.userId);
-    return NextResponse.json({ illustratedUrl: avatarUrl(name) }, { status: 201 });
+    await finishAdventurer(slot, name);
+    const { left } = await listAdventurers(viewer.userId);
+    return NextResponse.json({ adventurer: { id: slot, url: avatarUrl(name) }, left }, { status: 201 });
   } catch (err) {
-    // Hand the try back: a failure shouldn't use up someone's one illustration.
-    await supabase.from("profiles").update({ illustrated_at: null }).eq("user_id", viewer.userId);
+    // Hand the try back: a failure shouldn't use up one of the five.
+    await releaseAdventurer(slot);
     const message = err instanceof Error ? err.message : String(err);
     console.error("avatar illustrate failed:", message);
     // Say why (without details), so "AI Gateway isn't set up for this project" is easy to spot.
