@@ -14,6 +14,9 @@ import { Label, TextInput } from "@/components/ui/Field";
 import Sheet from "@/components/ui/Sheet";
 import { HAPTICS, haptic } from "@/lib/motion";
 import { useFamily } from "@/components/family/FamilyProvider";
+import Switch from "@/components/ui/Switch";
+import { THEME_COOKIE } from "@/lib/theme";
+import { useRouter } from "next/navigation";
 
 const noSubscribe = () => () => {};
 const pill =
@@ -196,5 +199,29 @@ export function AdventurerButton({ hasAvatar }: { hasAvatar: boolean }) {
     <button type="button" onClick={openAdventurer} className={pill}>
       <CameraIcon size={14} weight="fill" /> {hasAvatar ? "New adventurer" : "Make your adventurer"}
     </button>
+  );
+}
+
+/** Settings → Dark mode. Stored on this device; light unless turned on here. */
+export function DarkModeSetting({ initial }: { initial: boolean }) {
+  const [on, setOn] = useState(initial);
+  const router = useRouter();
+  function toggle() {
+    const next = !on;
+    setOn(next);
+    document.documentElement.dataset.theme = next ? "dark" : "light";
+    document.cookie = `${THEME_COOKIE}=${next ? "dark" : "light"}; path=/; max-age=31536000; samesite=lax`;
+    haptic(HAPTICS.select);
+    // Re-render on the server too, so the browser bar color follows.
+    router.refresh();
+  }
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <p className="text-[16px] font-semibold">Dark mode</p>
+        <p className="text-[13.5px] text-ink-3">Off by default. Applies on this device.</p>
+      </div>
+      <Switch on={on} onChange={toggle} label="Dark mode" />
+    </div>
   );
 }

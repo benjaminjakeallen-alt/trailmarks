@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* `dark:` follows the app setting, not the phone's system setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /*
  * "Glacier" — cool mist and white surfaces, deep Petrol teal for anything
  * you act on, Aqua for land and routes you've claimed, Sun (amber) for
@@ -7,6 +10,7 @@
  * Photos carry the color; the chrome stays quiet around them.
  */
 :root {
+  color-scheme: light;
   --bg: #f2f5f6;
   --bg-elevated: #ffffff;
   --bg-sunken: #e7edef;
@@ -39,39 +43,39 @@
   --highlight: inset 0 1px 0 rgb(255 255 255 / 0.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0a1316;
-    --bg-elevated: #111d21;
-    --bg-sunken: #070e10;
-    --ink: #e9f1f2;
-    --ink-2: #a5b4b8;
-    --ink-3: #6b7d82;
-    --line: rgb(233 241 242 / 0.07);
-    --line-strong: rgb(233 241 242 / 0.13);
+/* Dark mode is opt-in (Family → Settings), stored per device in the tm-theme cookie. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a1316;
+  --bg-elevated: #111d21;
+  --bg-sunken: #070e10;
+  --ink: #e9f1f2;
+  --ink-2: #a5b4b8;
+  --ink-3: #6b7d82;
+  --line: rgb(233 241 242 / 0.07);
+  --line-strong: rgb(233 241 242 / 0.13);
 
-    --land: #1b292e;
-    --land-hover: #26383d;
-    --land-edge: #111d21;
+  --land: #1b292e;
+  --land-hover: #26383d;
+  --land-edge: #111d21;
 
-    --petrol: #1a8a8a;
-    --petrol-strong: #22a3a1;
-    --petrol-soft: rgb(26 138 138 / 0.18);
+  --petrol: #1a8a8a;
+  --petrol-strong: #22a3a1;
+  --petrol-soft: rgb(26 138 138 / 0.18);
 
-    --aqua: #20c2af;
-    --aqua-bright: #62e4d2;
-    --aqua-soft: rgb(32 194 175 / 0.15);
+  --aqua: #20c2af;
+  --aqua-bright: #62e4d2;
+  --aqua-soft: rgb(32 194 175 / 0.15);
 
-    --sun: #ffb940;
-    --sun-soft: rgb(255 185 64 / 0.15);
+  --sun: #ffb940;
+  --sun-soft: rgb(255 185 64 / 0.15);
 
-    --coral: #ff6b5a;
-    --coral-soft: rgb(255 107 90 / 0.15);
+  --coral: #ff6b5a;
+  --coral-soft: rgb(255 107 90 / 0.15);
 
-    --shadow-card: 0 10px 30px -18px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.3);
-    --shadow-float: 0 24px 48px -20px rgb(0 0 0 / 0.6), 0 2px 6px -2px rgb(0 0 0 / 0.35);
-    --highlight: inset 0 1px 0 rgb(255 255 255 / 0.05);
-  }
+  --shadow-card: 0 10px 30px -18px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.3);
+  --shadow-float: 0 24px 48px -20px rgb(0 0 0 / 0.6), 0 2px 6px -2px rgb(0 0 0 / 0.35);
+  --highlight: inset 0 1px 0 rgb(255 255 255 / 0.05);
 }
 
 @theme inline {

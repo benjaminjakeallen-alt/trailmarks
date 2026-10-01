@@ -4,7 +4,9 @@ import { getFamilyVisits } from "@/lib/stateVisits";
 import Avatar from "@/components/family/Avatar";
 import { SignOutButton } from "@/components/family/FamilyActions";
 import { InviteOptions } from "@/components/family/Invite";
-import { AdventurerButton, ChangePasswordButton, ResetPasswordButton } from "@/components/family/MemberActions";
+import { AdventurerButton, ChangePasswordButton, DarkModeSetting, ResetPasswordButton } from "@/components/family/MemberActions";
+import { cookies } from "next/headers";
+import { THEME_COOKIE } from "@/lib/theme";
 import { Eyebrow, Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 
@@ -83,6 +85,13 @@ export default async function FamilyPage() {
           family.
         </p>
         <InviteOptions />
+      </Panel>
+
+      <Panel className="mt-5" innerClassName="p-5 sm:p-7">
+        <h2 className="font-display text-xl">Settings</h2>
+        <div className="mt-4">
+          <DarkModeSetting initial={(await cookies()).get(THEME_COOKIE)?.value === "dark"} />
+        </div>
       </Panel>
 
       <div className="mt-8">

@@ -78,7 +78,7 @@ export default function TripMap({ points, pins = [], onPinClick, followLatest, c
     if (!containerRef.current || mapRef.current) return;
 
     setWorkerUrl(WORKER_URL);
-    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const dark = document.documentElement.dataset.theme === "dark";
     const first = pointsRef.current[0];
     const map = new MapLibreMap({
       container: containerRef.current,
