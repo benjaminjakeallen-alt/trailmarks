@@ -108,9 +108,9 @@ export default function HomeExperience({
   const [view, setView] = useState<"us" | "world">("us");
   const [countryVisits, setCountryVisits] = useState(initialCountryVisits);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  // The last quick tap on a state: it plays that state's activity.
+  // The last double-tap on a state: it lifts and plays that state's activity.
   const [played, setPlayed] = useState<{ code: string; n: number } | null>(null);
-  const onTap = (code: string) => setPlayed((p) => ({ code, n: (p?.n ?? -1) + 1 }));
+  const onTap = (code: string | null) => setPlayed((p) => (code ? { code, n: (p?.n ?? -1) + 1 } : null));
 
   // Mine drives claiming; byState (member ids per state, in family order) drives the family view.
   const { mine, byState } = useMemo(() => {

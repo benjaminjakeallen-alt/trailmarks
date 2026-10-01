@@ -33,16 +33,18 @@ interface UsMapProps {
   onUnclaim: (code: string) => void;
   /** Tap on a state you have claimed: show it, change nothing. */
   onSelect: (code: string) => void;
-  /** The last quick tap (n counts taps, so a state with two activities alternates). */
+  /** The last double-tap (n counts them, so a state with two activities alternates). */
   played?: { code: string; n: number } | null;
-  /** Every quick tap, claimed or not. */
-  onTap?: (code: string) => void;
+  /** A double-tap on a state: lift it and play its scene (null: a single tap, put it back). */
+  onTap?: (code: string | null) => void;
 }
 
 /** How long to hold before an unclaim fires. */
 export const LONG_PRESS_MS = 550;
 /** Moving further than this (CSS px) turns a press into a scroll, and cancels it. */
 export const PRESS_SLOP_PX = 10;
+/** Two taps on the same state within this play its scene. */
+const DOUBLE_TAP_MS = 380;
 
 const NO_FAMILY: Record<string, string[]> = {};
 const NO_MEMBERS: Member[] = [];
@@ -226,6 +228,7 @@ export default function UsMap({
     fired: boolean;
   } | null>(null);
   const [introDone, setIntroDone] = useState(false);
+  const lastTap = useRef<{ code: string; at: number } | null>(null);
   // The map's size in px, for laying the 3D scene out over it.
   const [wrapSize, setWrapSize] = useState<{ w: number; h: number } | null>(null);
   useEffect(() => {
@@ -270,9 +273,20 @@ export default function UsMap({
   }
 
   /** A quick tap: claim a state you haven't claimed; just select one you have. */
-  function tap(code: string, pointer?: { clientX: number; clientY: number }) {
-    // A quick tap (never a hold or a drag) is what plays the state's activity.
-    onTap?.(code);
+  function tap(code: string, pointer?: { clientX: number; clientY: number; timeStamp?: number }) {
+    // A double-tap on the same state (never a single tap, hold or drag) lifts it and plays its activity.
+    const now = pointer?.timeStamp ?? 0;
+    const last = lastTap.current;
+    lastTap.current = { code, at: now };
+    if (last && last.code === code && now - last.at < DOUBLE_TAP_MS) {
+      lastTap.current = null;
+      haptic(HAPTICS.select);
+      onSelect(code);
+      onTap?.(code);
+      return;
+    }
+    // Any single tap settles a lifted state back onto the map.
+    if (played) onTap?.(null);
     if (!geo.byCode[code]) return;
     if (visited.has(code)) {
       haptic(HAPTICS.select);
