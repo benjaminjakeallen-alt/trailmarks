@@ -108,6 +108,9 @@ export default function HomeExperience({
   const [view, setView] = useState<"us" | "world">("us");
   const [countryVisits, setCountryVisits] = useState(initialCountryVisits);
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  // The last quick tap on a state: it plays that state's activity.
+  const [played, setPlayed] = useState<{ code: string; n: number } | null>(null);
+  const onTap = (code: string) => setPlayed((p) => ({ code, n: (p?.n ?? -1) + 1 }));
 
   // Mine drives claiming; byState (member ids per state, in family order) drives the family view.
   const { mine, byState, datesByState } = useMemo(() => {
@@ -301,6 +304,8 @@ export default function HomeExperience({
                       onClaim={(code) => setClaimed(code, true)}
                       onUnclaim={(code) => setClaimed(code, false)}
                       onSelect={setSelected}
+                      played={played}
+                      onTap={onTap}
                     />
                   </motion.div>
                 ) : (
@@ -364,6 +369,7 @@ export default function HomeExperience({
         claimed={selected ? mine.has(selected) : false}
         visitorIds={selected ? (byState[selected] ?? []) : []}
         visitorDates={selected ? datesByState[selected] : undefined}
+        played={played && played.code === selected ? played : null}
         onToggle={toggle}
         onOpenJournal={openJournal}
         onClose={() => setSelected(null)}
@@ -374,7 +380,6 @@ export default function HomeExperience({
         origin={journal?.origin ?? null}
         claimed={journal ? mine.has(journal.code) : false}
         visitorIds={journal ? (byState[journal.code] ?? []) : []}
-        visitorDates={journal ? datesByState[journal.code] : undefined}
         onClose={() => setJournal(null)}
         onWrote={markWritten}
       />

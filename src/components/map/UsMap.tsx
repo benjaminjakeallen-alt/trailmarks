@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MAP_HEIGHT, MAP_WIDTH, getUsGeometry } from "@/lib/usGeo";
 import { EASE_OUT_EXPO, HAPTICS, SPRING_SNAPPY, SPRING_STAMP, haptic } from "@/lib/motion";
-import Campfire from "@/components/family/Campfire";
+import StateScene from "@/components/scenes/StateScene";
 import type { Member } from "@/lib/types";
 
 type FxKind = "claim" | "unclaim";
@@ -33,6 +33,10 @@ interface UsMapProps {
   onUnclaim: (code: string) => void;
   /** Tap on a state you have claimed: show it, change nothing. */
   onSelect: (code: string) => void;
+  /** The last quick tap (n counts taps, so a state with two activities alternates). */
+  played?: { code: string; n: number } | null;
+  /** Every quick tap, claimed or not. */
+  onTap?: (code: string) => void;
 }
 
 /** How long to hold before an unclaim fires. */
@@ -202,6 +206,8 @@ export default function UsMap({
   onClaim,
   onUnclaim,
   onSelect,
+  played = null,
+  onTap,
 }: UsMapProps) {
   const geo = useMemo(() => getUsGeometry(), []);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -256,6 +262,8 @@ export default function UsMap({
 
   /** A quick tap: claim a state you haven't claimed; just select one you have. */
   function tap(code: string, pointer?: { clientX: number; clientY: number }) {
+    // A quick tap (never a hold or a drag) is what plays the state's activity.
+    onTap?.(code);
     if (!geo.byCode[code]) return;
     if (visited.has(code)) {
       haptic(HAPTICS.select);
@@ -547,24 +555,32 @@ export default function UsMap({
         </g>
       </svg>
 
-      {/* Who's been to the selected state: their adventurers round a campfire, right on the map. */}
+      {/* Desktop: a quick tap plays the state's activity in a card over the map (phones show it in the sheet). */}
       <AnimatePresence>
-        {selectedShape && campers.length > 0 && (
+        {selectedShape && played?.code === selectedShape.code && campers.length > 0 && (
           <motion.div
-            key={`camp-${selectedShape.code}`}
-            className="pointer-events-none absolute z-[5]"
+            key={`scene-${selectedShape.code}-${played.n}`}
+            className="pointer-events-none absolute z-[5] hidden w-[250px] lg:block"
             style={{
               left: `${(selectedShape.centroid[0] / MAP_WIDTH) * 100}%`,
               top: `${(selectedShape.centroid[1] / MAP_HEIGHT) * 100}%`,
             }}
-            initial={{ opacity: 0, scale: 0.4 }}
+            initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.18 } }}
+            exit={{ opacity: 0, scale: 0.7, transition: { duration: 0.18 } }}
             transition={SPRING_STAMP}
           >
-            <div className="-translate-x-1/2 -translate-y-[64%] max-sm:scale-[0.82]">
-              <div className="absolute left-1/2 top-[62%] h-9 w-28 -translate-x-1/2 -translate-y-1/2 rounded-[50%] bg-[radial-gradient(closest-side,rgb(8_40_44/0.35),transparent)]" />
-              <Campfire members={campers} variant="map" gold={everyone(selectedShape.code)} />
+            {/* Above the state, or below it for the northern ones so it stays on the map. */}
+            <div
+              className={`-translate-x-1/2 ${selectedShape.centroid[1] < MAP_HEIGHT * 0.42 ? "translate-y-5" : "-translate-y-[calc(100%+20px)]"}`}
+            >
+              <StateScene
+                code={selectedShape.code}
+                members={campers}
+                gold={everyone(selectedShape.code)}
+                turn={played.n}
+                className="shadow-[var(--shadow-float)] ring-1 ring-line"
+              />
             </div>
           </motion.div>
         )}

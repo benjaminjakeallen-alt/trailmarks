@@ -112,7 +112,21 @@ Swap the plain fills for illustrated maps you can switch between:
 - **Road trip**: everyone's recorded trips drawn across the map.
 - **Seasons**: autumn leaves, winter snow, following the calendar.
 
-## 10. A different activity in every state (idea)
+## 10. A different activity in every state — started (15 states)
+
+Built: a quick tap on a state (never a hold or a drag) plays its activity,
+acted out by the family's adventurers: in a card over the map on desktop,
+in the state sheet on phones. Five on stage at once; bigger families (up to
+ten) rotate one in every few seconds. Scenes live in
+`src/components/scenes/` (`stage.tsx` is the little engine; preview them
+all at `/dev/scenes` in development). Done: UT (44 oz sodas, lawn chairs),
+CA (mouse ears + fireworks / surfing, alternating), OR (Tillamook ice
+cream), NV (slots), AZ (cliff dwellings), NM (abduction), ID (potatoes),
+TX (BBQ), FL (tank tops, run), NY (pizza), TN (country queen), WI (game day
+in green and gold), MI (pickup), LA (jazz), GA (peaches). Every other state
+keeps the campfire until it gets one.
+
+Original idea:
 
 The campfire becomes per-state: each state has its own little animation
 the family's adventurers do together (Utah: a swig together, Texas: BBQ,

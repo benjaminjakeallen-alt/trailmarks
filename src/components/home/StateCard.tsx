@@ -6,7 +6,9 @@ import { Button, ButtonLink } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Panel";
 import Switch from "@/components/ui/Switch";
 import StateSilhouette from "@/components/map/StateSilhouette";
-import { VisitorsCamp } from "@/components/family/Visitors";
+import Visitors from "@/components/family/Visitors";
+import StateScene from "@/components/scenes/StateScene";
+import { useFamily } from "@/components/family/FamilyProvider";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import { originOf, type JournalOrigin } from "@/components/home/JournalPanel";
 import { EASE_OUT_EXPO } from "@/lib/motion";
@@ -18,6 +20,8 @@ interface StateCardProps {
   visitorIds?: string[];
   /** When each of them first went. */
   visitorDates?: Record<string, string | null>;
+  /** Set after a quick tap on this state: play its activity. */
+  played?: { code: string; n: number } | null;
   onToggle: (code: string) => void;
   /** Open the journal in place (the map's slide-over) instead of navigating. */
   onOpenJournal?: (code: string, origin: JournalOrigin) => void;
@@ -28,11 +32,13 @@ export function StateCardBody({
   code,
   claimed,
   visitorIds = [],
-  visitorDates,
+  played = null,
   onToggle,
   onOpenJournal,
   compact = false,
 }: StateCardProps) {
+  const { members, byId } = useFamily();
+  const cast = visitorIds.map((id) => byId[id]).filter(Boolean);
   const info = code ? STATES_BY_CODE[code] : null;
 
   return (
@@ -57,7 +63,16 @@ export function StateCardBody({
             <StateSilhouette code={info.code} claimed={claimed} width={96} height={72} className="h-16 w-24 shrink-0" />
           </div>
 
-          <VisitorsCamp userIds={visitorIds} dates={visitorDates} className="mt-3" />
+          {played && cast.length > 0 && (
+            <StateScene
+              code={info.code}
+              members={cast}
+              gold={members.length > 1 && cast.length === members.length}
+              turn={played.n}
+              className="mt-3"
+            />
+          )}
+          <Visitors userIds={visitorIds} className="mt-3" />
 
           <div className={`flex items-center justify-between rounded-2xl bg-bg px-4 py-3 ring-1 ring-line ${compact ? "mt-4" : "mt-6"}`}>
             <div>
@@ -106,7 +121,7 @@ export function StateSheet({
   code,
   claimed,
   visitorIds,
-  visitorDates,
+  played,
   onToggle,
   onOpenJournal,
   onClose,
@@ -134,7 +149,7 @@ export function StateSheet({
               code={code}
               claimed={claimed}
               visitorIds={visitorIds}
-              visitorDates={visitorDates}
+              played={played}
               onToggle={onToggle}
               onOpenJournal={onOpenJournal}
               compact
