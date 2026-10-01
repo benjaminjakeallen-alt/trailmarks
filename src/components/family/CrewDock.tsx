@@ -45,6 +45,21 @@ export default function CrewDock() {
     return () => window.clearTimeout(t);
   }, [viewer, members.length]);
 
+  // It's a nudge, not a gate: any tap elsewhere, or a few seconds, puts it away (and it won't come back).
+  const bubbleRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!hint) return;
+    const away = (e: PointerEvent) => {
+      if (!bubbleRef.current?.contains(e.target as Node)) dismiss(hint);
+    };
+    const t = window.setTimeout(() => dismiss(hint), 9000);
+    document.addEventListener("pointerdown", away, true);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("pointerdown", away, true);
+    };
+  }, [hint]);
+
   function dismiss(which: "adventurer" | "invite") {
     setHint(null);
     try {
@@ -113,6 +128,7 @@ export default function CrewDock() {
       <AnimatePresence>
         {hint && (
           <motion.button
+            ref={bubbleRef}
             type="button"
             key={hint}
             onClick={() => {

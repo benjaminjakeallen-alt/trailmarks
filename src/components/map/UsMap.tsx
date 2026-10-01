@@ -36,9 +36,9 @@ interface UsMapProps {
 }
 
 /** How long to hold before an unclaim fires. */
-const LONG_PRESS_MS = 550;
+export const LONG_PRESS_MS = 550;
 /** Moving further than this (CSS px) turns a press into a scroll, and cancels it. */
-const PRESS_SLOP_PX = 10;
+export const PRESS_SLOP_PX = 10;
 
 const NO_FAMILY: Record<string, string[]> = {};
 const NO_MEMBERS: Member[] = [];
@@ -148,7 +148,7 @@ function UnclaimFx({ fx }: { fx: Fx }) {
 }
 
 /** The gold moment's label: a pill that rises from the tap, sized for screens rather than map units. */
-function Cheer({ x, y }: { x: number; y: number }) {
+export function Cheer({ x, y }: { x: number; y: number }) {
   return (
     <motion.div
       className="pointer-events-none absolute z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-br from-[#fff1b8] via-[#f5b929] to-[#c98a08] px-4 py-2 text-[14px] font-semibold text-[#4a3000] shadow-[0_12px_28px_-10px_rgb(180_120_0/0.7)] ring-1 ring-white/60"
@@ -164,7 +164,7 @@ function Cheer({ x, y }: { x: number; y: number }) {
 }
 
 /** The ring that fills under your finger while you hold to unclaim. Screen-sized, not map-sized. */
-function HoldRing({ x, y }: { x: number; y: number }) {
+export function HoldRing({ x, y }: { x: number; y: number }) {
   return (
     <motion.div
       className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2"

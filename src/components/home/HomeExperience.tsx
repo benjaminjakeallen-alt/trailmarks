@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import UsMap from "@/components/map/UsMap";
+import WorldGlobe from "@/components/map/WorldGlobe";
+import { CountryBar, CountrySheet } from "@/components/home/CountryCard";
+import { COUNTRIES_BY_CODE, COUNTRY_COUNT } from "@/lib/countriesData";
+import { GlobeHemisphereWestIcon } from "@phosphor-icons/react";
 import { StatsDrawer, StatsPill } from "@/components/home/StatsDrawer";
 import SelectedStateBar from "@/components/home/SelectedStateBar";
 import { StateSheet } from "@/components/home/StateCard";
@@ -12,7 +16,7 @@ import CrewDock from "@/components/family/CrewDock";
 import { Panel } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 import { EASE_OUT_EXPO } from "@/lib/motion";
-import type { FamilyVisit } from "@/lib/types";
+import type { FamilyCountryVisit, FamilyVisit } from "@/lib/types";
 
 const barMotion = {
   initial: { opacity: 0, y: 8 },
@@ -51,7 +55,49 @@ function Legend({ family }: { family: boolean }) {
   );
 }
 
-export default function HomeExperience({ initialVisits }: { initialVisits: FamilyVisit[] }) {
+/** World view's counter: countries you've been to, out of the independent ones. */
+function WorldPill({ count }: { count: number }) {
+  return (
+    <div className="flex h-11 items-center gap-2.5 rounded-full bg-petrol pl-2 pr-4 text-white shadow-[0_12px_24px_-14px_var(--petrol)]">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15">
+        <GlobeHemisphereWestIcon size={16} weight="bold" />
+      </span>
+      <span className="flex items-baseline gap-1">
+        <span className="font-display text-[1.2rem] leading-none">{count}</span>
+        <span className="text-[13px] font-medium text-white/70">/ {COUNTRY_COUNT} countries</span>
+      </span>
+    </div>
+  );
+}
+
+/** USA ⇄ World. */
+function ViewSwitch({ view, onChange }: { view: "us" | "world"; onChange: (v: "us" | "world") => void }) {
+  return (
+    <div className="inline-flex rounded-full bg-bg p-1 ring-1 ring-line" role="tablist" aria-label="Map">
+      {(["us", "world"] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          role="tab"
+          aria-selected={view === v}
+          onClick={() => onChange(v)}
+          className={`relative rounded-full px-4 py-1.5 text-[13.5px] font-semibold transition-colors ${view === v ? "text-white" : "text-ink-2 hover:text-ink"}`}
+        >
+          {view === v && <motion.span layoutId="map-view" className="absolute inset-0 rounded-full bg-petrol" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
+          <span className="relative">{v === "us" ? "USA" : "World"}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export default function HomeExperience({
+  initialVisits,
+  initialCountryVisits,
+}: {
+  initialVisits: FamilyVisit[];
+  initialCountryVisits: FamilyCountryVisit[];
+}) {
   const { viewer, members } = useFamily();
   const me = viewer?.userId ?? "";
   const [visits, setVisits] = useState(initialVisits);
@@ -59,6 +105,9 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
   const [statsOpen, setStatsOpen] = useState(false);
   const [journal, setJournal] = useState<{ code: string; origin: JournalOrigin | null } | null>(null);
   const openJournal = (code: string, origin: JournalOrigin) => setJournal({ code, origin });
+  const [view, setView] = useState<"us" | "world">("us");
+  const [countryVisits, setCountryVisits] = useState(initialCountryVisits);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 
   // Mine drives claiming; byState (member ids per state, in family order) drives the family view.
   const { mine, byState, datesByState } = useMemo(() => {
@@ -70,6 +119,55 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
     for (const v of visits) (dates[v.stateCode] ??= {})[v.userId] = v.firstVisitedOn;
     return { mine: new Set(visits.filter((v) => v.userId === me).map((v) => v.stateCode)), byState: grouped, datesByState: dates };
   }, [visits, members, me]);
+
+  // The world: country claims, plus the US for anyone who has claimed a state.
+  const world = useMemo(() => {
+    const order = new Map(members.map((m, i) => [m.userId, i]));
+    const grouped: Record<string, string[]> = {};
+    const dates: Record<string, Record<string, string | null>> = {};
+    for (const v of countryVisits) {
+      (grouped[v.countryCode] ??= []).push(v.userId);
+      (dates[v.countryCode] ??= {})[v.userId] = v.firstVisitedOn;
+    }
+    for (const v of visits) {
+      if (!(grouped.US ??= []).includes(v.userId)) grouped.US.push(v.userId);
+      const us = (dates.US ??= {});
+      if (v.firstVisitedOn && (!us[v.userId] || v.firstVisitedOn < us[v.userId]!)) us[v.userId] = v.firstVisitedOn;
+      else us[v.userId] ??= null;
+    }
+    for (const ids of Object.values(grouped)) ids.sort((a, b) => (order.get(a) ?? 99) - (order.get(b) ?? 99));
+    const mineSet = new Set(countryVisits.filter((v) => v.userId === me).map((v) => v.countryCode));
+    if (mine.size > 0) mineSet.add("US");
+    const count = [...mineSet].filter((c) => COUNTRIES_BY_CODE[c]?.independent).length;
+    return { mine: mineSet, byCountry: grouped, dates, count };
+  }, [countryVisits, visits, members, me, mine]);
+
+  async function setCountryClaimed(code: string, claim: boolean) {
+    if (code === "US") {
+      setSelectedCountry("US");
+      return;
+    }
+    if (claim === world.mine.has(code)) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const before = countryVisits;
+    setCountryVisits(
+      claim
+        ? [...countryVisits, { userId: me, countryCode: code, firstVisitedOn: today }]
+        : countryVisits.filter((v) => !(v.userId === me && v.countryCode === code)),
+    );
+    setSelectedCountry(code);
+    const res = await fetch(`/api/countries/${code}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visited: claim, firstVisitedOn: claim ? today : null }),
+    }).catch(() => null);
+    if (!res?.ok) setCountryVisits(before);
+  }
+  const toggleCountry = (code: string) => setCountryClaimed(code, !world.mine.has(code));
+  const openStates = () => {
+    setSelectedCountry(null);
+    setView("us");
+  };
 
   async function setClaimed(code: string, claim: boolean) {
     if (claim === mine.has(code)) return;
@@ -119,12 +217,34 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
             <div className="flex min-h-[76px] items-center gap-4 border-b border-line px-3 py-3 sm:px-6">
               {/* Holds the pill's footprint while it is expanded, so the bar never jumps. */}
               <div className="w-[176px] shrink-0">
-                {!statsOpen && <StatsPill visitedCodes={mineList} onOpen={() => setStatsOpen(true)} />}
+                {view === "world" ? (
+                  <WorldPill count={world.count} />
+                ) : (
+                  !statsOpen && <StatsPill visitedCodes={mineList} onOpen={() => setStatsOpen(true)} />
+                )}
               </div>
 
               <div className="hidden min-w-0 flex-1 lg:block">
                 <AnimatePresence mode="wait" initial={false}>
-                  {selected ? (
+                  {view === "world" ? (
+                    selectedCountry ? (
+                      <motion.div key={`c-${selectedCountry}`} {...barMotion}>
+                        <CountryBar
+                          code={selectedCountry}
+                          claimed={world.mine.has(selectedCountry)}
+                          visitorIds={world.byCountry[selectedCountry] ?? []}
+                          stateCount={mine.size}
+                          onToggle={toggleCountry}
+                          onOpenStates={openStates}
+                          onClose={() => setSelectedCountry(null)}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.p key="world-hint" {...barMotion} className="text-[14px] text-ink-3">
+                        Drag to spin. Tap a country to claim it, hold to unclaim.
+                      </motion.p>
+                    )
+                  ) : selected ? (
                     <motion.div key={selected} {...barMotion}>
                       <SelectedStateBar
                         code={selected}
@@ -150,20 +270,68 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
 
             <div className="px-2 pb-3 pt-3 sm:px-6 sm:pb-6 sm:pt-5 lg:px-10">
               {/* Sized so the whole map fits above the fold on a laptop. */}
-              <div className="mx-auto w-full" style={{ maxWidth: "max(560px, calc((100dvh - 19rem) * 1.6))" }}>
-                <UsMap
-                  visited={mine}
-                  family={byState}
-                  members={members}
-                  viewerId={me}
-                  selectedCode={selected}
-                  onClaim={(code) => setClaimed(code, true)}
-                  onUnclaim={(code) => setClaimed(code, false)}
-                  onSelect={setSelected}
+              <div className="mb-2 flex justify-center sm:mb-0 sm:justify-start">
+                <ViewSwitch
+                  view={view}
+                  onChange={(v) => {
+                    setView(v);
+                    setSelected(null);
+                    setSelectedCountry(null);
+                    setStatsOpen(false);
+                  }}
                 />
               </div>
+              <AnimatePresence mode="wait" initial={false}>
+                {view === "us" ? (
+                  <motion.div
+                    key="us"
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.97 }}
+                    transition={{ duration: 0.35, ease: EASE_OUT_EXPO }}
+                    className="mx-auto w-full"
+                    style={{ maxWidth: "max(560px, calc((100dvh - 19rem) * 1.6))" }}
+                  >
+                    <UsMap
+                      visited={mine}
+                      family={byState}
+                      members={members}
+                      viewerId={me}
+                      selectedCode={selected}
+                      onClaim={(code) => setClaimed(code, true)}
+                      onUnclaim={(code) => setClaimed(code, false)}
+                      onSelect={setSelected}
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="world"
+                    initial={{ opacity: 0, scale: 0.9, rotate: -8 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    exit={{ opacity: 0, scale: 0.94 }}
+                    transition={{ duration: 0.6, ease: EASE_OUT_EXPO }}
+                    className="mx-auto w-full"
+                    style={{ maxWidth: "max(480px, calc((100dvh - 22rem) * 1.33))" }}
+                  >
+                    <WorldGlobe
+                      visited={world.mine}
+                      family={world.byCountry}
+                      members={members}
+                      viewerId={me}
+                      selectedCode={selectedCountry}
+                      onClaim={(code) => setCountryClaimed(code, true)}
+                      onUnclaim={(code) => setCountryClaimed(code, false)}
+                      onSelect={setSelectedCountry}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[13px] font-medium text-ink-2 lg:justify-between">
-                <p className="font-normal text-ink-3 lg:hidden">Tap a state to claim it. Press and hold to unclaim.</p>
+                <p className="font-normal text-ink-3 lg:hidden">
+                  {view === "us"
+                    ? "Tap a state to claim it. Press and hold to unclaim."
+                    : "Drag to spin. Tap a country to claim it, hold to unclaim."}
+                </p>
                 <div className="flex items-center gap-2 lg:ml-auto">
                   <Legend family={isFamily} />
                 </div>
@@ -180,8 +348,19 @@ export default function HomeExperience({ initialVisits }: { initialVisits: Famil
         </motion.div>
       </section>
 
+      <CountrySheet
+        code={view === "world" ? selectedCountry : null}
+        claimed={selectedCountry ? world.mine.has(selectedCountry) : false}
+        visitorIds={selectedCountry ? (world.byCountry[selectedCountry] ?? []) : []}
+        visitorDates={selectedCountry ? world.dates[selectedCountry] : undefined}
+        stateCount={mine.size}
+        onToggle={toggleCountry}
+        onOpenStates={openStates}
+        onClose={() => setSelectedCountry(null)}
+      />
+
       <StateSheet
-        code={journal ? null : selected}
+        code={journal || view !== "us" ? null : selected}
         claimed={selected ? mine.has(selected) : false}
         visitorIds={selected ? (byState[selected] ?? []) : []}
         visitorDates={selected ? datesByState[selected] : undefined}

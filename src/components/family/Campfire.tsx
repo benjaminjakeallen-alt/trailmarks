@@ -188,17 +188,23 @@ export default function Campfire({
               aria-label={s.member.displayName}
               className={`absolute rounded-full ${variant === "map" ? "pointer-events-none" : "cursor-pointer"}`}
               style={{ left: s.x - d / 2, top: s.y - d, width: d, height: d, zIndex: behindFire ? order : 20 + order }}
-              initial={{ scale: 0, y: 12 }}
               animate={
                 reduce
-                  ? { scale: 1, y: 0 }
+                  ? { y: 0 }
                   : catching
-                    ? { scale: 1, y: [0, 0, -d * 0.28, 0], transition: { duration: 1.25, times: [0, 0.58, 0.72, 0.9] } }
-                    : { scale: 1, y: [0, -1.5, 0], transition: { duration: 2.2 + idx * 0.3, repeat: Infinity } }
+                    ? { y: [0, 0, -d * 0.28, 0], transition: { duration: 1.25, times: [0, 0.58, 0.72, 0.9] } }
+                    : { y: [0, -1.5, 0], transition: { duration: 2.2 + idx * 0.3, repeat: Infinity } }
               }
-              transition={{ type: "spring", stiffness: 420, damping: 18, delay: 0.05 * idx }}
             >
-              <Avatar member={s.member} size={d} className="shadow-[0_4px_10px_-4px_rgb(0_0_0/0.45)] ring-2 ring-white" />
+              {/* The pop-in lives on its own layer, so the hop and bob above never touch its scale. */}
+              <motion.span
+                className="block"
+                initial={{ scale: 0, y: 12 }}
+                animate={{ scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 420, damping: 18, delay: 0.05 * idx }}
+              >
+                <Avatar member={s.member} size={d} className="shadow-[0_4px_10px_-4px_rgb(0_0_0/0.45)] ring-2 ring-white" />
+              </motion.span>
             </motion.button>
           );
         })}

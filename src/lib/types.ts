@@ -97,3 +97,10 @@ export interface FamilyVisit {
   stateCode: string;
   firstVisitedOn: string | null;
 }
+
+/** One person's claim on one country. */
+export interface FamilyCountryVisit {
+  userId: string;
+  countryCode: string;
+  firstVisitedOn: string | null;
+}

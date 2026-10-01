@@ -104,9 +104,23 @@ Tokens live in `src/app/globals.css`; never hard-code hex values in components.
   photo, and only a trip's owner can record, add steps to, finish or delete
   it. Nothing crosses families.
 - On the map: your states are solid aqua, states only other family members
-  have claimed are a lighter tint, each state shows its members' badges, and
-  a state everyone in the family has claimed turns shimmering gold. The stats
-  drawer adds a family ranking and an "everyone's been" count.
+  have claimed are a lighter tint, and a state everyone in the family has
+  claimed turns shimmering gold. Tap a state and the people who've been
+  appear round a campfire on it (`Campfire.tsx`). The stats drawer adds a
+  family ranking and an "everyone's been" count.
+- **Invites**: the dashed "+" seat in the map header (or Invite in the nav)
+  opens a sheet with the share sheet, Text, Email, Copy and a QR code; any
+  member can make a new link. `/join` also takes a typed code.
+- **Adventurer avatars**: tap your own avatar in the map header to make one
+  from a selfie: an AI illustration (`/api/avatar/illustrate`, AI Gateway,
+  needs credits) or an in-browser comic badge (`src/lib/photoBadge.ts`). Only
+  the finished avatar is stored, in the private `avatars` bucket (`/a/<file>`).
+- **Password reset** without email: on `/family`, anyone can make another
+  member a one-time, 48-hour link (`src/lib/passwordReset.ts`; only a hash is
+  stored). You can change your own password there too.
+- **Private media**: photos (`/p/<file>`, resized via a custom next/image
+  loader), avatars and voice notes are all in private buckets, served only to
+  the owner's family.
 - `src/proxy.ts` refreshes the session cookie on every request and sends
   anyone signed out to `/login` (API routes get a 401). Pages call
   `requireViewer()` and API routes `apiViewer()` (`src/lib/auth.ts`), then
@@ -189,7 +203,15 @@ On the map, a state's **Open journal** grows a slide-over panel out of the
 button, docked on the right: that state's family memories plus the composer, without leaving the
 map (the full `/states/[code]` page is a link away). Every composer has a
 mic: speak and the words stream into the entry (browser speech recognition,
-`src/lib/useDictation.ts`).
+`src/lib/useDictation.ts`), while the recording itself is kept and plays back
+on the memory (`src/lib/useRecorder.ts`). Without live speech recognition the
+clip is transcribed on the server.
+
+## The world
+
+The map's USA / World switch turns to a globe (`WorldGlobe.tsx`): drag to
+spin, tap a continent and it turns to face you, tap a country to claim it,
+hold to unclaim, search for the small ones. See `docs/BACKLOG.md` item 8.
 
 ## Photo import
 
@@ -208,16 +230,13 @@ Detailed feature ideas awaiting a go-ahead live in [`docs/BACKLOG.md`](docs/BACK
 - **Canada & Mexico** — the data model and map component are built to
   extend beyond the US 50; adding provinces/states just means new entries
   in `statesData.ts` and swapping in a North America TopoJSON.
-- **Password reset** — "forgot password" emails need Supabase's Site URL
-  set to the live domain (Authentication → URL Configuration) and ideally a
-  custom SMTP sender.
 - **Background GPS tracking** — a native app or PWA with background
   geolocation, so a trip keeps recording without the page staying open.
   This is the biggest gap versus Polarsteps' actual app.
 - **GPX import** — for anyone who already recorded a route in another app
   (Strava, Gaia GPS, a Garmin) and wants to bring it in instead of
   re-recording live.
-- **Map themes** — swap the color palette (national-park poster, vintage
-  postcard, night sky) as a fun customization.
+- **Map themes** and **a different activity in every state** — see
+  `docs/BACKLOG.md` items 9 and 10.
 - **Offline-friendly PWA** — so photos can be added from the road before
   reception comes back.

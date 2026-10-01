@@ -35,7 +35,7 @@ Replaced "Golden Hour" with "Glacier", built from the owner's three reference
 shots: deep petrol teal, glacier aqua, amber highlights, and photo-first
 cards with frosted-glass chips. See the README's design system section.
 
-## 6. Voice journal with transcription — done (dictation); audio kept is next
+## 6. Voice journal with transcription — done
 
 Every memory composer has a mic ("Speak it", or the mic in the story box).
 It uses the browser's own speech recognition (`src/lib/useDictation.ts`):
@@ -43,13 +43,13 @@ Apple's dictation on iPhone/Safari, Google's in Chrome; free, no API key,
 text streams in while you talk, and a dictated entry with no title takes
 its first sentence. Firefox has no speech recognition, so the mic hides there.
 
-Still open, if wanted:
-
-- Keep the audio itself: record with `MediaRecorder`, store it in Supabase
-  Storage beside the photos, add `audio_file` to `memories`.
-- Server transcription for better accuracy and punctuation (OpenAI Whisper /
-  gpt-4o-transcribe, Deepgram, AssemblyAI, or via Vercel AI Gateway): a paid
-  provider decision.
+The recording is kept too (`src/lib/useRecorder.ts`, 32 kbps, up to 10
+minutes): it plays back on the memory card and lives in the private `voice`
+bucket, served by `/v/<file>` with range requests. When the browser can't
+transcribe live (Firefox), the clip goes to `/api/transcribe` (AI Gateway,
+`openai/gpt-4o-mini-transcribe`). That needs AI Gateway credits on the
+Vercel team; without them the recording is still kept and the person is
+asked to add a line.
 
 ## 7. Import photos by metadata — done (web version)
 
@@ -71,7 +71,7 @@ Still true, and worth a native app later:
 - A website can't browse the photo library by date, so "show me only this
   trip's photos" needs the native app (PhotoKit).
 
-## 8. The whole world, with a globe that turns to each continent
+## 8. The whole world, with a globe that turns to each continent — done
 
 Grow from U.S. states to every country on every continent. A continent
 selector (a segmented control or a row of chips) turns the map like a globe
@@ -86,4 +86,39 @@ claiming countries.
   (ISO 3166 for countries, with the U.S. states kept as a subdivision), and
   the stats and ranking extend to countries and continents.
 - Trip auto-detection (`stateLookup.ts`) gains country point-in-polygon.
+
+Built: the map's USA / World switch shows `WorldGlobe.tsx`, an orthographic
+globe over `src/data/world-countries.json` (world-atlas 50m, simplified,
+236 countries and territories; rebuild with `scripts/build-world.mjs`).
+Drag to spin, continent chips fly the camera, tap claims, hold unclaims,
+search reaches the tiny ones (which also get a dot), and the same aqua /
+family / gold colors and campfire apply. Claims live in `country_visits`;
+the US counts for anyone with a state claimed. Still open: country journals
+and memories, and trip auto-detection outside the US.
+
+## 9. Map themes (idea)
+
+Swap the plain fills for illustrated maps you can switch between:
+
+- **National parks**: parks as small illustrated badges, with the big
+  landforms drawn in (the Rockies, Appalachians, Grand Canyon, Great Lakes).
+- **Great roads**: Route 66, the Blue Ridge Parkway, Pacific Coast Highway,
+  the Overseas Highway, drawn as roads; claimed stretches light up.
+- **Vintage postcard**: hand-lettered state names, paper texture, a stamp on
+  every claimed state.
+- **Topographic**: relief shading and rivers.
+- **Night lights**: a dark map with city lights; claimed states glow.
+- **Foodie**: each state's signature dish as a little icon.
+- **Road trip**: everyone's recorded trips drawn across the map.
+- **Seasons**: autumn leaves, winter snow, following the calendar.
+
+## 10. A different activity in every state (idea)
+
+The campfire becomes per-state: each state has its own little animation
+the family's adventurers do together (Utah: a swig together, Texas: BBQ,
+Hawaii: surfing, Colorado: skiing, Alaska: fishing…). Up to 10 people per
+family; up to 5 on screen at once, rotating in and out. Needs a list of
+activities per state (from the family), and the AI-illustrated avatars so
+each adventurer looks like its person (skin tone and likeness) at a tiny
+size, which needs AI Gateway credits.
 
