@@ -89,6 +89,10 @@ export interface Family {
 export interface Viewer extends Member {
   email: string;
   familyId: string;
+  /** Their one AI-illustrated adventurer, once made. */
+  illustratedUrl: string | null;
+  /** Whether they've used their one illustration (each costs AI credits). */
+  illustrationUsed: boolean;
 }
 
 /** One person's claim on one state. */

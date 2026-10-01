@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateImage } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import sharp from "sharp";
+import crypto from "node:crypto";
 import { apiViewer } from "@/lib/auth";
+import { AVATARS_BUCKET, avatarUrl, getSupabase } from "@/lib/supabase";
 
 /** Image editing can take a while. */
 export const maxDuration = 120;
@@ -20,9 +22,11 @@ function prompt(color: string) {
 }
 
 /**
- * Selfie in, illustrated adventurer out (through Vercel AI Gateway). Nothing
- * is stored here: the person sees the result and chooses whether to save it.
- * Any failure returns 503, and the app falls back to its in-browser photo badge.
+ * Selfie in, illustrated adventurer out (through Vercel AI Gateway, medium
+ * quality, about a cent). Each person gets one: the try is claimed before the
+ * call and handed back if the call fails, and the result is stored straight
+ * away so it's never lost. The selfie itself isn't kept. If the illustrator
+ * is unavailable the app falls back to its in-browser photo badge.
  */
 export async function POST(req: NextRequest) {
   const viewer = await apiViewer();
@@ -33,17 +37,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Send a photo under 4 MB" }, { status: 400 });
   }
 
+  const supabase = getSupabase();
+  const { data: claimed } = await supabase
+    .from("profiles")
+    .update({ illustrated_at: new Date().toISOString() })
+    .eq("user_id", viewer.userId)
+    .is("illustrated_at", null)
+    .select("user_id");
+  if (!claimed?.length) {
+    return NextResponse.json({ error: "You've already made your illustrated adventurer.", reason: "used" }, { status: 409 });
+  }
+
   try {
     const photo = await sharp(Buffer.from(await file.arrayBuffer())).resize(1024, 1024, { fit: "cover" }).png().toBuffer();
     const { image } = await generateImage({
       model: gateway.image(MODEL),
       prompt: { images: [photo], text: prompt(viewer.color) },
       size: "1024x1024",
+      // Shown at 25-50px: medium is plenty, and about a third the price of high.
+      providerOptions: { openai: { quality: "medium" } },
       abortSignal: AbortSignal.timeout(110_000),
     });
-    const png = await sharp(Buffer.from(image.uint8Array)).resize(512, 512).png().toBuffer();
-    return NextResponse.json({ image: `data:image/png;base64,${png.toString("base64")}` });
+    const webp = await sharp(Buffer.from(image.uint8Array)).resize(512, 512).webp({ quality: 88 }).toBuffer();
+    const name = `${crypto.randomUUID()}.webp`;
+    const { error } = await supabase.storage.from(AVATARS_BUCKET).upload(name, webp, { contentType: "image/webp" });
+    if (error) throw new Error(`storage: ${error.message}`);
+    await supabase.from("profiles").update({ illustrated_file: name }).eq("user_id", viewer.userId);
+    return NextResponse.json({ illustratedUrl: avatarUrl(name) }, { status: 201 });
   } catch (err) {
+    // Hand the try back: a failure shouldn't use up someone's one illustration.
+    await supabase.from("profiles").update({ illustrated_at: null }).eq("user_id", viewer.userId);
     const message = err instanceof Error ? err.message : String(err);
     console.error("avatar illustrate failed:", message);
     // Say why (without details), so "AI Gateway isn't set up for this project" is easy to spot.

@@ -33,6 +33,8 @@ interface ProfileRow {
   display_name: string;
   color: string;
   avatar_file: string | null;
+  illustrated_at: string | null;
+  illustrated_file: string | null;
 }
 
 /** The signed-in person with their family, or null. Cached for the request. */
@@ -44,7 +46,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!user) return null;
 
   const profile = unwrap(
-    await getSupabase().from("profiles").select("family_id, display_name, color, avatar_file").eq("user_id", user.id).maybeSingle(),
+    await getSupabase().from("profiles").select("family_id, display_name, color, avatar_file, illustrated_at, illustrated_file").eq("user_id", user.id).maybeSingle(),
   ) as ProfileRow | null;
   if (!profile) return null;
 
@@ -55,6 +57,8 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     displayName: profile.display_name,
     color: profile.color,
     avatarUrl: avatarUrl(profile.avatar_file),
+    illustratedUrl: avatarUrl(profile.illustrated_file),
+    illustrationUsed: Boolean(profile.illustrated_at),
   };
 });
 

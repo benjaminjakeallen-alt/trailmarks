@@ -14,7 +14,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ file: s
 
   const supabase = getSupabase();
   const [{ data: owner }, { data: viewer }] = await Promise.all([
-    supabase.from("profiles").select("family_id").eq("avatar_file", file).maybeSingle(),
+    // The file name is checked above, so it's safe inside the filter.
+    supabase.from("profiles").select("family_id").or(`avatar_file.eq.${file},illustrated_file.eq.${file}`).limit(1).maybeSingle(),
     supabase.from("profiles").select("family_id").eq("user_id", userId).maybeSingle(),
   ]);
   if (!owner || !viewer || owner.family_id !== viewer.family_id) return new NextResponse(null, { status: 404 });

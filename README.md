@@ -112,9 +112,14 @@ Tokens live in `src/app/globals.css`; never hard-code hex values in components.
   opens a sheet with the share sheet, Text, Email, Copy and a QR code; any
   member can make a new link. `/join` also takes a typed code.
 - **Adventurer avatars**: tap your own avatar in the map header to make one
-  from a selfie: an AI illustration (`/api/avatar/illustrate`, AI Gateway,
-  needs credits) or an in-browser comic badge (`src/lib/photoBadge.ts`). Only
-  the finished avatar is stored, in the private `avatars` bucket (`/a/<file>`).
+  from a selfie. The in-browser comic badge (`src/lib/photoBadge.ts`) is free
+  and unlimited; the AI illustration (`/api/avatar/illustrate`, AI Gateway,
+  medium quality, about 1 cent) is **one per person**, only when they tap
+  "Illustrate me". A failed call doesn't use the try, the result is stored
+  at once, and they can switch back to it any time. To give someone another
+  try: `update profiles set illustrated_at = null, illustrated_file = null
+  where user_id = '…'`. Only finished avatars are stored, never the selfie,
+  in the private `avatars` bucket (`/a/<file>`).
 - **Password reset** without email: on `/family`, anyone can make another
   member a one-time, 48-hour link (`src/lib/passwordReset.ts`; only a hash is
   stored). You can change your own password there too.

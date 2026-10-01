@@ -21,7 +21,13 @@ import { EASE_OUT_EXPO, HAPTICS, haptic } from "@/lib/motion";
 const VIEW = 272;
 
 type Choice = "illustrated" | "badge";
-type Illustration = { state: "loading" } | { state: "ready"; url: string; blob: Blob } | { state: "unavailable" };
+/** The one AI illustration each person gets: on offer, being drawn, made (and stored), used up, or unavailable. */
+type Illustration =
+  | { state: "offer" }
+  | { state: "loading" }
+  | { state: "ready"; url: string }
+  | { state: "used" }
+  | { state: "unavailable" };
 
 /** Pan (drag) and zoom (slider, wheel, pinch) a photo inside a circle, with the hat as a guide. */
 function Cropper({ image, onDone }: { image: HTMLImageElement; onDone: (crop: HTMLCanvasElement) => void }) {
@@ -162,7 +168,14 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
   const router = useRouter();
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [badge, setBadge] = useState<{ url: string; blob: Blob } | null>(null);
-  const [illustration, setIllustration] = useState<Illustration | null>(null);
+  const initialIllustration = (): Illustration =>
+    viewer?.illustratedUrl
+      ? { state: "ready", url: viewer.illustratedUrl }
+      : viewer?.illustrationUsed
+        ? { state: "used" }
+        : { state: "offer" };
+  const [illustration, setIllustration] = useState<Illustration>(initialIllustration);
+  const crop = useRef<HTMLCanvasElement | null>(null);
   const [choice, setChoice] = useState<Choice>("badge");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -174,7 +187,8 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
     run.current++;
     setImage(null);
     setBadge(null);
-    setIllustration(null);
+    // A made illustration stays on offer; only an unfinished attempt resets.
+    setIllustration((i) => (i.state === "ready" || i.state === "used" ? i : { state: "offer" }));
     setChoice("badge");
     setError(null);
     setSaving(false);
@@ -188,38 +202,59 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
     img.src = URL.createObjectURL(file);
   }
 
-  async function make(crop: HTMLCanvasElement) {
+  /** The free photo badge, made in the browser straight away. */
+  async function make(canvas: HTMLCanvasElement) {
     if (!viewer) return;
     const id = ++run.current;
+    crop.current = canvas;
     haptic(HAPTICS.claim);
-    const b = await makePhotoBadge(crop, viewer.color);
+    const b = await makePhotoBadge(canvas, viewer.color);
     if (id !== run.current) return;
     setBadge({ url: URL.createObjectURL(b), blob: b });
-    setIllustration({ state: "loading" });
+    if (illustration.state === "ready") setChoice("illustrated");
+  }
 
-    const jpeg = await new Promise<Blob | null>((r) => crop.toBlob(r, "image/jpeg", 0.9));
+  /** Spends the person's one AI illustration (only when they ask). The server stores the result. */
+  async function illustrate() {
+    const canvas = crop.current;
+    if (!canvas || (illustration.state !== "offer" && illustration.state !== "unavailable")) return;
+    haptic(HAPTICS.select);
+    setIllustration({ state: "loading" });
+    const jpeg = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.9));
     const form = new FormData();
     if (jpeg) form.append("file", jpeg, "selfie.jpg");
     const res = await fetch("/api/avatar/illustrate", { method: "POST", body: form }).catch(() => null);
-    const data = res?.ok ? await res.json().catch(() => null) : null;
-    if (id !== run.current) return;
-    if (data?.image) {
-      const blob = await (await fetch(data.image)).blob();
-      setIllustration({ state: "ready", url: URL.createObjectURL(blob), blob });
+    const data = await res?.json().catch(() => null);
+    if (res?.ok && data?.illustratedUrl) {
+      setIllustration({ state: "ready", url: data.illustratedUrl });
       setChoice("illustrated");
-      haptic(HAPTICS.claim);
+      haptic(HAPTICS.everyone);
+      router.refresh();
+    } else if (res?.status === 409) {
+      setIllustration({ state: "used" });
     } else {
       setIllustration({ state: "unavailable" });
     }
   }
 
+  async function wearIllustration() {
+    return fetch("/api/avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ use: "illustration" }),
+    }).catch(() => null);
+  }
+
   async function save() {
-    const blob = choice === "illustrated" && illustration?.state === "ready" ? illustration.blob : badge?.blob;
-    if (!blob) return;
     setSaving(true);
-    const form = new FormData();
-    form.append("file", blob, "avatar.png");
-    const res = await fetch("/api/avatar", { method: "POST", body: form }).catch(() => null);
+    let res: Response | null = null;
+    if (choice === "illustrated" && illustration.state === "ready") {
+      res = await wearIllustration();
+    } else if (badge) {
+      const form = new FormData();
+      form.append("file", badge.blob, "avatar.png");
+      res = await fetch("/api/avatar", { method: "POST", body: form }).catch(() => null);
+    }
     if (!res?.ok) {
       setError("That didn't save. Check your connection and try again.");
       setSaving(false);
@@ -287,14 +322,31 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                   Choose a photo
                 </Button>
               </div>
+              {viewer.illustratedUrl && viewer.avatarUrl !== viewer.illustratedUrl && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={async () => {
+                    setSaving(true);
+                    await wearIllustration();
+                    router.refresh();
+                    onClose();
+                  }}
+                  className="mt-4 flex w-full items-center gap-3 rounded-2xl bg-bg p-2.5 text-left ring-1 ring-line hover:ring-petrol/40"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- small stored avatar */}
+                  <img src={viewer.illustratedUrl} alt="" className="h-12 w-12 rounded-full" />
+                  <span className="flex-1 text-[14.5px] font-semibold">Wear your illustrated adventurer again</span>
+                </button>
+              )}
               {viewer.avatarUrl && (
                 <button type="button" onClick={remove} disabled={saving} className="mx-auto mt-4 block text-[14px] font-semibold text-ink-3 hover:text-coral">
                   Go back to initials
                 </button>
               )}
               <p className="mt-4 text-center text-[12.5px] leading-relaxed text-ink-3">
-                Your selfie isn&apos;t kept, only the adventurer you pick. The illustrated one is drawn by an AI image
-                model.
+                Your selfie isn&apos;t kept, only the adventurer you pick. Photo badges are free and unlimited; everyone
+                gets one AI-illustrated adventurer.
               </p>
             </div>
           )}
@@ -307,11 +359,17 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                 <OptionCard
                   label="Illustrated"
                   selected={choice === "illustrated"}
-                  disabled={illustration?.state !== "ready"}
-                  onSelect={() => setChoice("illustrated")}
+                  disabled={illustration.state === "loading" || illustration.state === "used"}
+                  onSelect={() => (illustration.state === "ready" ? setChoice("illustrated") : illustrate())}
                 >
                   <div className="relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-sunken">
-                    {illustration?.state === "ready" ? (
+                    {illustration.state === "offer" ? (
+                      <span className="flex flex-col items-center gap-1.5 px-3 text-center">
+                        <MagicWandIcon size={26} weight="fill" className="text-petrol" />
+                        <span className="text-[13px] font-semibold text-petrol">Illustrate me</span>
+                        <span className="text-[11.5px] leading-tight text-ink-3">One per person, so use your best selfie</span>
+                      </span>
+                    ) : illustration.state === "ready" ? (
                       <motion.img
                         src={illustration.url}
                         alt="Illustrated adventurer"
@@ -320,13 +378,17 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                         transition={{ type: "spring", stiffness: 260, damping: 18 }}
                         className="h-full w-full object-cover"
                       />
-                    ) : illustration?.state === "loading" ? (
+                    ) : illustration.state === "loading" ? (
                       <span className="flex flex-col items-center gap-2 px-3 text-center text-[12.5px] font-medium text-ink-3">
                         <MagicWandIcon size={26} className="animate-pulse text-petrol" />
                         Sketching you…
                       </span>
                     ) : (
-                      <span className="px-4 text-center text-[12.5px] text-ink-3">The illustrator is out today</span>
+                      <span className="px-4 text-center text-[12.5px] text-ink-3">
+                        {illustration.state === "used"
+                          ? "You've made your one illustration"
+                          : "The illustrator is out right now. Your try wasn't used: tap to try again."}
+                      </span>
                     )}
                   </div>
                 </OptionCard>
