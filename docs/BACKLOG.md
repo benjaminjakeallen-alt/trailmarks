@@ -112,19 +112,17 @@ Swap the plain fills for illustrated maps you can switch between:
 - **Road trip**: everyone's recorded trips drawn across the map.
 - **Seasons**: autumn leaves, winter snow, following the calendar.
 
-## 10. A different activity in every state — started (15 states)
+## 10. A different activity in every state — started (15 states, in 3D)
 
-Built: a quick tap on a state (never a hold or a drag) plays its activity,
-acted out by the family's adventurers: in a card over the map on desktop,
-in the state sheet on phones. Five on stage at once; bigger families (up to
-ten) rotate one in every few seconds. Scenes live in
-`src/components/scenes/` (`stage.tsx` is the little engine; preview them
-all at `/dev/scenes` in development). Done: UT (44 oz sodas, lawn chairs),
-CA (mouse ears + fireworks / surfing, alternating), OR (Tillamook ice
-cream), NV (slots), AZ (cliff dwellings), NM (abduction), ID (potatoes),
-TX (BBQ), FL (tank tops, run), NY (pizza), TN (country queen), WI (game day
-in green and gold), MI (pickup), LA (jazz), GA (peaches). Every other state
-keeps the campfire until it gets one.
+Built: a quick tap on a state (never a hold or a drag) lifts it off the map
+as a 3D slab (CSS 3D: a tilted plane with thickness and a shadow), its
+surface painted for the activity, and the family's adventurers stand on it
+as little game pieces and act it out. Small states grow to a readable size.
+Five on stage at once; bigger families (up to ten) rotate one in every few
+seconds. Engine: `src/components/scenes/diorama.tsx`; scenes:
+`dioramaScenes.tsx`; preview them all at `/dev/scenes` in development.
+Done: UT, CA (two, alternating), OR, NV, AZ, NM, ID, TX, FL, NY, TN, WI, MI,
+LA, GA. Every other state gets the 3D campfire until it has its own.
 
 Original idea:
 

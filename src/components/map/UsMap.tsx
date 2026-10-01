@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MAP_HEIGHT, MAP_WIDTH, getUsGeometry } from "@/lib/usGeo";
 import { EASE_OUT_EXPO, HAPTICS, SPRING_SNAPPY, SPRING_STAMP, haptic } from "@/lib/motion";
-import StateScene from "@/components/scenes/StateScene";
+import StateDiorama from "@/components/scenes/StateDiorama";
 import type { Member } from "@/lib/types";
 
 type FxKind = "claim" | "unclaim";
@@ -226,6 +226,15 @@ export default function UsMap({
     fired: boolean;
   } | null>(null);
   const [introDone, setIntroDone] = useState(false);
+  // The map's size in px, for laying the 3D scene out over it.
+  const [wrapSize, setWrapSize] = useState<{ w: number; h: number } | null>(null);
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setWrapSize({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const reduceMotion = useReducedMotion();
 
   const isFamily = members.length > 1;
@@ -555,34 +564,17 @@ export default function UsMap({
         </g>
       </svg>
 
-      {/* Desktop: a quick tap plays the state's activity in a card over the map (phones show it in the sheet). */}
+      {/* A quick tap: the state lifts off the map and the family acts out its activity on it, in 3D. */}
       <AnimatePresence>
-        {selectedShape && played?.code === selectedShape.code && campers.length > 0 && (
-          <motion.div
+        {selectedShape && played?.code === selectedShape.code && campers.length > 0 && wrapSize && (
+          <StateDiorama
             key={`scene-${selectedShape.code}-${played.n}`}
-            className="pointer-events-none absolute z-[5] hidden w-[250px] lg:block"
-            style={{
-              left: `${(selectedShape.centroid[0] / MAP_WIDTH) * 100}%`,
-              top: `${(selectedShape.centroid[1] / MAP_HEIGHT) * 100}%`,
-            }}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.7, transition: { duration: 0.18 } }}
-            transition={SPRING_STAMP}
-          >
-            {/* Above the state, or below it for the northern ones so it stays on the map. */}
-            <div
-              className={`-translate-x-1/2 ${selectedShape.centroid[1] < MAP_HEIGHT * 0.42 ? "translate-y-5" : "-translate-y-[calc(100%+20px)]"}`}
-            >
-              <StateScene
-                code={selectedShape.code}
-                members={campers}
-                gold={everyone(selectedShape.code)}
-                turn={played.n}
-                className="shadow-[var(--shadow-float)] ring-1 ring-line"
-              />
-            </div>
-          </motion.div>
+            shape={selectedShape}
+            size={wrapSize}
+            members={campers}
+            gold={everyone(selectedShape.code)}
+            turn={played.n}
+          />
         )}
       </AnimatePresence>
 
