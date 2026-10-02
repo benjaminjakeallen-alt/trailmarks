@@ -33,7 +33,7 @@ export default function SceneGallery() {
         <div
           key={`${code}-${turn}-${n}`}
           data-scene={`${code}-${turn}-${n}`}
-          className="relative overflow-hidden rounded-3xl bg-elevated ring-1 ring-line"
+          className="relative overflow-hidden rounded-3xl bg-surface ring-1 ring-line"
           style={{ width: SIZE.w, height: SIZE.h }}
         >
           <StateDiorama shape={geo.byCode[code]} size={SIZE} members={family(n)} gold={code === "TN"} turn={turn} />

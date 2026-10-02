@@ -60,26 +60,22 @@ export default function JoinForm({
     <form onSubmit={submit} className="space-y-5">
       {invite ? (
         <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-petrol-soft px-3 py-1 text-[13px] font-semibold text-petrol">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-[13px] font-semibold text-accent-fg">
             <UsersThreeIcon size={15} weight="fill" /> You&apos;re invited
           </span>
           <h2 className="mt-3 font-display text-[2rem] leading-tight">Join {invite.familyName}</h2>
           {invite.members.length > 0 && (
             <div className="mt-3 flex items-center gap-3">
               <AvatarStack members={invite.members} size={32} max={5} />
-              <p className="text-[14px] text-ink-2">{alreadyHere(invite.members)}</p>
+              <p className="text-[14px] text-fg-muted">{alreadyHere(invite.members)}</p>
             </div>
           )}
-          <p className="mt-3 text-[15px] text-ink-3">
-            Make your own account. Your states are yours; trips and photos are shared with the family.
-          </p>
         </div>
       ) : (
         <div>
           <h2 className="font-display text-[2rem] leading-tight">Start your family&apos;s map</h2>
-          <p className="mt-1 text-[15px] text-ink-3">You&apos;ll get an invite link to send to everyone else.</p>
           {inviteInvalid && (
-            <p className="mt-3 rounded-2xl bg-sun-soft px-4 py-3 text-[14px] text-ink-2">
+            <p className="mt-3 rounded-2xl bg-reward-soft px-4 py-3 text-[14px] text-fg-muted">
               That invite link isn&apos;t valid anymore. Ask for a fresh one, or start a new family here.
             </p>
           )}
@@ -136,7 +132,7 @@ export default function JoinForm({
         />
       </div>
       {error && (
-        <p role="alert" className="rounded-2xl bg-coral-soft px-4 py-3 text-[14px] text-ink">
+        <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-[14px] text-fg">
           {error}
         </p>
       )}
@@ -148,9 +144,9 @@ export default function JoinForm({
       >
         {busy ? "Creating your account…" : invite ? `Join ${invite.familyName}` : "Create our map"}
       </Button>
-      <p className="text-center text-[14px] text-ink-3">
+      <p className="text-center text-[14px] text-fg-subtle">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-petrol hover:text-petrol-strong">
+        <Link href="/login" className="font-semibold text-accent-fg hover:text-accent-strong">
           Sign in
         </Link>
       </p>

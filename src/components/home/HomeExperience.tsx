@@ -31,24 +31,24 @@ function Legend({ family }: { family: boolean }) {
   if (!family) {
     return (
       <>
-        <span className={`${chip} bg-aqua-soft`}>
-          <span className={`${dot} bg-gradient-to-br from-aqua-bright to-petrol`} /> Claimed
+        <span className={`${chip} bg-success-soft`}>
+          <span className={`${dot} bg-gradient-to-br from-success-bright to-accent`} /> Claimed
         </span>
-        <span className={`${chip} bg-bg`}>
-          <span className={`${dot} bg-land ring-1 ring-line-strong`} /> Not yet
+        <span className={`${chip} bg-canvas`}>
+          <span className={`${dot} bg-map-land ring-1 ring-line-strong`} /> Not yet
         </span>
       </>
     );
   }
   return (
     <>
-      <span className={`${chip} bg-aqua-soft`}>
-        <span className={`${dot} bg-gradient-to-br from-aqua-bright to-petrol`} /> You
+      <span className={`${chip} bg-success-soft`}>
+        <span className={`${dot} bg-gradient-to-br from-success-bright to-accent`} /> You
       </span>
-      <span className={`${chip} bg-bg`}>
-        <span className={`${dot} bg-aqua-bright/45`} /> Family
+      <span className={`${chip} bg-canvas`}>
+        <span className={`${dot} bg-success-bright/45`} /> Family
       </span>
-      <span className={`${chip} bg-sun-soft`}>
+      <span className={`${chip} bg-reward-soft`}>
         <span className={`${dot} bg-gradient-to-br from-[#fff1b8] via-[#f5b929] to-[#b47a06]`} /> Everyone
       </span>
     </>
@@ -58,13 +58,13 @@ function Legend({ family }: { family: boolean }) {
 /** World view's counter: countries you've been to, out of the independent ones. */
 function WorldPill({ count }: { count: number }) {
   return (
-    <div className="flex h-11 items-center gap-2.5 rounded-full bg-petrol pl-2 pr-4 text-white shadow-[0_12px_24px_-14px_var(--petrol)]">
+    <div className="flex h-11 items-center gap-2.5 rounded-full bg-accent pl-2 pr-4 text-on-accent shadow-[0_12px_24px_-14px_var(--accent)]">
       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15">
         <GlobeHemisphereWestIcon size={16} weight="bold" />
       </span>
       <span className="flex items-baseline gap-1">
         <span className="font-display text-[1.2rem] leading-none">{count}</span>
-        <span className="text-[13px] font-medium text-white/70">/ {COUNTRY_COUNT} countries</span>
+        <span className="text-[13px] font-medium text-on-accent/90">/ {COUNTRY_COUNT} countries</span>
       </span>
     </div>
   );
@@ -73,7 +73,7 @@ function WorldPill({ count }: { count: number }) {
 /** USA ⇄ World. */
 function ViewSwitch({ view, onChange }: { view: "us" | "world"; onChange: (v: "us" | "world") => void }) {
   return (
-    <div className="inline-flex rounded-full bg-bg p-1 ring-1 ring-line" role="tablist" aria-label="Map">
+    <div className="inline-flex rounded-full bg-canvas p-1 ring-1 ring-line" role="tablist" aria-label="Map">
       {(["us", "world"] as const).map((v) => (
         <button
           key={v}
@@ -81,9 +81,9 @@ function ViewSwitch({ view, onChange }: { view: "us" | "world"; onChange: (v: "u
           role="tab"
           aria-selected={view === v}
           onClick={() => onChange(v)}
-          className={`relative rounded-full px-4 py-1.5 text-[13.5px] font-semibold transition-colors ${view === v ? "text-white" : "text-ink-2 hover:text-ink"}`}
+          className={`relative rounded-full px-4 py-1.5 text-[13.5px] font-semibold transition-colors ${view === v ? "text-white" : "text-fg-muted hover:text-fg"}`}
         >
-          {view === v && <motion.span layoutId="map-view" className="absolute inset-0 rounded-full bg-petrol" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
+          {view === v && <motion.span layoutId="map-view" className="absolute inset-0 rounded-full bg-accent" transition={{ type: "spring", stiffness: 420, damping: 32 }} />}
           <span className="relative">{v === "us" ? "USA" : "World"}</span>
         </button>
       ))}
@@ -207,7 +207,7 @@ export default function HomeExperience({
       <section className="mx-auto max-w-[1400px] px-3 pt-2 sm:px-8 sm:pt-3">
         <WordReveal
           text="Every Memory, Remembered"
-          className="mb-4 px-1 font-display text-[clamp(2.1rem,4.6vw,3.6rem)] leading-[1] tracking-[-0.035em] sm:mb-5 [&>span>span:last-child]:text-petrol"
+          className="mb-4 px-1 font-display text-[clamp(2.1rem,4.6vw,3.6rem)] leading-[1] tracking-[-0.035em] sm:mb-5 [&>span>span:last-child]:text-accent-fg"
         />
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -241,7 +241,7 @@ export default function HomeExperience({
                         />
                       </motion.div>
                     ) : (
-                      <motion.p key="world-hint" {...barMotion} className="text-[14px] text-ink-3">
+                      <motion.p key="world-hint" {...barMotion} className="text-[14px] text-fg-subtle">
                         Tap a continent to zoom in, then a country to claim it.
                       </motion.p>
                     )
@@ -257,7 +257,7 @@ export default function HomeExperience({
                       />
                     </motion.div>
                   ) : (
-                    <motion.p key="hint" {...barMotion} className="text-[14px] text-ink-3">
+                    <motion.p key="hint" {...barMotion} className="text-[14px] text-fg-subtle">
                       Tap a state to claim it. Press and hold to unclaim.
                     </motion.p>
                   )}
@@ -293,7 +293,7 @@ export default function HomeExperience({
                       <button
                         type="button"
                         onClick={(e) => openJournal(selected, originOf(e.currentTarget))}
-                        className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-petrol pl-3 pr-2.5 text-[13.5px] font-semibold text-white active:scale-95"
+                        className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-accent pl-3 pr-2.5 text-[13.5px] font-semibold text-on-accent active:scale-95"
                       >
                         <NotebookIcon size={15} weight="fill" /> Journal
                       </button>
@@ -301,7 +301,7 @@ export default function HomeExperience({
                         type="button"
                         onClick={() => setSelected(null)}
                         aria-label="Deselect"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-3"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-fg-subtle"
                       >
                         <XIcon size={16} />
                       </button>
@@ -319,7 +319,7 @@ export default function HomeExperience({
                         <button
                           type="button"
                           onClick={openStates}
-                          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-petrol px-3 text-[13.5px] font-semibold text-white active:scale-95"
+                          className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 text-[13.5px] font-semibold text-on-accent active:scale-95"
                         >
                           <MapTrifoldIcon size={15} weight="fill" /> States
                         </button>
@@ -328,7 +328,7 @@ export default function HomeExperience({
                         type="button"
                         onClick={() => setSelectedCountry(null)}
                         aria-label="Deselect"
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-3"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-fg-subtle"
                       >
                         <XIcon size={16} />
                       </button>
@@ -383,12 +383,7 @@ export default function HomeExperience({
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[13px] font-medium text-ink-2 lg:justify-between">
-                <p className="font-normal text-ink-3 lg:hidden">
-                  {view === "us"
-                    ? "Tap a state to claim it. Press and hold to unclaim."
-                    : "Tap a continent to zoom in, then a country to claim it."}
-                </p>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[13px] font-medium text-fg-muted lg:justify-between">
                 <div className="flex items-center gap-2 lg:ml-auto">
                   <Legend family={isFamily} />
                 </div>

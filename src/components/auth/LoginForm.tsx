@@ -38,7 +38,6 @@ export default function LoginForm({ next }: { next: string }) {
     <form onSubmit={submit} className="space-y-5">
       <div>
         <h2 className="font-display text-[2rem] leading-tight">Welcome back</h2>
-        <p className="mt-1 text-[15px] text-ink-3">Sign in to your family&apos;s map.</p>
       </div>
       <div>
         <Label htmlFor="email">Email</Label>
@@ -65,19 +64,19 @@ export default function LoginForm({ next }: { next: string }) {
           type="button"
           onClick={() => setForgot((v) => !v)}
           aria-expanded={forgot}
-          className="mt-2 text-[14px] font-semibold text-petrol hover:text-petrol-strong"
+          className="mt-2 text-[14px] font-semibold text-accent-fg hover:text-accent-strong"
         >
           Forgot your password?
         </button>
         {forgot && (
-          <p className="mt-2 rounded-2xl bg-sun-soft px-4 py-3 text-[14px] leading-relaxed text-ink-2">
+          <p className="mt-2 rounded-2xl bg-reward-soft px-4 py-3 text-[14px] leading-relaxed text-fg-muted">
             Ask anyone in your family to open <strong>Family</strong> in Trailmarks and tap{" "}
             <strong>Reset password</strong> under your name. They&apos;ll send you a link to pick a new one.
           </p>
         )}
       </div>
       {error && (
-        <p role="alert" className="rounded-2xl bg-coral-soft px-4 py-3 text-[14px] text-ink">
+        <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-[14px] text-fg">
           {error}
         </p>
       )}
@@ -89,9 +88,9 @@ export default function LoginForm({ next }: { next: string }) {
       >
         {busy ? "Signing in…" : "Sign in"}
       </Button>
-      <p className="text-center text-[14px] text-ink-3">
+      <p className="text-center text-[14px] text-fg-subtle">
         New here?{" "}
-        <Link href="/join" className="font-semibold text-petrol hover:text-petrol-strong">
+        <Link href="/join" className="font-semibold text-accent-fg hover:text-accent-strong">
           Start your family&apos;s map
         </Link>
         <br />

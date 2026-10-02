@@ -29,7 +29,7 @@ function Mosaic({ memory, onOpen }: { memory: Memory; onOpen: (i: number) => voi
         key={photo.id}
         type="button"
         onClick={() => onOpen(i)}
-        className={`group relative overflow-hidden bg-sunken ${className}`}
+        className={`group relative overflow-hidden bg-surface-sunken ${className}`}
       >
         <Image
           src={photo.url}
@@ -89,17 +89,17 @@ export default function MemoryCard({ memory, onDelete }: { memory: Memory; onDel
 
   return (
     <article
-      className={`rounded-[1.75rem] bg-elevated p-5 shadow-[var(--shadow-card)] ring-1 ring-line transition-opacity sm:p-6 ${
+      className={`rounded-[1.75rem] bg-surface p-5 shadow-[var(--shadow-card)] ring-1 ring-line transition-opacity sm:p-6 ${
         deleting ? "opacity-40" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 text-[13px] font-medium text-ink-3">
+          <p className="flex items-center gap-2 text-[13px] font-medium text-fg-subtle">
             {members.length > 1 && author && (
               <>
                 <Avatar member={author} size={20} />
-                <span className="text-ink-2">{nameOf(memory.userId)}</span>
+                <span className="text-fg-muted">{nameOf(memory.userId)}</span>
                 <span aria-hidden>·</span>
               </>
             )}
@@ -113,7 +113,7 @@ export default function MemoryCard({ memory, onDelete }: { memory: Memory; onDel
             onClick={remove}
             disabled={deleting}
             aria-label={`Delete ${memory.title}`}
-            className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-coral-soft hover:text-coral"
+            className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-fg-subtle transition-colors hover:bg-danger-soft hover:text-danger-fg"
           >
             <TrashIcon size={18} />
           </button>
@@ -129,7 +129,7 @@ export default function MemoryCard({ memory, onDelete }: { memory: Memory; onDel
         />
       )}
 
-      {memory.body && <p className="mt-3 max-w-[62ch] whitespace-pre-wrap leading-[1.7] text-ink-2">{memory.body}</p>}
+      {memory.body && <p className="mt-3 max-w-[62ch] whitespace-pre-wrap leading-[1.7] text-fg-muted">{memory.body}</p>}
 
       <Mosaic memory={memory} onOpen={setLightbox} />
 

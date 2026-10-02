@@ -260,7 +260,7 @@ export default function Campfire({
             initial={{ opacity: 0, y: 6, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4 }}
-            className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap rounded-xl bg-ink px-2.5 py-1 text-[12px] font-semibold text-bg shadow-[var(--shadow-float)]"
+            className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap rounded-xl bg-fg px-2.5 py-1 text-[12px] font-semibold text-canvas shadow-[var(--shadow-float)]"
             style={{ left: pickedSeat.x, top: pickedSeat.y - size.avatar * pickedSeat.scale - 30, zIndex: 40 }}
           >
             {pickedSeat.member.displayName}

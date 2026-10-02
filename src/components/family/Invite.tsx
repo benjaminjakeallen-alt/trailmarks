@@ -94,7 +94,7 @@ export function InviteOptions({ compact = false }: { compact?: boolean }) {
   const smsHref = `sms:?&body=${encodeURIComponent(`${message} ${url}`)}`;
   const mailHref = `mailto:?subject=${encodeURIComponent(`Join ${family.name} on Trailmarks`)}&body=${encodeURIComponent(`${message}\n\n${url}`)}`;
   const round =
-    "flex flex-col items-center gap-1.5 rounded-2xl px-1 py-3 text-[13px] font-medium text-ink-2 transition-colors hover:bg-bg hover:text-ink active:scale-[0.97]";
+    "flex flex-col items-center gap-1.5 rounded-2xl px-1 py-3 text-[13px] font-medium text-fg-muted transition-colors hover:bg-canvas hover:text-fg active:scale-[0.97]";
   const bubble = "flex h-12 w-12 items-center justify-center rounded-full";
 
   return (
@@ -121,13 +121,13 @@ export function InviteOptions({ compact = false }: { compact?: boolean }) {
           Text
         </a>
         <a href={mailHref} className={round}>
-          <span className={`${bubble} bg-petrol-soft text-petrol`}>
+          <span className={`${bubble} bg-accent-soft text-accent-fg`}>
             <EnvelopeSimpleIcon size={22} weight="fill" />
           </span>
           Email
         </a>
         <button type="button" onClick={copy} className={round}>
-          <span className={`${bubble} bg-sun-soft text-[#b36b00]`}>
+          <span className={`${bubble} bg-reward-soft text-[#b36b00]`}>
             {copied ? <CheckIcon size={22} weight="bold" /> : <CopyIcon size={22} weight="fill" />}
           </span>
           {copied ? "Copied" : "Copy link"}
@@ -136,9 +136,9 @@ export function InviteOptions({ compact = false }: { compact?: boolean }) {
           type="button"
           onClick={() => setShowQr((v) => !v)}
           aria-expanded={showQr}
-          className={`${round} ${showQr ? "text-ink" : ""}`}
+          className={`${round} ${showQr ? "text-fg" : ""}`}
         >
-          <span className={`${bubble} ${showQr ? "bg-ink text-bg" : "bg-sunken text-ink"}`}>
+          <span className={`${bubble} ${showQr ? "bg-fg text-canvas" : "bg-surface-sunken text-fg"}`}>
             <QrCodeIcon size={22} weight="fill" />
           </span>
           QR code
@@ -154,29 +154,25 @@ export function InviteOptions({ compact = false }: { compact?: boolean }) {
             transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
             className="overflow-hidden"
           >
-            <div className="mt-3 flex items-center gap-4 rounded-3xl bg-bg p-4 ring-1 ring-line">
-              {origin && <QrCode text={url} className="h-32 w-32 shrink-0 text-petrol-strong" />}
+            <div className="mt-3 flex items-center gap-4 rounded-3xl bg-canvas p-4 ring-1 ring-line">
+              {origin && <QrCode text={url} className="h-32 w-32 shrink-0 text-accent-strong" />}
               <div className="min-w-0">
-                <p className="text-[15px] font-semibold">Together right now?</p>
-                <p className="mt-1 text-[14px] leading-snug text-ink-3">
-                  Have them point their phone camera here. Or type the code at the join page:
-                </p>
-                <p className="mt-2 font-display text-[1.35rem] tracking-[0.14em] text-petrol">{family.inviteCode}</p>
+                <p className="text-[15px] font-semibold">Scan or enter code</p>
+                <p className="mt-2 font-display text-[1.35rem] tracking-[0.14em] text-accent-fg">{family.inviteCode}</p>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-3">
-        <span>Anyone with this link can join {family.name}.</span>
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
         {rotating === "confirm" ? (
           <span className="flex items-center gap-2">
-            <span className="text-ink-2">Old links stop working.</span>
-            <button type="button" onClick={rotate} className="font-semibold text-coral">
+            <span className="text-fg-muted">Old links stop working.</span>
+            <button type="button" onClick={rotate} className="font-semibold text-danger-fg">
               Make a new link
             </button>
-            <button type="button" onClick={() => setRotating("idle")} className="font-semibold text-ink-2">
+            <button type="button" onClick={() => setRotating("idle")} className="font-semibold text-fg-muted">
               Keep
             </button>
           </span>
@@ -185,7 +181,7 @@ export function InviteOptions({ compact = false }: { compact?: boolean }) {
             type="button"
             onClick={() => setRotating("confirm")}
             disabled={rotating === "busy"}
-            className="inline-flex items-center gap-1 font-semibold text-petrol hover:text-petrol-strong disabled:opacity-50"
+            className="inline-flex items-center gap-1 font-semibold text-accent-fg hover:text-accent-strong disabled:opacity-50"
           >
             <ArrowsClockwiseIcon size={13} className={rotating === "busy" ? "animate-spin" : ""} />
             {rotating === "busy" ? "Making a new link…" : "New link"}
@@ -204,10 +200,6 @@ export function InviteSheet({ open, onClose }: { open: boolean; onClose: () => v
       <div className="pr-10">
         <AvatarStack members={members} size={34} max={6} />
         <h2 className="mt-4 font-display text-[1.8rem] leading-tight">Invite the family</h2>
-        <p className="mt-1 text-[15px] leading-relaxed text-ink-3">
-          Everyone gets their own login and their own states on the family map. Trips, memories and photos
-          are shared.
-        </p>
       </div>
       <div className="mt-5">
         <InviteOptions compact />
@@ -227,7 +219,7 @@ export function InviteButton({ className = "" }: { className?: string }) {
         openInvite();
       }}
       aria-label="Invite family"
-      className={`flex h-10 items-center gap-2 rounded-full bg-elevated px-3 text-[15px] font-medium text-petrol ring-1 ring-line transition-[box-shadow,transform] hover:ring-petrol/40 active:scale-[0.97] ${className}`}
+      className={`flex h-10 items-center gap-2 rounded-full bg-surface px-3 text-[15px] font-medium text-accent-fg ring-1 ring-line transition-[box-shadow,transform] hover:ring-accent/40 active:scale-[0.97] ${className}`}
     >
       <UserPlusIcon size={19} weight="bold" />
       <span className="hidden md:inline">Invite</span>

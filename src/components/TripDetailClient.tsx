@@ -60,7 +60,7 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
 
   return (
     <div className="mx-auto max-w-[1400px] px-3 pb-24 pt-4 sm:px-8 lg:pt-6">
-      <Link href="/trips" className="group ml-1 inline-flex items-center gap-2 text-[15px] font-medium text-ink-2 hover:text-ink">
+      <Link href="/trips" className="group ml-1 inline-flex items-center gap-2 text-[15px] font-medium text-fg-muted hover:text-fg">
         <ArrowLeftIcon size={15} className="transition-transform duration-300 group-hover:-translate-x-1" />
         All trips
       </Link>
@@ -142,19 +142,19 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
             initial={{ opacity: 0, y: 16, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.7, ease: EASE_OUT_EXPO }}
-            className="mt-4 flex items-center gap-4 rounded-[1.6rem] bg-aqua-soft p-5 ring-1 ring-aqua/20"
+            className="mt-4 flex items-center gap-4 rounded-[1.6rem] bg-success-soft p-5 ring-1 ring-success/20"
           >
             <motion.span
               initial={{ scale: 0, rotate: -30 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ ...SPRING_STAMP, delay: 0.15 }}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-aqua text-white"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-success text-white"
             >
               <CheckIcon size={22} weight="bold" />
             </motion.span>
             <div>
               <p className="font-display text-xl">Trip complete.</p>
-              <p className="text-sm text-ink-2">
+              <p className="text-sm text-fg-muted">
                 {finished.length > 0
                   ? `${finished.map((c) => STATES_BY_CODE[c]?.name ?? c).join(", ")} ${
                       finished.length === 1 ? "is" : "are"
@@ -168,12 +168,12 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
 
       {stateCodes.length > 0 && (
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <span className="mr-1 text-[14px] font-medium text-ink-3">Crossed</span>
+          <span className="mr-1 text-[14px] font-medium text-fg-subtle">Crossed</span>
           {stateCodes.map((code) => (
             <Link
               key={code}
               href={`/states/${code.toLowerCase()}`}
-              className="rounded-full bg-elevated px-3.5 py-1.5 text-[14px] font-medium shadow-[var(--shadow-card)] ring-1 ring-line transition-colors hover:text-petrol hover:ring-petrol/30"
+              className="rounded-full bg-surface px-3.5 py-1.5 text-[14px] font-medium shadow-[var(--shadow-card)] ring-1 ring-line transition-colors hover:text-accent-fg hover:ring-accent/30"
             >
               {STATES_BY_CODE[code]?.name ?? code}
             </Link>
@@ -185,7 +185,7 @@ export default function TripDetailClient({ trip: initialTrip }: { trip: TripDeta
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-baseline gap-3">
             <h2 className="font-display text-3xl">Steps</h2>
-            <span className="text-[14px] font-medium text-ink-3 tabular">
+            <span className="text-[14px] font-medium text-fg-subtle tabular">
               {memories.length} {memories.length === 1 ? "stop" : "stops"}
             </span>
           </div>

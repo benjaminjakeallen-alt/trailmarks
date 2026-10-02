@@ -40,7 +40,7 @@ export default function Visitors({
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {visitors.length > 0 && <AvatarStack members={visitors} size={size} />}
-      <span className={`text-[13px] leading-snug ${onPhoto ? "text-white/80" : "text-ink-3"}`}>{line}</span>
+      <span className={`text-[13px] leading-snug ${onPhoto ? "text-white/80" : "text-fg-subtle"}`}>{line}</span>
     </div>
   );
 }

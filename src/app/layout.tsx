@@ -33,7 +33,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       data-theme={theme}
       className={`${outfit.variable} h-full antialiased`}
     >
-      <body className="flex min-h-[100dvh] flex-col bg-bg text-ink">
+      <body className="flex min-h-[100dvh] flex-col bg-canvas text-fg">
         <Providers>
           <FamilyProvider
             viewer={viewer}

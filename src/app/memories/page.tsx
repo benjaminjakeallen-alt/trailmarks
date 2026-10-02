@@ -1,7 +1,6 @@
 import { requireViewer } from "@/lib/auth";
 import { getAllMemories } from "@/lib/memories";
 import MemoriesGallery from "@/components/MemoriesGallery";
-import { Eyebrow } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 import type { GalleryItem } from "@/lib/galleryItem";
 
@@ -25,12 +24,8 @@ export default async function MemoriesPage() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 pb-24 pt-8 sm:px-8 lg:pt-16">
-      <header className="mb-8 sm:mb-12">
-        <Eyebrow>Memories</Eyebrow>
-        <WordReveal
-          text={"Every photo,\nevery road."}
-          className="mt-3 font-display text-[clamp(2.6rem,6vw,4.75rem)] leading-[0.95] tracking-[-0.04em] [&>span:last-child]:text-petrol"
-        />
+      <header className="mb-8 sm:mb-10">
+        <WordReveal text="Memories" className="font-display text-[clamp(2.4rem,6vw,4rem)] leading-[1] tracking-[-0.035em]" />
       </header>
       <MemoriesGallery items={items} />
     </div>

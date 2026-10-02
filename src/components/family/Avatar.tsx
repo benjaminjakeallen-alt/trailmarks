@@ -25,7 +25,7 @@ export default function Avatar({
         alt=""
         title={member.displayName}
         draggable={false}
-        className={`inline-block shrink-0 select-none rounded-full object-cover ${ring ? "ring-2 ring-elevated" : ""} ${className}`}
+        className={`inline-block shrink-0 select-none rounded-full object-cover ${ring ? "ring-2 ring-surface" : ""} ${className}`}
         style={{ width: size, height: size, background: member.color }}
       />
     );
@@ -34,7 +34,7 @@ export default function Avatar({
     <span
       title={member.displayName}
       className={`inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold text-white ${
-        ring ? "ring-2 ring-elevated" : ""
+        ring ? "ring-2 ring-surface" : ""
       } ${className}`}
       style={{ width: size, height: size, background: member.color, fontSize: Math.round(size * 0.4) }}
     >
@@ -54,7 +54,7 @@ export function AvatarStack({ members, size = 26, max = 4 }: { members: Member[]
       ))}
       {extra > 0 && (
         <span
-          className="-ml-2 inline-flex items-center justify-center rounded-full bg-sunken font-semibold text-ink-2 ring-2 ring-elevated"
+          className="-ml-2 inline-flex items-center justify-center rounded-full bg-surface-sunken font-semibold text-fg-muted ring-2 ring-surface"
           style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}
         >
           +{extra}

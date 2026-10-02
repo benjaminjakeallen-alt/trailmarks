@@ -25,14 +25,14 @@ export function TripStatus({ status, onPhoto = false }: { status: Trip["status"]
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12.5px] font-medium ${
-        onPhoto ? "glass text-white" : "bg-elevated text-ink-2 ring-1 ring-line"
+        onPhoto ? "glass text-white" : "bg-surface text-fg-muted ring-1 ring-line"
       }`}
     >
       <span className="relative flex h-2 w-2">
-        {status === "active" && <span className="record-pulse absolute inset-0 rounded-full bg-coral" />}
+        {status === "active" && <span className="record-pulse absolute inset-0 rounded-full bg-danger" />}
         <span
           className={`relative h-2 w-2 rounded-full ${
-            status === "active" ? "bg-coral" : status === "completed" ? "bg-aqua-bright" : onPhoto ? "bg-white/60" : "bg-ink-3"
+            status === "active" ? "bg-danger" : status === "completed" ? "bg-success-bright" : onPhoto ? "bg-white/60" : "bg-fg-subtle"
           }`}
         />
       </span>
@@ -117,14 +117,14 @@ export default function TripCard({
         </div>
 
         <div className="relative p-5 sm:p-6">
-          <h3 className={`font-display leading-[1.05] ${featured ? "text-[2rem] sm:text-[2.5rem]" : "text-[1.6rem]"}`}>
+          <h2 className={`font-display leading-[1.05] ${featured ? "text-[2rem] sm:text-[2.5rem]" : "text-[1.6rem]"}`}>
             {trip.title}
-          </h3>
+          </h2>
           <div className="mt-3 flex flex-wrap gap-2">
             <Chip icon={<CalendarBlankIcon size={14} />}>{formatTripDates(trip.startedAt, trip.endedAt)}</Chip>
             {distanceMiles > 0 && <Chip icon={<PathIcon size={14} />}>{miles} mi</Chip>}
             {stateCodes.length > 0 && (
-              <Chip icon={<MapPinIcon size={14} weight="fill" className="text-sun" />}>
+              <Chip icon={<MapPinIcon size={14} weight="fill" className="text-reward" />}>
                 {stateCodes.map((c) => STATES_BY_CODE[c]?.code ?? c).join(" · ")}
               </Chip>
             )}

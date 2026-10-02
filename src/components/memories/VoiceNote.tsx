@@ -72,13 +72,13 @@ export default function VoiceNote({
   }
 
   return (
-    <div className={`flex items-center gap-3 rounded-full bg-coral-soft py-1.5 pl-1.5 pr-4 ${className}`}>
+    <div className={`flex items-center gap-3 rounded-full bg-danger-soft py-1.5 pl-1.5 pr-4 ${className}`}>
       <audio ref={audio} src={src} preload="metadata" />
       <button
         type="button"
         onClick={toggle}
         aria-label={playing ? `Pause ${label}` : `Play ${label}`}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-coral text-white transition-transform active:scale-95"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger text-on-danger transition-transform active:scale-95"
       >
         {playing ? <PauseIcon size={16} weight="fill" /> : <PlayIcon size={16} weight="fill" />}
       </button>
@@ -86,12 +86,12 @@ export default function VoiceNote({
         {shape.map((v, i) => (
           <span
             key={i}
-            className={`w-[3px] shrink-0 rounded-full transition-colors ${i / shape.length < progress ? "bg-coral" : "bg-coral/30"}`}
+            className={`w-[3px] shrink-0 rounded-full transition-colors ${i / shape.length < progress ? "bg-danger" : "bg-danger/30"}`}
             style={{ height: `${v * 100}%` }}
           />
         ))}
       </div>
-      <span className="shrink-0 text-[13px] font-semibold tabular-nums text-coral">
+      <span className="shrink-0 text-[13px] font-semibold tabular-nums text-danger-fg">
         {formatSeconds(playing || progress ? duration * progress : duration)}
       </span>
       {onRemove && (
@@ -99,7 +99,7 @@ export default function VoiceNote({
           type="button"
           onClick={onRemove}
           aria-label="Remove recording"
-          className="-mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-coral/70 hover:bg-coral/10 hover:text-coral"
+          className="-mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-danger-fg/70 hover:bg-danger/10 hover:text-danger-fg"
         >
           <XIcon size={15} />
         </button>

@@ -92,8 +92,8 @@ export default function RouteSketch({
     >
       <defs>
         <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1={start[0]} y1={start[1]} x2={end[0]} y2={end[1]}>
-          <stop offset="0" style={{ stopColor: onPhoto ? "#ffffff" : "var(--aqua)" }} />
-          <stop offset="1" style={{ stopColor: onPhoto ? "#ffffff" : "var(--petrol)" }} />
+          <stop offset="0" style={{ stopColor: onPhoto ? "#ffffff" : "var(--success)" }} />
+          <stop offset="1" style={{ stopColor: onPhoto ? "#ffffff" : "var(--accent)" }} />
         </linearGradient>
       </defs>
 
@@ -101,7 +101,7 @@ export default function RouteSketch({
         <path
           d={d}
           fill="none"
-          stroke={onPhoto ? "#ffffff" : "var(--ink-3)"}
+          stroke={onPhoto ? "#ffffff" : "var(--fg-subtle)"}
           strokeOpacity={onPhoto ? 0.55 : 0.5}
           strokeWidth={2.5}
           strokeDasharray="2 8"
@@ -112,7 +112,7 @@ export default function RouteSketch({
           <path
             d={d}
             fill="none"
-            stroke={onPhoto ? "rgb(0 0 0 / 0.2)" : "var(--bg-elevated)"}
+            stroke={onPhoto ? "rgb(0 0 0 / 0.2)" : "var(--surface)"}
             strokeWidth={onPhoto ? 7 : 9}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -135,7 +135,7 @@ export default function RouteSketch({
               <circle cx={start[0]} cy={start[1]} r={5} fill="#ffffff" />
             </>
           ) : (
-            <circle cx={start[0]} cy={start[1]} r={5} fill="var(--bg-elevated)" stroke="var(--aqua)" strokeWidth={2.5} />
+            <circle cx={start[0]} cy={start[1]} r={5} fill="var(--surface)" stroke="var(--success)" strokeWidth={2.5} />
           )}
           <motion.g
             initial={{ opacity: 0, scale: 0 }}
@@ -144,13 +144,13 @@ export default function RouteSketch({
             transition={{ delay: 1.6, type: "spring", stiffness: 400, damping: 18 }}
             style={{ transformBox: "fill-box", transformOrigin: "center" }}
           >
-            {live && <circle cx={end[0]} cy={end[1]} r={7} fill="var(--coral)" className="record-pulse state-path" />}
+            {live && <circle cx={end[0]} cy={end[1]} r={7} fill="var(--danger)" className="record-pulse state-path" />}
             <circle
               cx={end[0]}
               cy={end[1]}
               r={7}
-              fill={live ? "var(--coral)" : onPhoto ? "var(--sun)" : "var(--petrol)"}
-              stroke={onPhoto ? "#ffffff" : "var(--bg-elevated)"}
+              fill={live ? "var(--danger)" : onPhoto ? "var(--reward)" : "var(--accent)"}
+              stroke={onPhoto ? "#ffffff" : "var(--surface)"}
               strokeWidth={3}
             />
           </motion.g>

@@ -48,8 +48,8 @@ export default function StateSilhouette({
             </>
           ) : (
             <>
-              <stop offset="0" style={{ stopColor: onPhoto ? "var(--aqua-bright)" : "var(--petrol)" }} />
-              <stop offset="1" style={{ stopColor: onPhoto ? "var(--aqua)" : "var(--aqua-bright)" }} />
+              <stop offset="0" style={{ stopColor: onPhoto ? "var(--success-bright)" : "var(--accent)" }} />
+              <stop offset="1" style={{ stopColor: onPhoto ? "var(--success)" : "var(--success-bright)" }} />
             </>
           )}
         </linearGradient>
@@ -57,7 +57,7 @@ export default function StateSilhouette({
 
       <motion.path
         d={d}
-        fill={onPhoto ? "rgb(255 255 255 / 0.14)" : "var(--land)"}
+        fill={onPhoto ? "rgb(255 255 255 / 0.14)" : "var(--map-land)"}
         initial={{ opacity: draw ? 0 : 1 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.8, ease: EASE_OUT_EXPO, delay: draw ? 1.1 : 0 }}
@@ -73,7 +73,7 @@ export default function StateSilhouette({
       <motion.path
         d={d}
         fill="none"
-        stroke={onPhoto ? "#ffffff" : "var(--ink)"}
+        stroke={onPhoto ? "#ffffff" : "var(--fg)"}
         strokeWidth={onPhoto ? 2 : 1.2}
         strokeLinejoin="round"
         strokeOpacity={onPhoto ? 0.95 : 0.55}

@@ -87,9 +87,9 @@ export default function CrewDock() {
         aria-label={viewer.avatarUrl ? "Change your adventurer" : "Make your adventurer"}
         className="relative z-[4] rounded-full transition-transform active:scale-95"
       >
-        <Avatar member={viewer} size={40} className="ring-[3px] ring-elevated" />
+        <Avatar member={viewer} size={40} className="ring-[3px] ring-surface" />
         {!viewer.avatarUrl && (
-          <span className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-petrol text-white ring-2 ring-elevated">
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-accent text-on-accent ring-2 ring-surface">
             <CameraIcon size={10} weight="fill" />
           </span>
         )}
@@ -98,10 +98,10 @@ export default function CrewDock() {
       {shown.length > 0 && (
         <Link href="/family" aria-label="Your family" className="flex items-center">
           {shown.map((m) => (
-            <Avatar key={m.userId} member={m} size={40} className="-ml-2.5 ring-[3px] ring-elevated" />
+            <Avatar key={m.userId} member={m} size={40} className="-ml-2.5 ring-[3px] ring-surface" />
           ))}
           {extra > 0 && (
-            <span className="-ml-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-sunken text-[13px] font-semibold text-ink-2 ring-[3px] ring-elevated">
+            <span className="-ml-2.5 flex h-10 w-10 items-center justify-center rounded-full bg-surface-sunken text-[13px] font-semibold text-fg-muted ring-[3px] ring-surface">
               +{extra}
             </span>
           )}
@@ -117,7 +117,7 @@ export default function CrewDock() {
           openInvite();
         }}
         aria-label="Invite family"
-        className={`group ml-1.5 flex h-10 items-center gap-1.5 rounded-full border-2 border-dashed border-petrol/35 bg-elevated text-petrol transition-colors hover:border-petrol hover:bg-petrol-soft ${
+        className={`group ml-1.5 flex h-10 items-center gap-1.5 rounded-full border-2 border-dashed border-accent/35 bg-surface text-accent-fg transition-colors hover:border-accent hover:bg-accent-soft ${
           solo ? "pl-2.5 pr-3.5" : "w-10 justify-center"
         }`}
       >
@@ -140,16 +140,11 @@ export default function CrewDock() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
             transition={{ duration: 0.45, ease: EASE_OUT_EXPO }}
-            className="absolute right-0 top-[calc(100%+10px)] z-20 w-[228px] rounded-2xl bg-ink px-3.5 py-2.5 text-left text-[13px] leading-snug text-bg shadow-[var(--shadow-float)]"
+            className="absolute right-0 top-[calc(100%+10px)] z-20 w-max rounded-2xl bg-fg px-3.5 py-2.5 text-left text-[13px] leading-snug text-canvas shadow-[var(--shadow-float)]"
           >
-            <span className="absolute -top-1.5 h-3 w-3 rotate-45 bg-ink" style={{ right: arrowRight }} />
+            <span className="absolute -top-1.5 h-3 w-3 rotate-45 bg-fg" style={{ right: arrowRight }} />
             <span className="relative block font-semibold">
               {hint === "adventurer" ? "Become an adventurer" : "Bring the family"}
-            </span>
-            <span className="relative block text-bg/70">
-              {hint === "adventurer"
-                ? "Snap a selfie. You'll show up round the campfire on every state you've been."
-                : "Their states join your map, and the places you've all been turn gold."}
             </span>
           </motion.button>
         )}

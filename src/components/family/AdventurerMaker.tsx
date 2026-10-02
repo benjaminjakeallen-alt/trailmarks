@@ -11,6 +11,7 @@ import {
   MagicWandIcon,
   SparkleIcon,
 } from "@phosphor-icons/react";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import Sheet from "@/components/ui/Sheet";
 import Avatar from "@/components/family/Avatar";
@@ -65,7 +66,7 @@ function Cropper({ image, onDone }: { image: HTMLImageElement; onDone: (crop: HT
   return (
     <div>
       <div
-        className="relative mx-auto touch-none select-none overflow-hidden rounded-full bg-sunken ring-4 ring-petrol/20"
+        className="relative mx-auto touch-none select-none overflow-hidden rounded-full bg-surface-sunken ring-4 ring-accent/20"
         style={{ width: VIEW, height: VIEW }}
         onWheel={(e) => setZoomClamped(zoom * (e.deltaY < 0 ? 1.06 : 0.94))}
         onPointerDown={(e) => {
@@ -108,7 +109,7 @@ function Cropper({ image, onDone }: { image: HTMLImageElement; onDone: (crop: HT
           <ellipse cx={256} cy={318} rx={112} ry={138} fill="none" stroke="#fff" strokeOpacity={0.7} strokeWidth={4} strokeDasharray="10 12" />
         </svg>
       </div>
-      <p className="mt-3 text-center text-[13.5px] text-ink-3">Drag and pinch so your face fills the oval, under the hat.</p>
+      <p className="mt-3 text-center text-[13.5px] text-fg-subtle">Drag and pinch to fit the oval.</p>
       <input
         type="range"
         min={1}
@@ -117,7 +118,7 @@ function Cropper({ image, onDone }: { image: HTMLImageElement; onDone: (crop: HT
         value={zoom}
         onChange={(e) => setZoomClamped(Number(e.target.value))}
         aria-label="Zoom"
-        className="mx-auto mt-3 block w-56 accent-[var(--petrol)]"
+        className="mx-auto mt-3 block w-56 accent-[var(--accent)]"
       />
       <Button onClick={done} icon={<MagicWandIcon size={18} weight="fill" />} className="mt-5 w-full">
         Make my adventurer
@@ -146,11 +147,11 @@ function OptionCard({
       disabled={disabled}
       aria-pressed={selected}
       className={`relative flex flex-col items-center gap-2 rounded-3xl p-3 transition-[box-shadow,background-color] ${
-        selected ? "bg-petrol-soft ring-2 ring-petrol" : "bg-bg ring-1 ring-line hover:ring-petrol/40"
+        selected ? "bg-accent-soft ring-2 ring-accent" : "bg-canvas ring-1 ring-line hover:ring-accent/40"
       } disabled:cursor-default`}
     >
       {selected && (
-        <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-petrol text-white">
+        <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-on-accent">
           <CheckIcon size={13} weight="bold" />
         </span>
       )}
@@ -297,13 +298,6 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
         <h2 className="font-display text-[1.8rem] leading-tight">
           {stage === "choose" ? "Meet your adventurer" : stage === "crop" ? "Line yourself up" : "Your adventurers"}
         </h2>
-        <p className="mt-1 text-[15px] leading-relaxed text-ink-3">
-          {stage === "pick"
-            ? "Pick who you are on the family map, or snap a selfie for a new one."
-            : stage === "crop"
-              ? "Drag and pinch so your face fills the oval."
-              : "Pick the one that feels like you."}
-        </p>
       </div>
 
       <input ref={cameraRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
@@ -320,7 +314,14 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
         >
           {stage === "pick" && viewer && (
             <div>
-              {saved && saved.length > 0 ? (
+              {saved === null ? (
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-5" role="status">
+                  <span className="sr-only">Loading your adventurers</span>
+                  {[0, 1, 2].map((i) => (
+                    <Skeleton key={i} className="aspect-square rounded-full" />
+                  ))}
+                </div>
+              ) : saved.length > 0 ? (
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
                   {saved.map((a) => {
                     const on = wearing === a.url;
@@ -337,13 +338,13 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                           finish(await wear(a.id));
                         }}
                         className={`relative aspect-square rounded-full transition-transform active:scale-95 ${
-                          on ? "ring-4 ring-petrol" : "ring-1 ring-line hover:ring-petrol/50"
+                          on ? "ring-4 ring-accent" : "ring-1 ring-line hover:ring-accent/50"
                         }`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element -- small stored avatar */}
                         <img src={a.url} alt="" className="h-full w-full rounded-full object-cover" />
                         {on && (
-                          <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-petrol text-white ring-2 ring-elevated">
+                          <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-on-accent ring-2 ring-surface">
                             <CheckIcon size={13} weight="bold" />
                           </span>
                         )}
@@ -353,7 +354,7 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                   {Array.from({ length: left }, (_, k) => (
                     <span
                       key={`empty-${k}`}
-                      className="flex aspect-square items-center justify-center rounded-full border-2 border-dashed border-line-strong text-ink-3"
+                      className="flex aspect-square items-center justify-center rounded-full border-2 border-dashed border-line-strong text-fg-subtle"
                       aria-hidden
                     >
                       <SparkleIcon size={18} />
@@ -362,9 +363,9 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-3 py-2">
-                  <Avatar member={viewer} size={84} className="ring-4 ring-bg" />
-                  <SparkleIcon size={22} weight="fill" className="text-sun" />
-                  <span className="flex h-[84px] w-[84px] items-center justify-center rounded-full border-2 border-dashed border-line-strong bg-bg">
+                  <Avatar member={viewer} size={84} className="ring-4 ring-canvas" />
+                  <SparkleIcon size={22} weight="fill" className="text-reward" />
+                  <span className="flex h-[84px] w-[84px] items-center justify-center rounded-full border-2 border-dashed border-line-strong bg-canvas">
                     <svg viewBox="0 0 512 512" className="h-14 w-14" aria-hidden>
                       <path d={HAT.crown} fill="#d9b77e" stroke="#10262a" strokeWidth={14} strokeLinejoin="round" />
                       <path d={HAT.band} fill={viewer.color} stroke="#10262a" strokeWidth={14} strokeLinejoin="round" />
@@ -374,9 +375,9 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                 </div>
               )}
 
-              <p className="mt-5 text-[13.5px] font-semibold text-ink-2">
+              <p className="mt-5 text-[13.5px] font-semibold text-fg-muted">
                 {saved && saved.length > 0 ? "Make a new one" : "Make your first"}
-                <span className="ml-2 font-normal text-ink-3">
+                <span className="ml-2 font-normal text-fg-subtle">
                   {left > 0 ? `${left} of ${MAX} illustrations left` : `All ${MAX} illustrations made; photo badges are unlimited`}
                 </span>
               </p>
@@ -389,14 +390,10 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                 </Button>
               </div>
               {viewer.avatarUrl && (
-                <button type="button" onClick={remove} disabled={saving} className="mx-auto mt-4 block text-[14px] font-semibold text-ink-3 hover:text-coral">
+                <button type="button" onClick={remove} disabled={saving} className="mx-auto mt-4 block text-[14px] font-semibold text-fg-subtle hover:text-danger-fg">
                   Go back to initials
                 </button>
               )}
-              <p className="mt-4 text-center text-[12.5px] leading-relaxed text-ink-3">
-                Your selfie isn&apos;t kept, only the adventurers. Photo badges are free; each person can make {MAX} AI
-                illustrations.
-              </p>
             </div>
           )}
 
@@ -411,7 +408,7 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                   disabled={drawing === "loading" || (!fresh && left <= 0)}
                   onSelect={() => (fresh ? setChoice({ kind: "adventurer", id: fresh.id }) : illustrate())}
                 >
-                  <div className="relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-sunken">
+                  <div className="relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-surface-sunken">
                     {fresh ? (
                       <motion.img
                         src={fresh.url}
@@ -422,21 +419,21 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                         className="h-full w-full object-cover"
                       />
                     ) : drawing === "loading" ? (
-                      <span className="flex flex-col items-center gap-2 px-3 text-center text-[12.5px] font-medium text-ink-3">
-                        <MagicWandIcon size={26} className="animate-pulse text-petrol" />
+                      <span className="flex flex-col items-center gap-2 px-3 text-center text-[12.5px] font-medium text-fg-subtle">
+                        <MagicWandIcon size={26} className="animate-pulse text-accent-fg" />
                         Sketching you…
                       </span>
                     ) : left <= 0 ? (
-                      <span className="px-4 text-center text-[12.5px] text-ink-3">All {MAX} illustrations made</span>
+                      <span className="px-4 text-center text-[12.5px] text-fg-subtle">All {MAX} illustrations made</span>
                     ) : drawing === "unavailable" ? (
-                      <span className="px-4 text-center text-[12.5px] text-ink-3">
+                      <span className="px-4 text-center text-[12.5px] text-fg-subtle">
                         The illustrator is out right now. That try wasn&apos;t used: tap to try again.
                       </span>
                     ) : (
                       <span className="flex flex-col items-center gap-1.5 px-3 text-center">
-                        <MagicWandIcon size={26} weight="fill" className="text-petrol" />
-                        <span className="text-[13px] font-semibold text-petrol">Illustrate me</span>
-                        <span className="text-[11.5px] leading-tight text-ink-3">
+                        <MagicWandIcon size={26} weight="fill" className="text-accent-fg" />
+                        <span className="text-[13px] font-semibold text-accent-fg">Illustrate me</span>
+                        <span className="text-[11.5px] leading-tight text-fg-subtle">
                           {left} of {MAX} left
                         </span>
                       </span>
@@ -448,14 +445,14 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
                   <img src={badge.url} alt="Photo badge adventurer" className="h-32 w-32" />
                 </OptionCard>
               </div>
-              {error && <p className="mt-4 rounded-2xl bg-coral-soft px-4 py-3 text-[14px]">{error}</p>}
+              {error && <p className="mt-4 rounded-2xl bg-danger-soft px-4 py-3 text-[14px]">{error}</p>}
               <Button onClick={save} disabled={saving} icon={<CheckIcon size={18} weight="bold" />} className="mt-5 w-full">
                 {saving ? "Saving…" : "Wear this one"}
               </Button>
               <button
                 type="button"
                 onClick={reset}
-                className="mx-auto mt-3 flex items-center gap-1.5 text-[14px] font-semibold text-ink-2 hover:text-ink"
+                className="mx-auto mt-3 flex items-center gap-1.5 text-[14px] font-semibold text-fg-muted hover:text-fg"
               >
                 <ArrowCounterClockwiseIcon size={15} /> Try another photo
               </button>
@@ -463,7 +460,7 @@ export default function AdventurerMaker({ open, onClose }: { open: boolean; onCl
           )}
         </motion.div>
       </AnimatePresence>
-      {error && stage === "pick" && <p className="mt-4 rounded-2xl bg-coral-soft px-4 py-3 text-[14px]">{error}</p>}
+      {error && stage === "pick" && <p className="mt-4 rounded-2xl bg-danger-soft px-4 py-3 text-[14px]">{error}</p>}
     </Sheet>
   );
 }

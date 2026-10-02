@@ -40,17 +40,17 @@ export default function PhotoDropzone({
           add(e.dataTransfer.files);
         }}
         className={`flex w-full items-center gap-3 rounded-2xl border border-dashed px-4 py-3.5 text-left transition-colors duration-300 ${
-          dragging ? "border-petrol bg-petrol-soft" : "border-line-strong hover:border-ink-3"
+          dragging ? "border-accent bg-accent-soft" : "border-line-strong hover:border-fg-subtle"
         }`}
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-petrol-soft text-petrol">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-fg">
           <CameraIcon size={20} />
         </span>
         <span>
           <span className="block text-[15px] font-semibold">
             {files.length ? `${files.length} photo${files.length > 1 ? "s" : ""} ready` : "Add photos"}
           </span>
-          <span className="block text-[13px] text-ink-3">Drop them here or tap to choose</span>
+          <span className="block text-[13px] text-fg-subtle">Drop them here or tap to choose</span>
         </span>
       </button>
       <input
@@ -76,7 +76,7 @@ export default function PhotoDropzone({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.4, ease: EASE_OUT_EXPO, delay: i * 0.03 }}
-                className="group relative aspect-square overflow-hidden rounded-xl bg-sunken"
+                className="group relative aspect-square overflow-hidden rounded-xl bg-surface-sunken"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */}
                 <img src={p.url} alt="" className="h-full w-full object-cover" />

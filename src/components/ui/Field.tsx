@@ -1,11 +1,11 @@
 import type { ComponentProps } from "react";
 
 const control =
-  "w-full rounded-2xl bg-bg px-4 text-[15px] text-ink ring-1 ring-line-strong outline-none transition-shadow duration-300 placeholder:text-ink-3 focus:ring-2 focus:ring-petrol/60";
+  "w-full rounded-2xl bg-canvas px-4 text-[15px] text-fg ring-1 ring-line-strong outline-none transition-shadow duration-300 placeholder:text-fg-subtle focus:ring-2 focus:ring-accent/60";
 
 export function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-medium text-ink-2">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-medium text-fg-muted">
       {children}
     </label>
   );

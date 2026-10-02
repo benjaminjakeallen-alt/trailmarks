@@ -41,17 +41,12 @@ export default function SelectedStateBar({
         className="h-12 w-16 shrink-0"
       />
       <div className="min-w-0 shrink-0">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-petrol">{info.region}</p>
-        <h3 className="font-display text-[1.6rem] leading-tight">{info.name}</h3>
+        <h2 className="font-display text-[1.6rem] leading-tight">{info.name}</h2>
       </div>
-      {members.length > 1 ? (
-        <Visitors userIds={visitorIds} className="hidden min-w-0 xl:flex" />
-      ) : (
-        <p className="line-clamp-2 hidden max-w-[46ch] text-[13.5px] leading-snug text-ink-3 xl:block">{info.funFact}</p>
-      )}
+      {members.length > 1 && <Visitors userIds={visitorIds} className="hidden min-w-0 xl:flex" />}
 
       <div className="ml-auto flex shrink-0 items-center gap-3">
-        <div className="flex items-center gap-3 rounded-full bg-bg py-1.5 pl-4 pr-1.5 ring-1 ring-line">
+        <div className="flex items-center gap-3 rounded-full bg-canvas py-1.5 pl-4 pr-1.5 ring-1 ring-line">
           <span className="text-[14px] font-semibold">{claimed ? "Claimed" : "Not yet"}</span>
           <Switch on={claimed} onChange={() => onToggle(info.code)} label={`Claim ${info.name}`} />
         </div>
@@ -65,7 +60,7 @@ export default function SelectedStateBar({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-bg hover:text-ink"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-fg-subtle transition-colors hover:bg-canvas hover:text-fg"
         >
           <XIcon size={18} />
         </button>

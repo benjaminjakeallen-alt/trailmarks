@@ -13,9 +13,9 @@ const CLAIMED_GROUND = (
   <>
     <defs>
       <linearGradient id="slab-claimed" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" style={{ stopColor: "var(--petrol)" }} />
-        <stop offset="0.55" style={{ stopColor: "var(--aqua)" }} />
-        <stop offset="1" style={{ stopColor: "var(--aqua-bright)" }} />
+        <stop offset="0" style={{ stopColor: "var(--accent)" }} />
+        <stop offset="0.55" style={{ stopColor: "var(--success)" }} />
+        <stop offset="1" style={{ stopColor: "var(--success-bright)" }} />
       </linearGradient>
     </defs>
     <rect x="-10" y="-10" width="120" height="120" fill="url(#slab-claimed)" />
@@ -80,7 +80,7 @@ export default function StateDiorama({
   return (
     <div className="pointer-events-none absolute inset-0 z-[6]" aria-label={`${shape.info.name}, lifted`} role="img">
       <motion.div
-        className="absolute inset-0 bg-bg/45"
+        className="absolute inset-0 bg-canvas/45"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}

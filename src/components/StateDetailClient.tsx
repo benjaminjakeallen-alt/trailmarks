@@ -71,7 +71,7 @@ export default function StateDetailClient({
   return (
     <>
       <section className="mx-auto max-w-[1400px] px-3 pb-10 pt-4 sm:px-8 lg:pb-14 lg:pt-6">
-        <Link href="/" className="group ml-1 inline-flex items-center gap-2 text-[15px] font-medium text-ink-2 hover:text-ink">
+        <Link href="/" className="group ml-1 inline-flex items-center gap-2 text-[15px] font-medium text-fg-muted hover:text-fg">
           <ArrowLeftIcon size={15} className="transition-transform duration-300 group-hover:-translate-x-1" />
           Back to the map
         </Link>
@@ -151,14 +151,14 @@ export default function StateDetailClient({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.9, ease: EASE_OUT_EXPO }}
-          className="mb-10 flex gap-3 rounded-[1.4rem] bg-sun-soft px-5 py-4 text-[16px] leading-[1.6] text-ink-2"
+          className="mb-10 flex gap-3 rounded-[1.4rem] bg-reward-soft px-5 py-4 text-[16px] leading-[1.6] text-fg-muted"
         >
-          <LightbulbIcon size={20} weight="fill" className="mt-0.5 shrink-0 text-sun" />
+          <LightbulbIcon size={20} weight="fill" className="mt-0.5 shrink-0 text-reward" />
           {info.funFact}
         </motion.p>
         <div className="mb-6 flex items-baseline justify-between">
           <h2 className="font-display text-3xl">Journal</h2>
-          <span className="text-[14px] font-medium text-ink-3 tabular">
+          <span className="text-[14px] font-medium text-fg-subtle tabular">
             {memories.length} {memories.length === 1 ? "entry" : "entries"}
           </span>
         </div>

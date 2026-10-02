@@ -9,6 +9,7 @@ import type { GeometryObject, Topology } from "topojson-specification";
 import { ArrowLeftIcon, MagnifyingGlassIcon, XIcon } from "@phosphor-icons/react";
 import Campfire from "@/components/family/Campfire";
 import { Cheer, HoldRing, LONG_PRESS_MS, PRESS_SLOP_PX } from "@/components/map/UsMap";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { COUNTRIES, COUNTRIES_BY_CODE, type ContinentCode } from "@/lib/countriesData";
 import { HAPTICS, SPRING_STAMP, haptic } from "@/lib/motion";
 import type { Member } from "@/lib/types";
@@ -330,15 +331,15 @@ export default function WorldGlobe({
               onClick={() => pickContinent(c.key)}
               aria-pressed={active}
               className={`relative flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-[13.5px] font-semibold transition-colors ${
-                active ? "text-white" : "bg-bg text-ink-2 ring-1 ring-line hover:text-ink"
+                active ? "text-white" : "bg-canvas text-fg-muted ring-1 ring-line hover:text-fg"
               }`}
             >
               {active && (
-                <motion.span layoutId="continent-active" className="absolute inset-0 rounded-full bg-petrol" transition={SPRING_STAMP} />
+                <motion.span layoutId="continent-active" className="absolute inset-0 rounded-full bg-accent" transition={SPRING_STAMP} />
               )}
               <span className="relative">{c.label}</span>
               {(counts[c.key] ?? 0) > 0 && (
-                <span className={`relative rounded-full px-1.5 text-[11.5px] tabular-nums ${active ? "bg-white/20" : "bg-aqua-soft text-petrol"}`}>
+                <span className={`relative rounded-full px-1.5 text-[11.5px] tabular-nums ${active ? "bg-white/20" : "bg-success-soft text-accent-fg"}`}>
                   {counts[c.key]}
                 </span>
               )}
@@ -357,21 +358,21 @@ export default function WorldGlobe({
         >
           <defs>
             <radialGradient id="wg-ocean" cx="38%" cy="32%" r="75%">
-              <stop offset="0" stopColor="var(--aqua-soft)" />
-              <stop offset="1" stopColor="var(--petrol-soft)" />
+              <stop offset="0" stopColor="var(--success-soft)" />
+              <stop offset="1" stopColor="var(--accent-soft)" />
             </radialGradient>
             <radialGradient id="wg-shade" cx="35%" cy="30%" r="80%">
               <stop offset="0.55" stopColor="rgb(0 0 0 / 0)" />
               <stop offset="1" stopColor="rgb(8 40 44 / 0.28)" />
             </radialGradient>
             <radialGradient id="wg-glow" cx="50%" cy="50%" r="50%">
-              <stop offset="0.86" stopColor="var(--aqua-bright)" stopOpacity="0.35" />
-              <stop offset="1" stopColor="var(--aqua-bright)" stopOpacity="0" />
+              <stop offset="0.86" stopColor="var(--success-bright)" stopOpacity="0.35" />
+              <stop offset="1" stopColor="var(--success-bright)" stopOpacity="0" />
             </radialGradient>
             <linearGradient id="wg-visited" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" style={{ stopColor: "var(--petrol)" }} />
-              <stop offset="0.55" style={{ stopColor: "var(--aqua)" }} />
-              <stop offset="1" style={{ stopColor: "var(--aqua-bright)" }} />
+              <stop offset="0" style={{ stopColor: "var(--accent)" }} />
+              <stop offset="0.55" style={{ stopColor: "var(--success)" }} />
+              <stop offset="1" style={{ stopColor: "var(--success-bright)" }} />
             </linearGradient>
             <linearGradient id="wg-gold" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="220" y2="140" spreadMethod="reflect">
               <stop offset="0" stopColor="#9c6a05" />
@@ -387,7 +388,7 @@ export default function WorldGlobe({
 
           <circle cx={W / 2} cy={H / 2} r={R * view.zoom * 1.06} fill="url(#wg-glow)" />
           <path d={sphere} fill="url(#wg-ocean)" />
-          <path d={path(graticule) ?? ""} fill="none" stroke="var(--petrol)" strokeOpacity={0.08} strokeWidth={0.8} />
+          <path d={path(graticule) ?? ""} fill="none" stroke="var(--accent)" strokeOpacity={0.08} strokeWidth={0.8} />
 
           {shapes?.map(({ code, feature: f }, i) => {
             const d = path(f);
@@ -400,17 +401,17 @@ export default function WorldGlobe({
               : mine
                 ? "url(#wg-visited)"
                 : fam
-                  ? "color-mix(in srgb, var(--aqua-bright) 45%, var(--land))"
+                  ? "color-mix(in srgb, var(--success-bright) 45%, var(--map-land))"
                   : lit
-                    ? "var(--land-hover)"
-                    : "var(--land)";
+                    ? "var(--map-land-hover)"
+                    : "var(--map-land)";
             return (
               <path
                 key={`${code}-${i}`}
                 d={d}
                 data-country={code}
                 fill={fill}
-                stroke="var(--land-edge)"
+                stroke="var(--map-edge)"
                 strokeWidth={0.7}
                 strokeLinejoin="round"
                 className={`transition-[fill] duration-300 ${atGlobe ? "cursor-pointer" : "hover:brightness-95"}`}
@@ -429,7 +430,7 @@ export default function WorldGlobe({
             if (!lonlat || geoDistance(lonlat, [view.lon, view.lat]) > Math.PI / 2 - 0.05) return null;
             const xy = projection(lonlat);
             if (!xy) return null;
-            const fill = everyone(code) ? "#f2b624" : visited.has(code) ? "var(--aqua)" : "var(--aqua-bright)";
+            const fill = everyone(code) ? "#f2b624" : visited.has(code) ? "var(--success)" : "var(--success-bright)";
             return (
               <circle
                 key={`dot-${code}-${i}`}
@@ -448,7 +449,7 @@ export default function WorldGlobe({
             shapes
               ?.filter((s) => s.code === selectedCode)
               .map((s, i) => (
-                <path key={`sel-${i}`} d={path(s.feature) ?? ""} fill="none" stroke="var(--sun)" strokeWidth={2.4} strokeLinejoin="round" pointerEvents="none" />
+                <path key={`sel-${i}`} d={path(s.feature) ?? ""} fill="none" stroke="var(--reward)" strokeWidth={2.4} strokeLinejoin="round" pointerEvents="none" />
               ))}
 
           <path d={sphere} fill="url(#wg-shade)" pointerEvents="none" />
@@ -459,7 +460,7 @@ export default function WorldGlobe({
               cx={r.x}
               cy={r.y}
               fill="none"
-              stroke={r.gold ? "#f5c542" : "var(--aqua-bright)"}
+              stroke={r.gold ? "#f5c542" : "var(--success-bright)"}
               strokeWidth={3}
               initial={{ r: 4, opacity: 0.9 }}
               animate={{ r: 70, opacity: 0 }}
@@ -470,7 +471,10 @@ export default function WorldGlobe({
         </svg>
 
         {!shapes && (
-          <div className="absolute inset-0 flex items-center justify-center text-[14px] text-ink-3">Unrolling the globe…</div>
+          <div role="status" className="absolute inset-0 flex items-center justify-center">
+            <span className="sr-only">Loading the globe</span>
+            <Skeleton className="aspect-square w-[78%] rounded-full" />
+          </div>
         )}
 
         <AnimatePresence>
@@ -497,7 +501,7 @@ export default function WorldGlobe({
           <button
             type="button"
             onClick={() => pickContinent("WORLD")}
-            className="absolute left-2 top-2 z-10 flex h-10 items-center gap-1.5 rounded-full bg-elevated/90 pl-2.5 pr-3.5 text-[14px] font-semibold text-ink-2 shadow-[var(--shadow-card)] ring-1 ring-line backdrop-blur-xl hover:text-ink sm:left-3 sm:top-3"
+            className="absolute left-2 top-2 z-10 flex h-10 items-center gap-1.5 rounded-full bg-surface/90 pl-2.5 pr-3.5 text-[14px] font-semibold text-fg-muted shadow-[var(--shadow-card)] ring-1 ring-line backdrop-blur-xl hover:text-fg sm:left-3 sm:top-3"
           >
             <ArrowLeftIcon size={16} weight="bold" /> Globe
           </button>
@@ -506,9 +510,9 @@ export default function WorldGlobe({
         {/* Find a country: the way to reach the small ones. */}
         <div className="absolute right-2 top-2 z-10 sm:right-3 sm:top-3">
           {searching ? (
-            <div className="w-[min(260px,70vw)] rounded-2xl bg-elevated/95 p-1.5 shadow-[var(--shadow-float)] ring-1 ring-line backdrop-blur-xl">
+            <div className="w-[min(260px,70vw)] rounded-2xl bg-surface/95 p-1.5 shadow-[var(--shadow-float)] ring-1 ring-line backdrop-blur-xl">
               <div className="flex items-center gap-2 px-2">
-                <MagnifyingGlassIcon size={16} className="shrink-0 text-ink-3" />
+                <MagnifyingGlassIcon size={16} className="shrink-0 text-fg-subtle" />
                 <input
                   autoFocus
                   value={query}
@@ -519,9 +523,9 @@ export default function WorldGlobe({
                   }}
                   placeholder="Find a country"
                   aria-label="Find a country"
-                  className="min-h-10 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-ink-3"
+                  className="min-h-10 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-fg-subtle"
                 />
-                <button type="button" onClick={() => setSearching(false)} aria-label="Close search" className="text-ink-3 hover:text-ink">
+                <button type="button" onClick={() => setSearching(false)} aria-label="Close search" className="text-fg-subtle hover:text-fg">
                   <XIcon size={16} />
                 </button>
               </div>
@@ -532,11 +536,11 @@ export default function WorldGlobe({
                       <button
                         type="button"
                         onClick={() => focusCountry(c.code)}
-                        className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left text-[14.5px] hover:bg-bg"
+                        className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left text-[14.5px] hover:bg-canvas"
                       >
                         <span className="text-[18px] leading-none">{c.flag}</span>
                         <span className="min-w-0 flex-1 truncate">{c.name}</span>
-                        {visited.has(c.code) && <span className="h-2 w-2 rounded-full bg-aqua" />}
+                        {visited.has(c.code) && <span className="h-2 w-2 rounded-full bg-success" />}
                       </button>
                     </li>
                   ))}
@@ -548,7 +552,7 @@ export default function WorldGlobe({
               type="button"
               onClick={() => setSearching(true)}
               aria-label="Find a country"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-elevated/90 text-ink-2 shadow-[var(--shadow-card)] ring-1 ring-line backdrop-blur-xl hover:text-ink"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-surface/90 text-fg-muted shadow-[var(--shadow-card)] ring-1 ring-line backdrop-blur-xl hover:text-fg"
             >
               <MagnifyingGlassIcon size={18} />
             </button>

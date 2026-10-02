@@ -101,9 +101,9 @@ export default function TripMap({ points, pins = [], onPinClick, followLatest, c
     });
 
     map.on("style.load", () => {
-      const aqua = cssVar("--aqua", "#15a898");
-      const petrol = cssVar("--petrol", "#0b5c63");
-      const halo = cssVar("--bg-elevated", "#ffffff");
+      const aqua = cssVar("--success", "#15a898");
+      const petrol = cssVar("--accent", "#0b5c63");
+      const halo = cssVar("--surface", "#ffffff");
 
       map.addSource(ROUTE_SOURCE, { type: "geojson", data: routeData(pointsRef.current), lineMetrics: true });
       map.addSource(HEAD_SOURCE, { type: "geojson", data: headData(pointsRef.current) });
@@ -169,7 +169,7 @@ export default function TripMap({ points, pins = [], onPinClick, followLatest, c
       el.setAttribute("aria-label", `Step ${pin.index + 1}: ${pin.label}`);
       el.textContent = String(pin.index + 1).padStart(2, "0");
       el.className =
-        "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--petrol)] text-[12px] font-semibold text-white shadow-[0_6px_16px_-6px_rgb(0_0_0/0.45)] ring-[3px] ring-white transition-transform duration-300 hover:scale-110";
+        "flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-[12px] font-semibold text-white shadow-[0_6px_16px_-6px_rgb(0_0_0/0.45)] ring-[3px] ring-white transition-transform duration-300 hover:scale-110";
       el.addEventListener("click", () => onPinClick?.(pin.id));
       return new Marker({ element: el })
         .setLngLat([pin.lng, pin.lat])

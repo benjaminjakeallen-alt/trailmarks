@@ -201,7 +201,7 @@ export default function MemoryComposer({
     <motion.div
       layout
       transition={{ layout: { duration: 0.5, ease: EASE_OUT_EXPO } }}
-      className="overflow-hidden rounded-[1.75rem] bg-elevated shadow-[var(--shadow-card)] ring-1 ring-line"
+      className="overflow-hidden rounded-[1.75rem] bg-surface shadow-[var(--shadow-card)] ring-1 ring-line"
     >
       <AnimatePresence mode="popLayout" initial={false}>
         {!open ? (
@@ -213,11 +213,11 @@ export default function MemoryComposer({
             className="flex items-center gap-2 p-3"
           >
             <button type="button" onClick={() => setOpen(true)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-petrol text-white">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent">
                 <PencilSimpleIcon size={18} weight="regular" />
               </span>
-              <span className="flex-1 truncate text-[15px] text-ink-3">{prompt}</span>
-              {captureLocation && <MapPinIcon size={18} className="shrink-0 text-ink-3" />}
+              <span className="flex-1 truncate text-[15px] text-fg-subtle">{prompt}</span>
+              {captureLocation && <MapPinIcon size={18} className="shrink-0 text-fg-subtle" />}
             </button>
             {voiceSupported && (
               <button
@@ -226,7 +226,7 @@ export default function MemoryComposer({
                   setOpen(true);
                   toggleVoice();
                 }}
-                className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-coral-soft px-4 text-[14px] font-semibold text-coral transition-transform active:scale-95"
+                className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-danger-soft px-4 text-[14px] font-semibold text-danger-fg transition-transform active:scale-95"
               >
                 <MicrophoneIcon size={18} weight="fill" /> Speak it
               </button>
@@ -248,7 +248,7 @@ export default function MemoryComposer({
               onChange={(e) => setTitle(e.target.value)}
               placeholder={titlePlaceholder}
               aria-label="Title"
-              className="w-full bg-transparent font-display text-[1.7rem] leading-tight outline-none placeholder:text-ink-3/70"
+              className="w-full bg-transparent font-display text-[1.7rem] leading-tight outline-none placeholder:text-fg-subtle/70"
             />
 
             <div>
@@ -272,12 +272,12 @@ export default function MemoryComposer({
                     aria-label={listening ? "Stop recording" : "Record with your voice"}
                     aria-pressed={listening}
                     className={`absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
-                      listening ? "bg-coral text-white" : "bg-coral-soft text-coral hover:bg-coral hover:text-white"
+                      listening ? "bg-danger text-on-danger" : "bg-danger-soft text-danger-fg hover:bg-danger hover:text-on-danger"
                     }`}
                   >
                     {listening && (
                       <span
-                        className="absolute inset-0 rounded-full bg-coral/35 transition-transform duration-100"
+                        className="absolute inset-0 rounded-full bg-danger/35 transition-transform duration-100"
                         style={{ transform: `scale(${1 + recorder.level * 0.9})` }}
                       />
                     )}
@@ -294,17 +294,17 @@ export default function MemoryComposer({
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
                     className={`mt-2 flex items-start gap-2 text-[13.5px] ${
-                      !listening && (voiceNote || dictation.error) ? "text-coral" : "text-ink-3"
+                      !listening && (voiceNote || dictation.error) ? "text-danger-fg" : "text-fg-subtle"
                     }`}
                   >
                     {listening ? (
                       <>
                         <span className="mt-1.5 flex h-2 w-2 shrink-0">
-                          <span className="record-pulse absolute h-2 w-2 rounded-full bg-coral" />
-                          <span className="relative h-2 w-2 rounded-full bg-coral" />
+                          <span className="record-pulse absolute h-2 w-2 rounded-full bg-danger" />
+                          <span className="relative h-2 w-2 rounded-full bg-danger" />
                         </span>
                         {recorder.recording && (
-                          <span className="shrink-0 font-semibold tabular-nums text-coral">
+                          <span className="shrink-0 font-semibold tabular-nums text-danger-fg">
                             {formatSeconds(recorder.elapsed)}
                           </span>
                         )}
@@ -349,15 +349,15 @@ export default function MemoryComposer({
             </div>
 
             {captureLocation && (
-              <p className="flex items-center gap-1.5 text-[13px] font-medium text-ink-3">
+              <p className="flex items-center gap-1.5 text-[13px] font-medium text-fg-subtle">
                 <MapPinIcon size={13} /> Pinned to where you are when you save
               </p>
             )}
 
-            {error && <p className="text-sm text-coral">{error}</p>}
+            {error && <p className="text-sm text-danger-fg">{error}</p>}
 
             <div className="flex items-center justify-end gap-2 pt-1">
-              {status && <span className="mr-auto text-[13px] font-medium text-ink-3">{status}</span>}
+              {status && <span className="mr-auto text-[13px] font-medium text-fg-subtle">{status}</span>}
               <Button type="button" variant="quiet" onClick={reset} disabled={!!status}>
                 Cancel
               </Button>

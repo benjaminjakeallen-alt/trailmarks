@@ -62,7 +62,7 @@ export default function Nav() {
     <>
       <header
         className={`sticky top-0 z-40 pt-[env(safe-area-inset-top)] transition-[background-color,box-shadow,backdrop-filter] duration-500 ease-[var(--ease-glide)] ${
-          scrolled ? "bg-bg/75 shadow-[0_1px_0_var(--line)] backdrop-blur-xl" : "bg-transparent"
+          scrolled ? "bg-canvas/75 shadow-[0_1px_0_var(--line)] backdrop-blur-xl" : "bg-transparent"
         }`}
       >
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-3 sm:px-8 sm:py-4">
@@ -72,7 +72,7 @@ export default function Nav() {
           </Link>
 
           <nav className="absolute left-1/2 hidden -translate-x-1/2 sm:block">
-            <div className="flex items-center gap-1 rounded-full bg-elevated/80 p-1 shadow-[var(--shadow-card)] ring-1 ring-line backdrop-blur-xl">
+            <div className="flex items-center gap-1 rounded-full bg-surface/80 p-1 shadow-[var(--shadow-card)] ring-1 ring-line backdrop-blur-xl">
               {LINKS.map(({ href, label }) => {
                 const active = isActive(pathname, href);
                 return (
@@ -80,13 +80,13 @@ export default function Nav() {
                     key={href}
                     href={href}
                     className={`relative rounded-full px-4 py-2 text-[15px] font-medium transition-colors duration-300 ${
-                      active ? "text-white" : "text-ink-2 hover:text-ink"
+                      active ? "text-white" : "text-fg-muted hover:text-fg"
                     }`}
                   >
                     {active && (
                       <motion.span
                         layoutId="nav-active"
-                        className="absolute inset-0 rounded-full bg-petrol"
+                        className="absolute inset-0 rounded-full bg-accent"
                         transition={SPRING_SNAPPY}
                       />
                     )}
@@ -102,7 +102,7 @@ export default function Nav() {
             {pathname !== "/" && <InviteButton />}
             <Link
               href="/trips/new"
-              className="group hidden items-center gap-2 rounded-full bg-petrol py-1.5 pl-4 pr-1.5 text-[15px] font-medium text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_24px_-14px_var(--petrol)] hover:bg-petrol-strong transition-transform duration-300 active:scale-[0.97] sm:flex"
+              className="group hidden items-center gap-2 rounded-full bg-accent py-1.5 pl-4 pr-1.5 text-[15px] font-medium text-on-accent shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_24px_-14px_var(--accent)] hover:bg-accent-strong transition-transform duration-300 active:scale-[0.97] sm:flex"
             >
               New trip
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 transition-transform duration-300 group-hover:rotate-90">
@@ -113,7 +113,7 @@ export default function Nav() {
               href="/family"
               aria-label="Your family"
               className={`rounded-full p-0.5 transition-shadow ${
-                pathname.startsWith("/family") ? "ring-2 ring-petrol" : "ring-1 ring-line hover:ring-petrol/40"
+                pathname.startsWith("/family") ? "ring-2 ring-accent" : "ring-1 ring-line hover:ring-accent/40"
               }`}
             >
               <Avatar member={viewer} size={36} />
@@ -124,7 +124,7 @@ export default function Nav() {
 
       {/* Mobile: native-feeling bottom tab bar. */}
       <nav className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:hidden">
-        <div className="mx-auto flex max-w-sm items-center justify-around rounded-[1.75rem] bg-elevated/90 p-1.5 shadow-[var(--shadow-float)] ring-1 ring-line backdrop-blur-xl">
+        <div className="mx-auto flex max-w-sm items-center justify-around rounded-[1.75rem] bg-surface/90 p-1.5 shadow-[var(--shadow-float)] ring-1 ring-line backdrop-blur-xl">
           {LINKS.map(({ href, label, Icon }) => {
             const active = isActive(pathname, href);
             return (
@@ -132,13 +132,13 @@ export default function Nav() {
                 key={href}
                 href={href}
                 className={`relative flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-[1.4rem] text-[11px] transition-colors ${
-                  active ? "text-petrol" : "text-ink-3"
+                  active ? "text-accent-fg" : "text-fg-subtle"
                 }`}
               >
                 {active && (
                   <motion.span
                     layoutId="tab-active"
-                    className="absolute inset-0 rounded-[1.4rem] bg-petrol-soft"
+                    className="absolute inset-0 rounded-[1.4rem] bg-accent-soft"
                     transition={SPRING_SNAPPY}
                   />
                 )}

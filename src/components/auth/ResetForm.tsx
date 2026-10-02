@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRightIcon, KeyIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Label, TextInput } from "@/components/ui/Field";
 
-export default function ResetForm({ token, name, madeBy }: { token: string; name: string; madeBy: string | null }) {
+export default function ResetForm({ token, name }: { token: string; name: string }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,13 +33,7 @@ export default function ResetForm({ token, name, madeBy }: { token: string; name
   return (
     <form onSubmit={submit} className="space-y-5">
       <div>
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-petrol-soft px-3 py-1 text-[13px] font-semibold text-petrol">
-          <KeyIcon size={15} weight="fill" /> Password reset
-        </span>
-        <h2 className="mt-3 font-display text-[2rem] leading-tight">New password for {name}</h2>
-        <p className="mt-1 text-[15px] text-ink-3">
-          {madeBy ? `${madeBy} made this link for you. ` : ""}It works once, then you&apos;re signed in.
-        </p>
+        <h2 className="font-display text-[2rem] leading-tight">New password for {name}</h2>
       </div>
       <div>
         <Label htmlFor="password">New password</Label>
@@ -56,7 +50,7 @@ export default function ResetForm({ token, name, madeBy }: { token: string; name
         />
       </div>
       {error && (
-        <p role="alert" className="rounded-2xl bg-coral-soft px-4 py-3 text-[14px] text-ink">
+        <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-[14px] text-fg">
           {error}
         </p>
       )}

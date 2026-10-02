@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRightIcon, CalendarBlankIcon, MapPinIcon, SparkleIcon, XIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, CalendarBlankIcon, MapPinIcon, XIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import Switch from "@/components/ui/Switch";
 import { appendMeta, readPhotoMeta } from "@/lib/photoMeta";
@@ -31,7 +31,7 @@ function Thumbs({ photos }: { photos: ImportPhoto[] }) {
         <img key={p.key} src={p.previewUrl} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
       ))}
       {photos.length > shown.length && (
-        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-sunken text-[14px] font-semibold text-ink-2">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-surface-sunken text-[14px] font-semibold text-fg-muted">
           +{photos.length - shown.length}
         </span>
       )}
@@ -181,7 +181,7 @@ export default function PhotoImport({
 
   return createPortal(
     <motion.div
-      className="fixed inset-0 z-[90] flex items-end justify-center bg-ink/40 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[90] flex items-end justify-center bg-fg/40 backdrop-blur-sm sm:items-center sm:p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       onClick={() => stage.kind !== "uploading" && onClose()}
@@ -193,25 +193,20 @@ export default function PhotoImport({
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.45, ease: EASE_OUT_EXPO }}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[2rem] bg-elevated shadow-[var(--shadow-float)] ring-1 ring-line sm:rounded-[2rem]"
+        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[2rem] bg-surface shadow-[var(--shadow-float)] ring-1 ring-line sm:rounded-[2rem]"
       >
         <header className="flex items-start justify-between gap-4 border-b border-line p-5 sm:p-6">
           <div>
-            <p className="flex items-center gap-1.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] text-petrol">
-              <SparkleIcon size={14} weight="fill" /> Import photos
-            </p>
-            <h2 className="mt-1 font-display text-[1.6rem] leading-tight">
+            <h2 className="font-display text-[1.6rem] leading-tight">
               {stage.kind === "reading"
                 ? "Reading dates and places…"
                 : stage.kind === "uploading"
                   ? "Adding photos to your trip…"
                   : `Sorted ${photos.length} ${photos.length === 1 ? "photo" : "photos"} by time and place`}
             </h2>
-            {stage.kind === "review" && (
-              <p className="mt-1 text-[14px] text-ink-3">
-                {withMeta === photos.length
-                  ? "Check the stops, rename any you like, then import."
-                  : `${photos.length - withMeta} had no date, so they're grouped together at the end.`}
+            {stage.kind === "review" && (withMeta < photos.length || skipped > 0) && (
+              <p className="mt-1 text-[14px] text-fg-subtle">
+                {withMeta < photos.length && `${photos.length - withMeta} had no date, so they're grouped together at the end.`}
                 {skipped > 0 && ` ${skipped} ${skipped === 1 ? "file wasn't a supported image" : "files weren't supported images"} (HEIC: pick from Photos, which converts to JPEG).`}
               </p>
             )}
@@ -221,7 +216,7 @@ export default function PhotoImport({
             onClick={onClose}
             disabled={stage.kind === "uploading"}
             aria-label="Close"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bg text-ink-2 hover:text-ink disabled:opacity-40"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-canvas text-fg-muted hover:text-fg disabled:opacity-40"
           >
             <XIcon size={18} />
           </button>
@@ -230,21 +225,21 @@ export default function PhotoImport({
         <div className="flex-1 overflow-y-auto p-5 sm:p-6">
           {(stage.kind === "reading" || stage.kind === "uploading") && (
             <div className="py-10">
-              <div className="h-2 overflow-hidden rounded-full bg-land">
+              <div className="h-2 overflow-hidden rounded-full bg-map-land">
                 <motion.div
-                  className="h-full origin-left rounded-full bg-gradient-to-r from-petrol to-aqua"
+                  className="h-full origin-left rounded-full bg-gradient-to-r from-accent to-success"
                   animate={{ scaleX: stage.total ? stage.done / stage.total : 0 }}
                   transition={{ duration: 0.3 }}
                 />
               </div>
-              <p className="mt-3 text-center text-[14px] text-ink-3 tabular">
+              <p className="mt-3 text-center text-[14px] text-fg-subtle tabular">
                 {stage.done} of {stage.total}
               </p>
             </div>
           )}
 
           {stage.kind === "error" && (
-            <p role="alert" className="rounded-2xl bg-coral-soft px-4 py-3 text-[14px] text-ink">
+            <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-[14px] text-fg">
               {stage.message}. Photos that finished are saved; you can import the rest again.
             </p>
           )}
@@ -258,7 +253,7 @@ export default function PhotoImport({
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: excluded.has(group.key) ? 0.5 : 1, y: 0 }}
                     transition={{ duration: 0.4, ease: EASE_OUT_EXPO, delay: i * 0.04 }}
-                    className="rounded-[1.4rem] bg-bg p-4 ring-1 ring-line"
+                    className="rounded-[1.4rem] bg-canvas p-4 ring-1 ring-line"
                   >
                     <GroupCard
                       group={group}
@@ -276,7 +271,7 @@ export default function PhotoImport({
 
         {(stage.kind === "review" || stage.kind === "error") && (
           <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line p-5 sm:p-6">
-            <p className="text-[14px] text-ink-3">
+            <p className="text-[14px] text-fg-subtle">
               {photoCount} {photoCount === 1 ? "photo" : "photos"}
               {newStops > 0 && ` · ${newStops} new ${newStops === 1 ? "stop" : "stops"}`}
             </p>
@@ -311,7 +306,7 @@ function GroupCard({
     <div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-3">{label}</p>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">{label}</p>
           {group.kind === "existing" ? (
             <p className="mt-0.5 truncate font-display text-[1.15rem]">{group.memory.title}</p>
           ) : (
@@ -320,16 +315,16 @@ function GroupCard({
               onChange={(e) => onTitle(e.target.value)}
               aria-label="Stop name"
               maxLength={80}
-              className="mt-0.5 w-full rounded-lg bg-transparent font-display text-[1.15rem] outline-none ring-petrol/50 focus:bg-elevated focus:px-2 focus:ring-2"
+              className="mt-0.5 w-full rounded-lg bg-transparent font-display text-[1.15rem] outline-none ring-accent/50 focus:bg-surface focus:px-2 focus:ring-2"
             />
           )}
-          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-3">
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
             <span className="flex items-center gap-1">
               <CalendarBlankIcon size={13} /> {when(group.photos)}
             </span>
             {state && (
               <span className="flex items-center gap-1">
-                <MapPinIcon size={13} weight="fill" className="text-sun" /> {state}
+                <MapPinIcon size={13} weight="fill" className="text-reward" /> {state}
               </span>
             )}
             <span>

@@ -11,18 +11,9 @@ export function Panel({
   innerClassName?: string;
 }) {
   return (
-    <div className={`rounded-[1.75rem] bg-elevated shadow-[var(--shadow-card)] ring-1 ring-line ${className}`}>
+    <div className={`rounded-[1.75rem] bg-surface shadow-[var(--shadow-card)] ring-1 ring-line ${className}`}>
       <div className={`h-full rounded-[1.75rem] ${innerClassName}`}>{children}</div>
     </div>
   );
 }
 
-export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] text-petrol ${className}`}
-    >
-      {children}
-    </span>
-  );
-}

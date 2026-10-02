@@ -6,7 +6,6 @@ import Switch from "@/components/ui/Switch";
 import Visitors from "@/components/family/Visitors";
 import { useFamily } from "@/components/family/FamilyProvider";
 import { COUNTRIES_BY_CODE } from "@/lib/countriesData";
-import { CONTINENTS } from "@/components/map/WorldGlobe";
 
 interface Props {
   code: string;
@@ -19,7 +18,6 @@ interface Props {
   onOpenStates: () => void;
 }
 
-const continentName = (key: string) => CONTINENTS.find((c) => c.key === key)?.label ?? "";
 
 /** The US isn't claimed directly: it follows your states, so it offers the states map instead of a switch. */
 function Claim({ code, claimed, stateCount, onToggle, onOpenStates }: Omit<Props, "visitorIds" | "visitorDates">) {
@@ -32,7 +30,7 @@ function Claim({ code, claimed, stateCount, onToggle, onOpenStates }: Omit<Props
     );
   }
   return (
-    <div className="flex shrink-0 items-center gap-3 rounded-full bg-bg py-1.5 pl-4 pr-1.5 ring-1 ring-line">
+    <div className="flex shrink-0 items-center gap-3 rounded-full bg-canvas py-1.5 pl-4 pr-1.5 ring-1 ring-line">
       <span className="text-[14px] font-semibold">{claimed ? "Been" : "Not yet"}</span>
       <Switch on={claimed} onChange={() => onToggle(code)} label={`Claim ${info?.name}`} />
     </div>
@@ -50,8 +48,7 @@ export function CountryBar(props: Props & { onClose: () => void }) {
         {info.flag}
       </span>
       <div className="min-w-0 shrink">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-petrol">{continentName(info.continent)}</p>
-        <h3 className="truncate font-display text-[1.6rem] leading-tight">{info.name}</h3>
+        <h2 className="truncate font-display text-[1.6rem] leading-tight">{info.name}</h2>
       </div>
       {members.length > 1 && <Visitors userIds={props.visitorIds} className="hidden min-w-0 xl:flex" />}
       <div className="ml-auto flex shrink-0 items-center gap-3">
@@ -60,7 +57,7 @@ export function CountryBar(props: Props & { onClose: () => void }) {
           type="button"
           onClick={props.onClose}
           aria-label="Close"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-bg hover:text-ink"
+          className="flex h-10 w-10 items-center justify-center rounded-full text-fg-subtle transition-colors hover:bg-canvas hover:text-fg"
         >
           <XIcon size={18} />
         </button>

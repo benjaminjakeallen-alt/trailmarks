@@ -152,7 +152,7 @@ export default function Slideshow({
             transition={{ duration: 0.7, ease: EASE_OUT_EXPO, delay: 0.2 }}
           >
             <p className="flex items-center gap-1.5 text-[14px] font-medium text-white/75">
-              <MapPinIcon size={15} weight="fill" className="text-sun" />
+              <MapPinIcon size={15} weight="fill" className="text-reward" />
               {state?.name ?? "On the road"}
               {formatMemoryDate(item.memoryDate) && <> · {formatMemoryDate(item.memoryDate)}</>}
               {members.length > 1 && item.userId && <> · {nameOf(item.userId)}</>}

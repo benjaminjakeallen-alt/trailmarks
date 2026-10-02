@@ -4,11 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeftIcon, ArrowRightIcon, NavigationArrowIcon } from "@phosphor-icons/react";
+import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react";
 import RouteSketch from "@/components/trips/RouteSketch";
 import { Button } from "@/components/ui/Button";
 import { Label, TextArea } from "@/components/ui/Field";
-import { Eyebrow } from "@/components/ui/Panel";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
 export default function NewTripPage() {
@@ -44,7 +43,7 @@ export default function NewTripPage() {
   return (
     <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-10 px-4 pb-24 pt-6 sm:px-8 lg:grid-cols-12 lg:gap-14 lg:pt-10">
       <div className="lg:col-span-6">
-        <Link href="/trips" className="group inline-flex items-center gap-2 text-[15px] font-medium text-ink-2 hover:text-ink">
+        <Link href="/trips" className="group inline-flex items-center gap-2 text-[15px] font-medium text-fg-muted hover:text-fg">
           <ArrowLeftIcon size={15} className="transition-transform duration-300 group-hover:-translate-x-1" />
           All trips
         </Link>
@@ -56,16 +55,16 @@ export default function NewTripPage() {
           transition={{ duration: 0.8, ease: EASE_OUT_EXPO }}
           className="mt-10"
         >
-          <Eyebrow>New trip</Eyebrow>
+          <h1 className="sr-only">New trip</h1>
           <input
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Name this trip"
             aria-label="Trip name"
-            className="mt-4 w-full bg-transparent font-display text-[clamp(2.4rem,5.5vw,4.25rem)] leading-[1] tracking-[-0.035em] outline-none placeholder:text-ink-3/50"
+            className="w-full bg-transparent font-display text-[clamp(2.4rem,5.5vw,4.25rem)] leading-[1] tracking-[-0.035em] outline-none placeholder:text-fg-subtle/50"
           />
-          <div className="mt-3 h-0.5 w-full rounded-full bg-gradient-to-r from-aqua via-petrol/30 to-transparent" />
+          <div className="mt-3 h-0.5 w-full rounded-full bg-gradient-to-r from-success via-accent/30 to-transparent" />
 
           <div className="mt-8">
             <Label htmlFor="trip-desc">The plan (optional)</Label>
@@ -78,16 +77,12 @@ export default function NewTripPage() {
             />
           </div>
 
-          {error && <p className="mt-4 text-sm text-coral">{error}</p>}
+          {error && <p className="mt-4 text-sm text-danger-fg">{error}</p>}
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <Button type="submit" disabled={submitting} trailingIcon={<ArrowRightIcon size={15} />}>
               {submitting ? "Creating…" : "Create trip"}
             </Button>
-            <p className="flex max-w-[34ch] items-start gap-2 text-[14px] leading-relaxed text-ink-3">
-              <NavigationArrowIcon size={15} className="mt-0.5 shrink-0" />
-              You&apos;ll start recording from the trip page. Location is only used while it&apos;s open.
-            </p>
           </div>
         </motion.form>
       </div>
@@ -100,9 +95,6 @@ export default function NewTripPage() {
       >
         <div className="brand-gradient relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[var(--shadow-card)]">
           <RouteSketch points={[]} demo onPhoto className="h-full w-full" />
-          <p className="glass absolute bottom-5 left-5 rounded-full px-4 py-2 text-[14px] font-medium text-white">
-            Your route draws itself as you drive
-          </p>
         </div>
       </motion.div>
     </div>

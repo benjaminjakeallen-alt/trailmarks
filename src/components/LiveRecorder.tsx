@@ -138,8 +138,8 @@ export default function LiveRecorder({
 
   return (
     <div>
-      <div className="rounded-[2rem] bg-elevated p-1.5 shadow-[var(--shadow-card)] ring-1 ring-line">
-        <div className="relative h-[62dvh] min-h-[380px] overflow-hidden rounded-[calc(2rem-0.375rem)] bg-sunken sm:h-[560px]">
+      <div className="rounded-[2rem] bg-surface p-1.5 shadow-[var(--shadow-card)] ring-1 ring-line">
+        <div className="relative h-[62dvh] min-h-[380px] overflow-hidden rounded-[calc(2rem-0.375rem)] bg-surface-sunken sm:h-[560px]">
           <TripMap points={points} pins={pins} onPinClick={onPinClick} followLatest={recording} />
 
           {!completed && canRecord && (
@@ -147,15 +147,15 @@ export default function LiveRecorder({
               <motion.div
                 layout
                 transition={{ layout: { duration: 0.45, ease: EASE_OUT_EXPO } }}
-                className="pointer-events-auto flex items-center gap-3 rounded-full bg-elevated/85 p-2 pr-3 shadow-[var(--shadow-float)] ring-1 ring-line backdrop-blur-xl"
+                className="pointer-events-auto flex items-center gap-3 rounded-full bg-surface/85 p-2 pr-3 shadow-[var(--shadow-float)] ring-1 ring-line backdrop-blur-xl"
               >
                 <button
                   type="button"
                   onClick={recording ? pauseRecording : startRecording}
                   aria-label={recording ? "Pause recording" : points.length ? "Resume recording" : "Start recording"}
-                  className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-coral text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.25),0_10px_22px_-10px_var(--coral)] transition-transform duration-200 active:scale-95"
+                  className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-danger text-on-danger shadow-[inset_0_1px_0_rgb(255_255_255/0.25),0_10px_22px_-10px_var(--danger)] transition-transform duration-200 active:scale-95"
                 >
-                  {recording && <span className="record-pulse absolute inset-0 rounded-full bg-coral" />}
+                  {recording && <span className="record-pulse absolute inset-0 rounded-full bg-danger" />}
                   <AnimatePresence mode="wait" initial={false}>
                     {recording ? (
                       <motion.span
@@ -180,7 +180,7 @@ export default function LiveRecorder({
                 </button>
 
                 <div className="min-w-0 pr-1">
-                  <p className="text-[12px] font-medium text-ink-3">
+                  <p className="text-[12px] font-medium text-fg-subtle">
                     {recording ? "Live" : "Route"}
                   </p>
                   <p className="truncate text-[15px] font-semibold">{statusText}</p>
@@ -191,7 +191,7 @@ export default function LiveRecorder({
                     type="button"
                     onClick={finishTrip}
                     disabled={finishing}
-                    className="ml-1 flex h-11 items-center gap-2 rounded-full bg-petrol px-4 text-[15px] font-medium text-white transition-transform hover:bg-petrol-strong active:scale-95 disabled:opacity-50"
+                    className="ml-1 flex h-11 items-center gap-2 rounded-full bg-accent px-4 text-[15px] font-medium text-on-accent transition-transform hover:bg-accent-strong active:scale-95 disabled:opacity-50"
                   >
                     <FlagCheckeredIcon size={16} />
                     {finishing ? "Finishing…" : "Finish"}
@@ -209,9 +209,9 @@ export default function LiveRecorder({
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mt-3 flex items-start gap-2 rounded-2xl bg-coral-soft px-4 py-3 text-sm text-ink"
+            className="mt-3 flex items-start gap-2 rounded-2xl bg-danger-soft px-4 py-3 text-sm text-fg"
           >
-            <WarningIcon size={18} className="mt-px shrink-0 text-coral" />
+            <WarningIcon size={18} className="mt-px shrink-0 text-danger-fg" />
             {GEO_ERRORS[geoState]}
           </motion.p>
         )}

@@ -70,8 +70,8 @@ function ClaimFx({ fx, d, bounds }: { fx: Fx; d: string; bounds: [[number, numbe
   const clipId = `tm-clip-${fx.id}`;
   const bloomId = `tm-bloom-${fx.id}`;
   const glowId = `tm-glow-${fx.id}`;
-  const tint = fx.gold ? "#f5c542" : "var(--aqua-bright)";
-  const deep = fx.gold ? "#c98a08" : "var(--aqua)";
+  const tint = fx.gold ? "#f5c542" : "var(--success-bright)";
+  const deep = fx.gold ? "#c98a08" : "var(--success)";
   return (
     <g>
       <defs>
@@ -124,8 +124,8 @@ function ClaimFx({ fx, d, bounds }: { fx: Fx; d: string; bounds: [[number, numbe
           textAnchor="middle"
           fontSize={16}
           fontWeight={700}
-          fill="var(--petrol)"
-          stroke="var(--bg-elevated)"
+          fill="var(--accent)"
+          stroke="var(--surface)"
           strokeWidth={3}
           paintOrder="stroke"
           initial={{ opacity: 0, y: 0 }}
@@ -145,7 +145,7 @@ function UnclaimFx({ fx }: { fx: Fx }) {
       cx={fx.x}
       cy={fx.y}
       fill="none"
-      stroke="var(--ink-3)"
+      stroke="var(--fg-subtle)"
       initial={{ r: 46, opacity: 0, strokeWidth: 0.5 }}
       animate={{ r: 2, opacity: [0, 0.7, 0], strokeWidth: 3 }}
       transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
@@ -187,7 +187,7 @@ export function HoldRing({ x, y }: { x: number; y: number }) {
           cy="32"
           r="26"
           fill="none"
-          stroke="var(--coral)"
+          stroke="var(--danger)"
           strokeWidth="5"
           strokeLinecap="round"
           initial={{ pathLength: 0 }}
@@ -404,9 +404,9 @@ export default function UsMap({
       >
         <defs>
           <linearGradient id="tm-visited" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={MAP_WIDTH} y2={MAP_HEIGHT}>
-            <stop offset="0" style={{ stopColor: "var(--petrol)" }} />
-            <stop offset="0.55" style={{ stopColor: "var(--aqua)" }} />
-            <stop offset="1" style={{ stopColor: "var(--aqua-bright)" }} />
+            <stop offset="0" style={{ stopColor: "var(--accent)" }} />
+            <stop offset="0.55" style={{ stopColor: "var(--success)" }} />
+            <stop offset="1" style={{ stopColor: "var(--success-bright)" }} />
           </linearGradient>
           {/* Gold for states the whole family has been to: reflected bands that drift like light on metal. */}
           <linearGradient
@@ -458,7 +458,7 @@ export default function UsMap({
               d={s.d}
               className="state-path cursor-pointer outline-none"
               style={{ transition: "fill 220ms cubic-bezier(0.32,0.72,0,1)" }}
-              fill={hovered === s.code ? "var(--land-hover)" : "var(--land)"}
+              fill={hovered === s.code ? "var(--map-land-hover)" : "var(--map-land)"}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={
@@ -495,7 +495,7 @@ export default function UsMap({
                   key={`f-${s.code}`}
                   d={s.d}
                   className="state-path cursor-pointer"
-                  fill="var(--aqua-bright)"
+                  fill="var(--success-bright)"
                   aria-hidden
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 0.42 }}
@@ -538,7 +538,7 @@ export default function UsMap({
         <motion.path
           d={geo.borders}
           fill="none"
-          stroke="var(--land-edge)"
+          stroke="var(--map-edge)"
           strokeWidth={1.1}
           strokeLinejoin="round"
           pointerEvents="none"
@@ -550,14 +550,14 @@ export default function UsMap({
 
         <g pointerEvents="none">
           {hoveredShape && hovered !== selectedCode && (
-            <path d={hoveredShape.d} fill="none" stroke="var(--ink)" strokeOpacity={0.35} strokeWidth={1.25} />
+            <path d={hoveredShape.d} fill="none" stroke="var(--fg)" strokeOpacity={0.35} strokeWidth={1.25} />
           )}
           {selectedShape && (
             <motion.path
               key={selectedShape.code}
               d={selectedShape.d}
               fill="none"
-              stroke="var(--sun)"
+              stroke="var(--reward)"
               strokeWidth={2.6}
               strokeLinejoin="round"
               initial={{ pathLength: 0, opacity: 0 }}
@@ -608,7 +608,7 @@ export default function UsMap({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.1 } }}
               transition={{ duration: 0.25, ease: EASE_OUT_EXPO }}
-              className="-translate-x-1/2 -translate-y-[calc(100%+14px)] whitespace-nowrap rounded-xl bg-ink px-3 py-1.5 text-bg shadow-[var(--shadow-float)]"
+              className="-translate-x-1/2 -translate-y-[calc(100%+14px)] whitespace-nowrap rounded-xl bg-fg px-3 py-1.5 text-canvas shadow-[var(--shadow-float)]"
             >
               <span className="text-[13px] font-medium">{hoveredShape.info.name}</span>
               <span className="ml-2 text-[12px] opacity-65">

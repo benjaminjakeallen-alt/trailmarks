@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 
 const noSubscribe = () => () => {};
 const pill =
-  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold text-petrol ring-1 ring-line hover:bg-bg hover:ring-petrol/40";
+  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[13px] font-semibold text-accent-fg ring-1 ring-line hover:bg-canvas hover:ring-accent/40";
 
 /** For someone else in the family: make them a one-time reset link and send it. */
 export function ResetPasswordButton({ userId, name }: { userId: string; name: string }) {
@@ -57,19 +57,15 @@ export function ResetPasswordButton({ userId, name }: { userId: string; name: st
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} label={`Reset ${name}'s password`}>
         <div className="pr-10">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-sun-soft text-[#b36b00]">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-reward-soft text-reward-fg">
             <KeyIcon size={24} weight="fill" />
           </span>
           <h2 className="mt-4 font-display text-[1.8rem] leading-tight">Reset {name}&apos;s password</h2>
-          <p className="mt-1 text-[15px] leading-relaxed text-ink-3">
-            Send {name} this link. It lets them pick a new password once, and expires in two days. Any older reset link
-            for them stops working.
-          </p>
         </div>
-        {error && <p className="mt-5 rounded-2xl bg-coral-soft px-4 py-3 text-[14px]">{error}</p>}
+        {error && <p className="mt-5 rounded-2xl bg-danger-soft px-4 py-3 text-[14px]">{error}</p>}
         {!error && (
           <div className="mt-5 space-y-3">
-            <p className="truncate rounded-2xl bg-bg px-4 py-3 font-mono text-[13px] text-ink-2 ring-1 ring-line">
+            <p className="truncate rounded-2xl bg-canvas px-4 py-3 font-mono text-[13px] text-fg-muted ring-1 ring-line">
               {url || "Making a link…"}
             </p>
             {canShare && (
@@ -86,7 +82,7 @@ export function ResetPasswordButton({ userId, name }: { userId: string; name: st
               <a
                 href={token ? `sms:?&body=${encodeURIComponent(`${message} ${url}`)}` : undefined}
                 aria-disabled={!token}
-                className="flex min-h-11 items-center justify-center gap-2 rounded-full bg-elevated text-[15px] font-medium ring-1 ring-line-strong aria-disabled:opacity-50"
+                className="flex min-h-11 items-center justify-center gap-2 rounded-full bg-surface text-[15px] font-medium ring-1 ring-line-strong aria-disabled:opacity-50"
               >
                 <ChatCircleTextIcon size={18} className="text-[#138a4a]" weight="fill" /> Text
               </a>
@@ -146,7 +142,7 @@ export function ChangePasswordButton() {
         <h2 className="pr-10 font-display text-[1.8rem] leading-tight">Change your password</h2>
         {status === "done" ? (
           <div className="mt-4">
-            <p className="text-[15px] text-ink-2">Done. Use the new password next time you sign in.</p>
+            <p className="text-[15px] text-fg-muted">Done. Use the new password next time you sign in.</p>
             <Button className="mt-5 w-full" onClick={() => setOpen(false)}>
               Close
             </Button>
@@ -178,7 +174,7 @@ export function ChangePasswordButton() {
               />
             </div>
             {error && (
-              <p role="alert" className="rounded-2xl bg-coral-soft px-4 py-3 text-[14px]">
+              <p role="alert" className="rounded-2xl bg-danger-soft px-4 py-3 text-[14px]">
                 {error}
               </p>
             )}
@@ -217,10 +213,7 @@ export function DarkModeSetting({ initial }: { initial: boolean }) {
   }
   return (
     <div className="flex items-center justify-between gap-4">
-      <div>
-        <p className="text-[16px] font-semibold">Dark mode</p>
-        <p className="text-[13.5px] text-ink-3">Off by default. Applies on this device.</p>
-      </div>
+      <p className="text-[16px] font-semibold">Dark mode</p>
       <Switch on={on} onChange={toggle} label="Dark mode" />
     </div>
   );

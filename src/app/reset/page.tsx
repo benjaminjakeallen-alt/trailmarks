@@ -14,15 +14,12 @@ export default async function ResetPage({ searchParams }: PageProps<"/reset">) {
   return (
     <AuthShell>
       {reset ? (
-        <ResetForm token={token} name={reset.name} madeBy={reset.madeBy} />
+        <ResetForm token={token} name={reset.name} />
       ) : (
         <div>
           <h2 className="font-display text-[2rem] leading-tight">This link has expired</h2>
-          <p className="mt-2 text-[15px] leading-relaxed text-ink-3">
-            Reset links work once and last two days. Ask anyone in your family for a new one: on their Family page,
-            they tap your name, then Reset password.
-          </p>
-          <Link href="/login" className="mt-6 inline-block font-semibold text-petrol hover:text-petrol-strong">
+          <p className="mt-2 text-[15px] text-fg-muted">Ask anyone in your family for a new one.</p>
+          <Link href="/login" className="mt-6 inline-block font-semibold text-accent-fg hover:text-accent-strong">
             Back to sign in
           </Link>
         </div>

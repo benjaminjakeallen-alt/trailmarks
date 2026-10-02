@@ -4,7 +4,6 @@ import { listTrips, getTrip } from "@/lib/trips";
 import TripCard from "@/components/TripCard";
 import RouteSketch from "@/components/trips/RouteSketch";
 import { ButtonLink } from "@/components/ui/Button";
-import { Eyebrow } from "@/components/ui/Panel";
 import { WordReveal } from "@/components/motion/Reveal";
 
 export const dynamic = "force-dynamic";
@@ -33,30 +32,20 @@ export default async function TripsPage() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 pb-24 pt-8 sm:px-8 lg:pt-16">
-      <header className="mb-8 flex flex-col gap-6 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Eyebrow>Trips</Eyebrow>
-          <WordReveal
-            text={"Roads you've\ndrawn."}
-            className="mt-3 font-display text-[clamp(2.6rem,6vw,4.75rem)] leading-[0.95] tracking-[-0.04em] [&>span:last-child]:text-petrol"
-          />
-        </div>
+      <header className="mb-8 flex flex-col gap-6 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+        <WordReveal text="Trips" className="font-display text-[clamp(2.4rem,6vw,4rem)] leading-[1] tracking-[-0.035em]" />
         <ButtonLink href="/trips/new" icon={<PlusIcon size={16} weight="bold" />} className="self-start sm:hidden">
           New trip
         </ButtonLink>
       </header>
 
       {trips.length === 0 ? (
-        <div className="grid grid-cols-1 items-center gap-8 rounded-[1.75rem] bg-elevated p-2 shadow-[var(--shadow-card)] ring-1 ring-line md:grid-cols-2">
+        <div className="grid grid-cols-1 items-center gap-8 rounded-[1.75rem] bg-surface p-2 shadow-[var(--shadow-card)] ring-1 ring-line md:grid-cols-2">
           <div className="brand-gradient aspect-[16/10] overflow-hidden rounded-[1.4rem]">
             <RouteSketch points={[]} demo onPhoto className="h-full w-full" />
           </div>
           <div className="p-6 md:p-10">
             <h2 className="font-display text-3xl">Your first route starts here.</h2>
-            <p className="mt-3 max-w-[40ch] leading-relaxed text-ink-2">
-              Start a trip, hit record, and drive. Trailmarks traces the road as you go and claims every
-              state you cross when you finish.
-            </p>
             <div className="mt-6">
               <ButtonLink href="/trips/new" icon={<PlusIcon size={16} weight="bold" />}>
                 Start a trip

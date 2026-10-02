@@ -109,7 +109,7 @@ function JournalShell({ origin, children }: { origin: JournalOrigin | null; chil
 
   return (
     <motion.div
-      className="fixed z-[71] overflow-hidden bg-bg shadow-[var(--shadow-float)]"
+      className="fixed z-[71] overflow-hidden bg-canvas shadow-[var(--shadow-float)]"
       style={{ left, top, width, height, borderRadius: radius, borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
     >
       <motion.div className="absolute left-0 top-0" style={{ x: contentX, y: contentY, width: size.w, height: size.h }}>
@@ -117,7 +117,7 @@ function JournalShell({ origin, children }: { origin: JournalOrigin | null; chil
       </motion.div>
       <motion.div
         aria-hidden
-        className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-petrol text-[15px] font-medium text-white"
+        className="pointer-events-none absolute inset-0 flex items-center justify-center gap-2 bg-accent text-[15px] font-medium text-on-accent"
         style={{ opacity: wash }}
       >
         <NotebookIcon size={17} /> Open journal
@@ -185,7 +185,7 @@ export default function JournalPanel({
         <>
           <motion.div
             key="journal-scrim"
-            className="fixed inset-0 z-[70] bg-ink/30 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[70] bg-fg/30 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -193,8 +193,8 @@ export default function JournalPanel({
             aria-hidden
           />
           <JournalShell key="journal-panel" origin={origin}>
-            <aside role="dialog" aria-label={`${info.name} journal`} className="flex h-full w-full flex-col bg-bg">
-              <header className="flex items-center gap-4 border-b border-line bg-elevated px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-6">
+            <aside role="dialog" aria-label={`${info.name} journal`} className="flex h-full w-full flex-col bg-canvas">
+              <header className="flex items-center gap-4 border-b border-line bg-surface px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-6">
                 <StateSilhouette
                   code={info.code}
                   claimed={claimed}
@@ -204,16 +204,13 @@ export default function JournalPanel({
                   className="h-12 w-16 shrink-0"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.1em] text-petrol">
-                    {info.region} · Journal
-                  </p>
                   <h2 className="truncate font-display text-[1.7rem] leading-tight">{info.name}</h2>
                 </div>
                 <button
                   type="button"
                   onClick={onClose}
                   aria-label="Close journal"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bg text-ink-2 ring-1 ring-line hover:text-ink"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-canvas text-fg-muted ring-1 ring-line hover:text-fg"
                 >
                   <XIcon size={18} />
                 </button>
@@ -230,7 +227,7 @@ export default function JournalPanel({
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <Link
                       href={`/states/${info.code.toLowerCase()}`}
-                      className="group ml-auto inline-flex items-center gap-1 text-[14px] font-semibold text-petrol hover:text-petrol-strong"
+                      className="group ml-auto inline-flex items-center gap-1 text-[14px] font-semibold text-accent-fg hover:text-accent-strong"
                     >
                       Full page
                       <ArrowUpRightIcon
@@ -262,7 +259,7 @@ export default function JournalPanel({
                   ) : (
                     <div className="space-y-3" aria-hidden>
                       {[0, 1].map((i) => (
-                        <div key={i} className="h-40 animate-pulse rounded-[1.75rem] bg-sunken" />
+                        <div key={i} className="h-40 animate-pulse rounded-[1.75rem] bg-surface-sunken" />
                       ))}
                     </div>
                   )}

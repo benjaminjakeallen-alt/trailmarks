@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowRightIcon, MapPinIcon } from "@phosphor-icons/react";
-import { Eyebrow } from "@/components/ui/Panel";
 import { STATES_BY_CODE } from "@/lib/statesData";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 import type { Memory } from "@/lib/types";
@@ -21,11 +20,8 @@ export default function MemoryRail({ memories }: { memories: Memory[] }) {
   return (
     <section className="mx-auto max-w-[1400px] px-4 py-14 sm:px-8 lg:py-20">
       <div className="mb-6 flex items-end justify-between gap-4">
-        <div>
-          <Eyebrow>Lately</Eyebrow>
-          <h2 className="mt-2 font-display text-3xl sm:text-[2.5rem]">Recent memories</h2>
-        </div>
-        <Link href="/memories" className="group flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[15px] font-semibold text-petrol hover:text-petrol-strong">
+        <h2 className="font-display text-3xl sm:text-[2.5rem]">Recent memories</h2>
+        <Link href="/memories" className="group flex shrink-0 items-center gap-1.5 whitespace-nowrap text-[15px] font-semibold text-accent-fg hover:text-accent-strong">
           All memories
           <ArrowRightIcon size={15} className="transition-transform duration-300 group-hover:translate-x-1" />
         </Link>
@@ -45,7 +41,7 @@ export default function MemoryRail({ memories }: { memories: Memory[] }) {
               className="w-[74%] shrink-0 snap-start sm:w-[300px]"
             >
               <Link href={hrefFor(memory)} className="group block">
-                <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-sunken shadow-[var(--shadow-card)]">
+                <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] bg-surface-sunken shadow-[var(--shadow-card)]">
                   {cover ? (
                     <Image
                       src={cover.url}
@@ -62,7 +58,7 @@ export default function MemoryRail({ memories }: { memories: Memory[] }) {
                   <div className="photo-scrim absolute inset-x-0 bottom-0 p-5 pt-20 text-white">
                     <p className="font-display text-[1.35rem] leading-tight">{memory.title}</p>
                     <p className="mt-1.5 flex items-center gap-1 text-[13px] text-white/75">
-                      <MapPinIcon size={14} weight="fill" className="text-sun" />
+                      <MapPinIcon size={14} weight="fill" className="text-reward" />
                       {state?.name ?? "On the road"}
                     </p>
                   </div>

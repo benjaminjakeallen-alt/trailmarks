@@ -18,12 +18,8 @@ export default function AuthShell({ children }: { children: ReactNode }) {
           <h1 className="font-display text-[clamp(2.4rem,5vw,4.25rem)] leading-[0.98] tracking-[-0.035em]">
             Every Memory,
             <br />
-            <span className="text-aqua-bright">Remembered</span>
+            <span className="text-success-bright">Remembered</span>
           </h1>
-          <p className="mt-4 max-w-[40ch] text-[16px] leading-relaxed text-white/80">
-            One map for the whole family. Claim the states you&apos;ve been, share the trips and photos, and watch the
-            places you&apos;ve all been turn gold.
-          </p>
         </div>
       </section>
       <section className="flex items-center justify-center px-2 py-8 sm:px-6 lg:py-0">

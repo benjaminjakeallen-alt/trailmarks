@@ -17,9 +17,9 @@ const base =
 
 const variants: Record<Variant, string> = {
   primary:
-    "bg-petrol text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_24px_-14px_var(--petrol)] hover:bg-petrol-strong",
-  secondary: "bg-elevated text-ink ring-1 ring-line-strong shadow-[var(--shadow-card)] hover:ring-ink-3/40",
-  quiet: "text-ink-2 hover:text-ink",
+    "bg-accent text-on-accent shadow-[inset_0_1px_0_rgb(255_255_255/0.18),0_12px_24px_-14px_var(--accent)] hover:bg-accent-strong",
+  secondary: "bg-surface text-fg ring-1 ring-line-strong shadow-[var(--shadow-card)] hover:ring-fg-subtle/40",
+  quiet: "text-fg-muted hover:text-fg",
   light: "bg-white text-[#0b5c63] shadow-[0_12px_30px_-14px_rgb(0_0_0/0.5)] hover:bg-white/90",
   glass: "glass text-white hover:bg-white/25",
 };
@@ -41,7 +41,7 @@ function Inner({ icon, trailingIcon, children, variant }: BaseProps & { variant:
               ? "bg-white/20"
               : variant === "light"
                 ? "bg-[#0b5c63]/10"
-                : "bg-ink/5"
+                : "bg-fg/5"
           }`}
         >
           {trailingIcon}

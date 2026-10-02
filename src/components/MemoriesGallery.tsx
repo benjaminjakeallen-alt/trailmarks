@@ -16,16 +16,16 @@ export default function MemoriesGallery({ items }: { items: GalleryItem[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col items-center rounded-[1.75rem] bg-elevated px-6 py-20 text-center shadow-[var(--shadow-card)] ring-1 ring-line">
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-petrol-soft text-petrol">
+      <div className="flex flex-col items-center rounded-[1.75rem] bg-surface px-6 py-20 text-center shadow-[var(--shadow-card)] ring-1 ring-line">
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-soft text-accent-fg">
           <ImagesIcon size={28} />
         </span>
         <p className="mt-5 font-display text-2xl">No photos yet</p>
-        <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-ink-3">
+        <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-fg-subtle">
           Add photos to a state&apos;s journal or a trip step, and they&apos;ll collect here — ready to play
           back as a story.
         </p>
-        <Link href="/" className="mt-6 text-[15px] font-semibold text-petrol hover:text-petrol-strong">
+        <Link href="/" className="mt-6 text-[15px] font-semibold text-accent-fg hover:text-accent-strong">
           Go to the map
         </Link>
       </div>
@@ -35,7 +35,7 @@ export default function MemoriesGallery({ items }: { items: GalleryItem[] }) {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <p className="text-[15px] font-medium text-ink-3 tabular">
+        <p className="text-[15px] font-medium text-fg-subtle tabular">
           {items.length} photo{items.length === 1 ? "" : "s"}
         </p>
         <Button onClick={() => setOpenIndex(0)} icon={<PlayIcon size={15} weight="fill" />}>
@@ -53,7 +53,7 @@ export default function MemoriesGallery({ items }: { items: GalleryItem[] }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-30px" }}
             transition={{ duration: 0.8, ease: EASE_OUT_EXPO, delay: (i % 4) * 0.06 }}
-            className="group relative block w-full break-inside-avoid overflow-hidden rounded-[1.4rem] bg-sunken shadow-[var(--shadow-card)]"
+            className="group relative block w-full break-inside-avoid overflow-hidden rounded-[1.4rem] bg-surface-sunken shadow-[var(--shadow-card)]"
           >
             <Image
               src={item.photo.url}

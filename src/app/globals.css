@@ -4,39 +4,53 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /*
- * "Glacier" — cool mist and white surfaces, deep Petrol teal for anything
- * you act on, Aqua for land and routes you've claimed, Sun (amber) for
- * highlights and achievements, Coral only for recording and errors.
- * Photos carry the color; the chrome stays quiet around them.
+ * "Glacier" — semantic color roles. Components use the role, never the raw
+ * swatch: canvas/surface for backgrounds, fg/fg-muted/fg-subtle for text,
+ * accent (deep teal) for anything you act on, success (aqua) for what you've
+ * claimed, reward (amber) for highlights and achievements, danger (coral) for
+ * recording, errors and destructive actions. Every `*-fg` and `on-*` pair
+ * clears WCAG AA (4.5:1) against canvas, surface and its own `*-soft` tint.
  */
 :root {
   color-scheme: light;
-  --bg: #f2f5f6;
-  --bg-elevated: #ffffff;
-  --bg-sunken: #e7edef;
-  --ink: #0e1b1f;
-  --ink-2: #4a5a60;
-  --ink-3: #87959a;
+
+  /* Surfaces */
+  --canvas: #f2f5f6;
+  --surface: #ffffff;
+  --surface-sunken: #e7edef;
   --line: rgb(14 27 31 / 0.07);
   --line-strong: rgb(14 27 31 / 0.12);
 
-  --land: #dae2e5;
-  --land-hover: #c8d3d7;
-  --land-edge: #ffffff;
+  /* Text */
+  --fg: #0e1b1f;
+  --fg-muted: #4a5a60;
+  --fg-subtle: #5f6f75;
 
-  --petrol: #0b5c63;
-  --petrol-strong: #08484e;
-  --petrol-soft: #dcecec;
+  /* Accent: buttons, links, selection */
+  --accent: #0b5c63;
+  --accent-strong: #08484e;
+  --accent-soft: #dcecec;
+  --accent-fg: #0b5c63;
+  --on-accent: #ffffff;
+  --focus: #0b5c63;
 
-  --aqua: #15a898;
-  --aqua-bright: #3fd3c1;
-  --aqua-soft: #d4f2ee;
+  /* Status */
+  --success: #15a898;
+  --success-bright: #3fd3c1;
+  --success-soft: #d4f2ee;
+  --success-fg: #0b7268;
+  --reward: #f5a524;
+  --reward-soft: #fdefd4;
+  --reward-fg: #8a5300;
+  --danger: #b03328;
+  --danger-soft: #fce2de;
+  --danger-fg: #b03328;
+  --on-danger: #ffffff;
 
-  --sun: #f5a524;
-  --sun-soft: #fdefd4;
-
-  --coral: #e5483a;
-  --coral-soft: #fce2de;
+  /* Map */
+  --map-land: #dae2e5;
+  --map-land-hover: #c8d3d7;
+  --map-edge: #ffffff;
 
   --shadow-card: 0 10px 30px -18px rgb(11 50 56 / 0.28), 0 1px 3px rgb(11 50 56 / 0.05);
   --shadow-float: 0 24px 48px -22px rgb(11 50 56 / 0.3), 0 2px 6px -2px rgb(11 50 56 / 0.08);
@@ -46,32 +60,39 @@
 /* Dark mode is opt-in (Family → Settings), stored per device in the tm-theme cookie. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0a1316;
-  --bg-elevated: #111d21;
-  --bg-sunken: #070e10;
-  --ink: #e9f1f2;
-  --ink-2: #a5b4b8;
-  --ink-3: #6b7d82;
+
+  --canvas: #0a1316;
+  --surface: #111d21;
+  --surface-sunken: #070e10;
   --line: rgb(233 241 242 / 0.07);
   --line-strong: rgb(233 241 242 / 0.13);
 
-  --land: #1b292e;
-  --land-hover: #26383d;
-  --land-edge: #111d21;
+  --fg: #e9f1f2;
+  --fg-muted: #a5b4b8;
+  --fg-subtle: #8a9ca1;
 
-  --petrol: #1a8a8a;
-  --petrol-strong: #22a3a1;
-  --petrol-soft: rgb(26 138 138 / 0.18);
+  --accent: #11706f;
+  --accent-strong: #0e6463;
+  --accent-soft: rgb(26 138 138 / 0.18);
+  --accent-fg: #4cc2be;
+  --on-accent: #ffffff;
+  --focus: #4cc2be;
 
-  --aqua: #20c2af;
-  --aqua-bright: #62e4d2;
-  --aqua-soft: rgb(32 194 175 / 0.15);
+  --success: #20c2af;
+  --success-bright: #62e4d2;
+  --success-soft: rgb(32 194 175 / 0.15);
+  --success-fg: #62e4d2;
+  --reward: #ffb940;
+  --reward-soft: rgb(255 185 64 / 0.15);
+  --reward-fg: #ffb940;
+  --danger: #ff6b5a;
+  --danger-soft: rgb(255 107 90 / 0.15);
+  --danger-fg: #ff7f70;
+  --on-danger: #0a1316;
 
-  --sun: #ffb940;
-  --sun-soft: rgb(255 185 64 / 0.15);
-
-  --coral: #ff6b5a;
-  --coral-soft: rgb(255 107 90 / 0.15);
+  --map-land: #1b292e;
+  --map-land-hover: #26383d;
+  --map-edge: #111d21;
 
   --shadow-card: 0 10px 30px -18px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.3);
   --shadow-float: 0 24px 48px -20px rgb(0 0 0 / 0.6), 0 2px 6px -2px rgb(0 0 0 / 0.35);
@@ -79,25 +100,32 @@
 }
 
 @theme inline {
-  --color-bg: var(--bg);
-  --color-elevated: var(--bg-elevated);
-  --color-sunken: var(--bg-sunken);
-  --color-ink: var(--ink);
-  --color-ink-2: var(--ink-2);
-  --color-ink-3: var(--ink-3);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
-  --color-land: var(--land);
-  --color-petrol: var(--petrol);
-  --color-petrol-strong: var(--petrol-strong);
-  --color-petrol-soft: var(--petrol-soft);
-  --color-aqua: var(--aqua);
-  --color-aqua-bright: var(--aqua-bright);
-  --color-aqua-soft: var(--aqua-soft);
-  --color-sun: var(--sun);
-  --color-sun-soft: var(--sun-soft);
-  --color-coral: var(--coral);
-  --color-coral-soft: var(--coral-soft);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-fg: var(--accent-fg);
+  --color-on-accent: var(--on-accent);
+  --color-focus: var(--focus);
+  --color-success: var(--success);
+  --color-success-bright: var(--success-bright);
+  --color-success-soft: var(--success-soft);
+  --color-success-fg: var(--success-fg);
+  --color-reward: var(--reward);
+  --color-reward-soft: var(--reward-soft);
+  --color-reward-fg: var(--reward-fg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-fg: var(--danger-fg);
+  --color-on-danger: var(--on-danger);
+  --color-map-land: var(--map-land);
 
   --font-sans: var(--font-outfit);
   --font-display: var(--font-outfit);
@@ -111,20 +139,20 @@ html {
 }
 
 body {
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--canvas);
+  color: var(--fg);
   font-family: var(--font-outfit), system-ui, sans-serif;
 }
 
 ::selection {
-  background: var(--aqua-soft);
-  color: var(--ink);
+  background: var(--success-soft);
+  color: var(--fg);
 }
 
 /* In the base layer so a component's own outline-none (inputs with their own focus ring) can win. */
 @layer base {
   :focus-visible {
-    outline: 2px solid var(--petrol);
+    outline: 2px solid var(--accent);
     outline-offset: 3px;
     border-radius: 6px;
   }
@@ -206,6 +234,34 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .record-pulse,
   .segment-fill {
+    animation: none;
+  }
+}
+
+/* Skeleton loaders: a sunken block with a soft light sweep. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: skeleton-sweep 1.4s var(--ease-glide) infinite;
+}
+:root[data-theme="dark"] .skeleton::after {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+}
+@keyframes skeleton-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
     animation: none;
   }
 }
