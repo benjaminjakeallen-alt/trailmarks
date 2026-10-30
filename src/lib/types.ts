@@ -76,6 +76,8 @@ export interface Member {
   color: string;
   /** Their adventurer avatar (made from a selfie), if they've made one. */
   avatarUrl: string | null;
+  /** Their 3D character as saved (see lib/look.ts); unchecked JSON. */
+  character?: unknown;
 }
 
 export interface Family {

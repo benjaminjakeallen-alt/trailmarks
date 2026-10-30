@@ -4,8 +4,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MAP_HEIGHT, MAP_WIDTH, getUsGeometry } from "@/lib/usGeo";
 import { EASE_OUT_EXPO, HAPTICS, SPRING_SNAPPY, SPRING_STAMP, haptic } from "@/lib/motion";
-import StateDiorama from "@/components/scenes/StateDiorama";
+import dynamic from "next/dynamic";
 import type { Member } from "@/lib/types";
+
+// three.js and the 3D cast load only when someone first taps a state.
+const StateStage = dynamic(() => import("@/components/stage3d/StateStage"), { ssr: false });
+
+/** Start fetching the 3D cast on the first tap, so a double-tap opens with everyone ready. */
+let warmed = false;
+function warmCast() {
+  if (warmed) return;
+  warmed = true;
+  void import("@/components/stage3d/cast").then((m) => m.warmCast(["rogue", "barbarian", "knight", "mage"])).catch(() => {
+    warmed = false;
+  });
+}
 
 type FxKind = "claim" | "unclaim";
 
@@ -275,6 +288,7 @@ export default function UsMap({
   /** A quick tap: claim a state you haven't claimed; just select one you have. */
   function tap(code: string, pointer?: { clientX: number; clientY: number; timeStamp?: number }) {
     // A double-tap on the same state (never a single tap, hold or drag) lifts it and plays its activity.
+    warmCast();
     const now = pointer?.timeStamp ?? 0;
     const last = lastTap.current;
     lastTap.current = { code, at: now };
@@ -581,7 +595,7 @@ export default function UsMap({
       {/* A quick tap: the state lifts off the map and the family acts out its activity on it, in 3D. */}
       <AnimatePresence>
         {selectedShape && played?.code === selectedShape.code && campers.length > 0 && wrapSize && (
-          <StateDiorama
+          <StateStage
             key={`scene-${selectedShape.code}-${played.n}`}
             shape={selectedShape}
             size={wrapSize}

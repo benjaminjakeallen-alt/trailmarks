@@ -28,18 +28,25 @@ interface ProfileRow {
   display_name: string;
   color: string;
   avatar_file: string | null;
+  character: unknown;
   created_at: string;
 }
 
 function toMember(row: ProfileRow): Member {
-  return { userId: row.user_id, displayName: row.display_name, color: row.color, avatarUrl: avatarUrl(row.avatar_file) };
+  return {
+    userId: row.user_id,
+    displayName: row.display_name,
+    color: row.color,
+    avatarUrl: avatarUrl(row.avatar_file),
+    character: row.character ?? null,
+  };
 }
 
 export const getMembers = cache(async (familyId: string): Promise<Member[]> => {
   const rows = unwrap(
     await getSupabase()
       .from("profiles")
-      .select("user_id, display_name, color, avatar_file, created_at")
+      .select("user_id, display_name, color, avatar_file, character, created_at")
       .eq("family_id", familyId)
       .order("created_at", { ascending: true }),
   ) as ProfileRow[];

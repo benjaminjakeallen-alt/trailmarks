@@ -1,8 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import StateDiorama from "@/components/scenes/StateDiorama";
-import { DIORAMAS } from "@/components/scenes/dioramaScenes";
+import { useSearchParams } from "next/navigation";
+import StateStage from "@/components/stage3d/StateStage";
+import { SCENE_CODES } from "@/components/stage3d/scenes";
 import { getUsGeometry } from "@/lib/usGeo";
 import type { Member } from "@/lib/types";
 
@@ -11,32 +12,37 @@ const NAMES = ["Ben", "Mom", "Dad", "Ava", "Leo", "Gran", "Pop", "Ivy", "Max", "
 const family = (n: number): Member[] =>
   NAMES.slice(0, n).map((displayName, i) => ({ userId: `dev-${i}`, displayName, color: COLORS[i % COLORS.length], avatarUrl: null }));
 
-const SIZE = { w: 560, h: 350 };
-
-/** Every state's 3D scene on its own patch of map, for tuning. */
 const noSubscribe = () => () => {};
 
+/** Every state's 3D scene on its own patch of map, for tuning. ?only=UT shows one. */
 export default function SceneGallery() {
-  // Client only: the scenes measure the state shapes in the browser.
+  // Client only: WebGL and the state shapes live in the browser.
   const ready = useSyncExternalStore(noSubscribe, () => true, () => false);
+  const params = useSearchParams();
   const geo = getUsGeometry();
   if (!ready) return null;
-  const entries = [
-    ...Object.entries(DIORAMAS).flatMap(([code, scenes]) => scenes.map((_, turn) => ({ code, turn, n: 5 }))),
-    { code: "UT", turn: 0, n: 8 },
-    { code: "OH", turn: 0, n: 4 },
-    { code: "RI", turn: 0, n: 3 },
-  ];
+  const only = params.get("only")?.toUpperCase();
+  const n = Number(params.get("n") ?? 5);
+  const turn = Number(params.get("turn") ?? 0);
+  const SIZE = { w: Number(params.get("w") ?? 720), h: Number(params.get("h") ?? 450) };
+  const codes = only ? [only] : [...SCENE_CODES, "OH"];
   return (
-    <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-4 p-4 lg:grid-cols-2">
-      {entries.map(({ code, turn, n }) => (
+    <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-4 p-4 xl:grid-cols-2">
+      {codes.map((code) => (
         <div
-          key={`${code}-${turn}-${n}`}
-          data-scene={`${code}-${turn}-${n}`}
+          key={code}
+          data-scene={code}
           className="relative overflow-hidden rounded-3xl bg-surface ring-1 ring-line"
           style={{ width: SIZE.w, height: SIZE.h }}
         >
-          <StateDiorama shape={geo.byCode[code]} size={SIZE} members={family(n)} gold={code === "TN"} turn={turn} />
+          <StateStage
+            shape={geo.byCode[code === "LAB" ? "CO" : code]}
+            sceneCode={code}
+            size={SIZE}
+            members={family(n)}
+            gold={code === "TN"}
+            turn={turn}
+          />
         </div>
       ))}
     </div>

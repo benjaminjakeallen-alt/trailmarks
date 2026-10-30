@@ -8,6 +8,7 @@ import {
   CopyIcon,
   KeyIcon,
   PaperPlaneTiltIcon,
+  PersonSimpleIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Label, TextInput } from "@/components/ui/Field";
@@ -194,6 +195,16 @@ export function AdventurerButton({ hasAvatar }: { hasAvatar: boolean }) {
   return (
     <button type="button" onClick={openAdventurer} className={pill}>
       <CameraIcon size={14} weight="fill" /> {hasAvatar ? "New adventurer" : "Make your adventurer"}
+    </button>
+  );
+}
+
+/** Opens the 3D character maker (the one who acts out the state scenes). */
+export function CharacterButton() {
+  const { openCharacter } = useFamily();
+  return (
+    <button type="button" onClick={openCharacter} className={pill}>
+      <PersonSimpleIcon size={14} weight="fill" /> Your 3D character
     </button>
   );
 }

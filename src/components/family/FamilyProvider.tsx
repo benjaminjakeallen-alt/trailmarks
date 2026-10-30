@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { InviteSheet } from "@/components/family/Invite";
 import AdventurerMaker from "@/components/family/AdventurerMaker";
+import CharacterMaker from "@/components/family/CharacterMaker";
 import type { Member, Viewer } from "@/lib/types";
 
 interface FamilyInfo {
@@ -19,6 +20,7 @@ interface FamilyContextValue {
   setInviteCode: (code: string) => void;
   openInvite: () => void;
   openAdventurer: () => void;
+  openCharacter: () => void;
 }
 
 const FamilyContext = createContext<FamilyContextValue>({
@@ -29,6 +31,7 @@ const FamilyContext = createContext<FamilyContextValue>({
   setInviteCode: () => {},
   openInvite: () => {},
   openAdventurer: () => {},
+  openCharacter: () => {},
 });
 
 /** The signed-in person and their family, loaded once in the root layout. Owns the invite and adventurer sheets. */
@@ -68,6 +71,13 @@ export default function FamilyProvider({
     setAdventurerOpen(true);
   }, []);
 
+  const [characterOpen, setCharacterOpen] = useState(false);
+  const [characterRun, setCharacterRun] = useState(0);
+  const openCharacter = useCallback(() => {
+    setCharacterRun((n) => n + 1);
+    setCharacterOpen(true);
+  }, []);
+
   const value = useMemo(
     () => ({
       viewer,
@@ -77,14 +87,18 @@ export default function FamilyProvider({
       setInviteCode,
       openInvite,
       openAdventurer,
+      openCharacter,
     }),
-    [viewer, members, family, setInviteCode, openInvite, openAdventurer],
+    [viewer, members, family, setInviteCode, openInvite, openAdventurer, openCharacter],
   );
   return (
     <FamilyContext.Provider value={value}>
       {children}
       {viewer && <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />}
       {viewer && <AdventurerMaker key={adventurerRun} open={adventurerOpen} onClose={() => setAdventurerOpen(false)} />}
+      {viewer && characterRun > 0 && (
+        <CharacterMaker key={characterRun} open={characterOpen} onClose={() => setCharacterOpen(false)} />
+      )}
     </FamilyContext.Provider>
   );
 }

@@ -112,17 +112,31 @@ Swap the plain fills for illustrated maps you can switch between:
 - **Road trip**: everyone's recorded trips drawn across the map.
 - **Seasons**: autumn leaves, winter snow, following the calendar.
 
-## 10. A different activity in every state — started (15 states, in 3D)
+## 10. A different activity in every state — built (15 states + campfire, real 3D)
 
-Built: a quick tap on a state (never a hold or a drag) lifts it off the map
-as a 3D slab (CSS 3D: a tilted plane with thickness and a shadow), its
-surface painted for the activity, and the family's adventurers stand on it
-as little game pieces and act it out. Small states grow to a readable size.
-Five on stage at once; bigger families (up to ten) rotate one in every few
-seconds. Engine: `src/components/scenes/diorama.tsx`; scenes:
-`dioramaScenes.tsx`; preview them all at `/dev/scenes` in development.
+Built: double-tap a state and it rises out of the map as a solid 3D slab in
+the map's own color (three.js: the outline extruded, soft shadows), and the
+family's 3D characters act out the state's activity on it with props and
+effects. Every state plays on the same size of stage, centered: small or
+narrow states zoom in until their roomiest spot fits it. Five on stage at
+once; bigger families (up to ten) rotate one in every few seconds.
+
+- Characters: KayKit Adventurers (CC0, Kay Lousberg), one shared skeleton and
+  animation set, recolored per person (body, hat, skin, hair, outfit), made
+  in Family → "Your 3D character" and saved in `profiles.character`.
+- Assets: `scripts/build-cast.mjs` trims the KayKit packs into `public/3d`
+  (about 880 KB gzipped, loaded on the first tap of a state).
+- Code: `src/components/stage3d/` — `stage.ts` (slab, camera, lights,
+  rotation, cancellable clocks), `cast.ts` (characters, gestures),
+  `scenes.ts` (per-state choreography), `props.ts`, `effects.ts`.
+- Preview every scene at `/dev/scenes` (`?only=UT&n=8&turn=1`) and the
+  character maker's looks at `/dev/character`, in development only.
+
 Done: UT, CA (two, alternating), OR, NV, AZ, NM, ID, TX, FL, NY, TN, WI, MI,
-LA, GA. Every other state gets the 3D campfire until it has its own.
+LA, GA. Every other state gets the campfire until it has its own.
+
+Next: auto-fill the character from the adventurer selfie (one cheap vision
+call), more states, sound.
 
 Original idea:
 

@@ -105,9 +105,13 @@ Tokens live in `src/app/globals.css`; never hard-code hex values in components.
   it. Nothing crosses families.
 - On the map: your states are solid aqua, states only other family members
   have claimed are a lighter tint, and a state everyone in the family has
-  claimed turns shimmering gold. Tap a state and the people who've been
-  appear round a campfire on it (`Campfire.tsx`). The stats drawer adds a
-  family ranking and an "everyone's been" count.
+  claimed turns shimmering gold. Double-tap a state and it lifts off the map
+  in 3D while the family's characters act out its activity on it
+  (`src/components/stage3d/`). The stats drawer adds a family ranking and an
+  "everyone's been" count.
+- **3D characters**: Family → "Your 3D character" picks a body, hat, skin,
+  hair and outfit. Models and animations are KayKit's CC0 packs by Kay
+  Lousberg (kaylousberg.com), rebuilt for the web by `scripts/build-cast.mjs`.
 - **Invites**: the dashed "+" seat in the map header (or Invite in the nav)
   opens a sheet with the share sheet, Text, Email, Copy and a QR code; any
   member can make a new link. `/join` also takes a typed code.

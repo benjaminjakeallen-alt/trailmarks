@@ -27,7 +27,9 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p.endsWith("/") ? p : `${p}/`));
-  if (user || isPublic) return response;
+  // The dev-only scene gallery (it 404s in production anyway).
+  const devTool = process.env.NODE_ENV !== "production" && path.startsWith("/dev/");
+  if (user || isPublic || devTool) return response;
 
   if (path.startsWith("/api/")) {
     return NextResponse.json({ error: "Sign in first" }, { status: 401 });
@@ -43,5 +45,6 @@ export const config = {
   // Everything except build assets and the static files the sign-in page itself needs.
   // /p/ (photos), /a/ (avatars) and /v/ (voice notes) check the viewer themselves, so a page of thumbnails skips a session round trip each.
   // /api/cron/ is called by Vercel Cron, not a signed-in person, and checks CRON_SECRET itself.
-  matcher: ["/((?!_next/static|_next/image|vendor/|api/cron/|p/|a/|v/|icon.svg|apple-icon.png|favicon.ico).*)"],
+  // /3d/ is the CC0 character and prop models: static, public, and fetched in bursts.
+  matcher: ["/((?!_next/static|_next/image|vendor/|api/cron/|3d/|p/|a/|v/|icon.svg|apple-icon.png|favicon.ico).*)"],
 };
