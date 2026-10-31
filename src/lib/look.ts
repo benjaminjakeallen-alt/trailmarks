@@ -87,7 +87,11 @@ export const GLASSES = ["none", "round", "square", "sun"] as const;
 export type Glasses = (typeof GLASSES)[number];
 export const HEADWEAR = [
   "none", "safari", "fedora", "ranger", "bucket", "bandana", "headlamp", "captain", "cap", "beanie", "cowboy", "bow",
+  "party", "propeller", "crown", "tophat", "pirate", "chef", "viking", "unicorn", "catears", "bunny", "flowers", "santa",
 ] as const;
+/** The Hat tab's two groups (besides None and the outfit's own hat). */
+export const ADVENTURE_HATS = ["safari", "fedora", "ranger", "bucket", "bandana", "headlamp", "captain", "cap", "beanie", "cowboy", "bow"] as const;
+export const FUN_HATS = ["party", "propeller", "crown", "tophat", "pirate", "chef", "viking", "unicorn", "catears", "bunny", "flowers", "santa"] as const;
 export type Headwear = (typeof HEADWEAR)[number];
 export const GEAR = ["none", "backpack", "binoculars", "camera", "scarf", "canteen"] as const;
 export type Gear = (typeof GEAR)[number];
@@ -138,6 +142,18 @@ export const HEADWEAR_LABELS: Record<Headwear, string> = {
   beanie: "Beanie",
   cowboy: "Cowboy hat",
   bow: "Bow",
+  party: "Party hat",
+  propeller: "Propeller cap",
+  crown: "Crown",
+  tophat: "Top hat",
+  pirate: "Pirate hat",
+  chef: "Chef's hat",
+  viking: "Viking helmet",
+  unicorn: "Unicorn horn",
+  catears: "Cat ears",
+  bunny: "Bunny ears",
+  flowers: "Flower crown",
+  santa: "Santa hat",
 };
 export const GEAR_LABELS: Record<Gear, string> = {
   none: "None",

@@ -157,6 +157,190 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
     badge.position.set(0, 0.08, 0.34);
     g.add(top, band, visor, badge);
     g.position.y = HEAD.crownY - 0.06;
+  } else if (kind === "party") {
+    // A striped cone with a pom-pom and an elastic, tipped at a jaunty angle.
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.5, 16), mat(color));
+    cone.position.y = 0.25;
+    g.add(cone);
+    for (let i = 0; i < 3; i++) {
+      const stripe = new THREE.Mesh(new THREE.TorusGeometry(0.17 - i * 0.055, 0.018, 4, 16), mat("#fbf7f0"));
+      stripe.rotation.x = Math.PI / 2;
+      stripe.position.y = 0.08 + i * 0.13;
+      g.add(stripe);
+    }
+    const pom = ball(0.07, "#f5c542", { detail: 2 });
+    pom.position.y = 0.52;
+    g.add(pom);
+    g.position.set(0.06, HEAD.crownY - 0.04, 0);
+    g.rotation.z = -0.25;
+  } else if (kind === "propeller") {
+    // A beanie with a propeller that spins (the actor turns anything tagged `spin`).
+    const panels = ["#e2483d", "#f5c542", "#2f7fd6", "#3bb54a"];
+    for (let i = 0; i < 4; i++) {
+      const wedge = new THREE.Mesh(
+        new THREE.SphereGeometry(0.37, 8, 8, (i * Math.PI) / 2, Math.PI / 2, 0, Math.PI / 2),
+        mat(panels[i]),
+      );
+      wedge.scale.y = 0.8;
+      g.add(wedge);
+    }
+    const visor = cyl(0.2, 0.2, 0.025, "#e2483d", 14);
+    visor.scale.z = 0.7;
+    visor.position.set(0, 0.0, 0.3);
+    const stem = cyl(0.015, 0.015, 0.1, "#c9d1d4", 6);
+    stem.position.y = 0.29;
+    const prop = new THREE.Group();
+    for (const side of [-1, 1]) {
+      const blade = box(0.22, 0.012, 0.06, side < 0 ? "#e2483d" : "#2f7fd6");
+      blade.position.x = side * 0.11;
+      blade.rotation.x = side * 0.25;
+      prop.add(blade);
+    }
+    prop.add(ball(0.025, "#f5c542"));
+    prop.position.y = 0.4;
+    prop.userData.spin = 14;
+    g.add(visor, stem, prop);
+    g.position.y = HEAD.crownY - 0.1;
+  } else if (kind === "crown") {
+    const gold = "#f5c542";
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.14, 20, 1, true), mat(gold, { rough: 0.35 }));
+    ring.material.side = THREE.DoubleSide;
+    g.add(ring);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const point = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.13, 4), mat(gold, { rough: 0.35 }));
+      point.position.set(Math.cos(a) * 0.26, 0.13, Math.sin(a) * 0.26);
+      const gem = ball(0.03, i % 2 ? "#e2364a" : "#2f7fd6", { detail: 0 });
+      gem.position.set(Math.cos(a) * 0.275, 0.0, Math.sin(a) * 0.275);
+      g.add(point, gem);
+    }
+    g.position.y = HEAD.crownY - 0.02;
+    g.rotation.z = 0.12;
+  } else if (kind === "tophat") {
+    const brim = cyl(0.38, 0.38, 0.03, "#1d1d22", 20);
+    const tall = cyl(0.24, 0.26, 0.5, "#1d1d22", 16);
+    const band = cyl(0.262, 0.262, 0.07, "#c0392b", 16);
+    band.position.y = 0.05;
+    g.add(brim, tall, band);
+    g.position.y = HEAD.crownY - 0.06;
+    g.rotation.z = -0.1;
+  } else if (kind === "pirate") {
+    // A tricorn: three folded-up sides and a little skull.
+    const felt = "#22252b";
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(0.33, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), mat(felt));
+    crown.scale.y = 0.7;
+    g.add(crown);
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + Math.PI / 2;
+      const flap = box(0.5, 0.18, 0.04, felt);
+      flap.position.set(Math.cos(a) * 0.3, 0.0, Math.sin(a) * 0.3);
+      flap.rotation.y = -a + Math.PI / 2;
+      flap.rotateX(-0.35);
+      g.add(flap);
+    }
+    const skull = ball(0.05, "#fbf7f0", { detail: 1 });
+    skull.position.set(0, 0.1, 0.34);
+    const trim = new THREE.Mesh(new THREE.TorusGeometry(0.39, 0.012, 4, 30), mat("#f5c542"));
+    trim.rotation.x = Math.PI / 2;
+    trim.position.y = 0.14;
+    g.add(skull, trim);
+    g.position.y = HEAD.crownY - 0.08;
+  } else if (kind === "chef") {
+    const band = cyl(0.3, 0.3, 0.16, "#fbf7f0", 18);
+    g.add(band);
+    for (const [x, z, r] of [[0, 0, 0.26], [-0.16, 0.05, 0.2], [0.16, 0.05, 0.2], [0, -0.14, 0.2], [0, 0.15, 0.18]] as const) {
+      const puff = ball(r, "#ffffff", { detail: 1 });
+      puff.position.set(x, 0.32, z);
+      g.add(puff);
+    }
+    g.position.y = HEAD.crownY - 0.08;
+  } else if (kind === "viking") {
+    const metal = "#9aa4a8";
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.39, 16, 9, 0, Math.PI * 2, 0, Math.PI / 2), mat(metal, { rough: 0.45 }));
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.39, 0.035, 6, 24), mat("#7a5232"));
+    rim.rotation.x = Math.PI / 2;
+    const ridge = box(0.06, 0.04, 0.78, "#7a5232");
+    ridge.position.y = 0.34;
+    ridge.rotation.x = 0;
+    g.add(dome, rim);
+    for (const side of [-1, 1]) {
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.38, 10), mat("#f2ece0"));
+      horn.position.set(side * 0.42, 0.18, 0);
+      horn.rotation.z = -side * 0.75;
+      g.add(horn);
+    }
+    g.position.y = HEAD.crownY - 0.12;
+  } else if (kind === "unicorn") {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.39, 0.025, 6, 26, Math.PI), mat("#ff8fb1"));
+    band.rotation.y = Math.PI / 2;
+    band.position.y = -0.04;
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.42, 12), mat("#fff4c4", { emissive: "#ffe9a8" }));
+    horn.position.set(0, 0.33, 0.12);
+    horn.rotation.x = 0.35;
+    g.add(band, horn);
+    for (const [c, x] of [["#ff8fb1", -0.12], ["#9b7bff", 0.12]] as const) {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 6), mat(c));
+      ear.position.set(x * 2.2, 0.26, -0.02);
+      g.add(ear);
+    }
+    g.position.y = HEAD.crownY - 0.08;
+  } else if (kind === "catears" || kind === "bunny") {
+    const fur = kind === "bunny" ? "#fbf7f0" : color;
+    const inner = "#ffb3c8";
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.39, 0.022, 6, 26, Math.PI), mat(fur));
+    band.rotation.y = Math.PI / 2;
+    band.position.y = -0.04;
+    g.add(band);
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Group();
+      if (kind === "bunny") {
+        const outer = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.34, 4, 8), mat(fur));
+        outer.scale.z = 0.5;
+        const pink = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.26, 4, 8), mat(inner));
+        pink.scale.z = 0.4;
+        pink.position.z = 0.025;
+        ear.add(outer, pink);
+        ear.position.set(side * 0.13, 0.36, -0.02);
+        ear.rotation.z = side * -0.18;
+        if (side > 0) ear.rotation.x = -0.35;
+      } else {
+        const outer = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.2, 4), mat(fur));
+        outer.scale.z = 0.5;
+        const pink = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), mat(inner));
+        pink.scale.z = 0.3;
+        pink.position.set(0, -0.02, 0.03);
+        ear.add(outer, pink);
+        ear.position.set(side * 0.24, 0.24, 0);
+        ear.rotation.z = side * -0.35;
+      }
+      g.add(ear);
+    }
+    g.position.y = HEAD.crownY - 0.08;
+  } else if (kind === "flowers") {
+    const colors = ["#ff8fb1", "#ffd34a", "#ffffff", "#9b7bff", "#ff9a3c"];
+    const vine = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.025, 6, 30), mat("#4caf50"));
+    vine.rotation.x = Math.PI / 2;
+    g.add(vine);
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const flower = ball(0.06, colors[i % colors.length], { detail: 0 });
+      flower.position.set(Math.cos(a) * 0.34, 0.02, Math.sin(a) * 0.34);
+      const middle = ball(0.025, "#f5a524", { detail: 0 });
+      middle.position.set(Math.cos(a) * 0.37, 0.04, Math.sin(a) * 0.37);
+      g.add(flower, middle);
+    }
+    g.position.y = HEAD.crownY - 0.1;
+    g.rotation.x = -0.12;
+  } else if (kind === "santa") {
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.33, 0.55, 14), mat("#d62f2f"));
+    cone.position.set(0, 0.24, -0.04);
+    cone.rotation.x = -0.45;
+    const trim = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.07, 8, 24), mat("#ffffff", { rough: 1 }));
+    trim.rotation.x = Math.PI / 2;
+    const pom = ball(0.08, "#ffffff", { detail: 2 });
+    pom.position.set(0, 0.36, -0.32);
+    g.add(cone, trim, pom);
+    g.position.y = HEAD.crownY - 0.1;
   } else if (kind === "cowboy") {
     const brim = cyl(0.46, 0.46, 0.03, color, 18);
     const crown = cyl(0.24, 0.27, 0.27, color, 12);

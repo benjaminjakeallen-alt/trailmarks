@@ -354,8 +354,18 @@ export class Actor {
     this.hop = { t: 0, dur: 0.42, h: 0.3 * strength };
   }
 
+  /** Moving parts on hats (a propeller), found once and turned every frame. */
+  private spinners: THREE.Object3D[] | null = null;
+
   update(dt: number) {
     this.mixer.update(dt);
+    if (!this.spinners) {
+      this.spinners = [];
+      this.model.traverse((o) => {
+        if (o.userData.spin) this.spinners!.push(o);
+      });
+    }
+    for (const o of this.spinners) o.rotation.y += dt * o.userData.spin;
 
     if (this.yawTarget !== null) {
       let d = this.yawTarget - this.root.rotation.y;

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useFamily } from "@/components/family/FamilyProvider";
 import {
+  ADVENTURE_HATS,
+  FUN_HATS,
   EXTRAS_FOR,
   EXTRA_LABELS,
   FACIAL_HAIR,
@@ -28,7 +30,6 @@ import {
   HAIR_COLORS,
   HAS_PANTS,
   HAT_LABELS,
-  HEADWEAR,
   HEADWEAR_LABELS,
   OUTFIT_COLORS,
   PANTS_COLORS,
@@ -159,7 +160,7 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
 
   const hatName = HAT_LABELS[look.body];
   // The body's own hat is one of the headwear choices.
-  const headOptions = hatName ? (["none", "own", ...HEADWEAR.filter((h) => h !== "none")] as const) : HEADWEAR;
+  const basics = hatName ? (["none", "own"] as const) : (["none"] as const);
   const headValue = look.hat ? "own" : look.headwear;
   const headLabels = { ...HEADWEAR_LABELS, own: hatName ?? "" } as Record<string, string>;
 
@@ -265,13 +266,22 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
           </>
         )}
         {tab === "Hat" && (
-          <Choices
-            label="Headwear"
-            options={headOptions as readonly string[]}
-            value={headValue}
-            labels={headLabels}
-            onPick={(v) => set(v === "own" ? { hat: true, headwear: "none" } : { hat: false, headwear: v as Look["headwear"] })}
-          />
+          <>
+            {[
+              { label: "Headwear", options: basics as readonly string[] },
+              { label: "Adventure", options: ADVENTURE_HATS as readonly string[] },
+              { label: "Just for fun", options: FUN_HATS as readonly string[] },
+            ].map((group) => (
+              <Choices
+                key={group.label}
+                label={group.label}
+                options={group.options}
+                value={headValue}
+                labels={headLabels}
+                onPick={(v) => set(v === "own" ? { hat: true, headwear: "none" } : { hat: false, headwear: v as Look["headwear"] })}
+              />
+            ))}
+          </>
         )}
       </div>
 
