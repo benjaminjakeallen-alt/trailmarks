@@ -9,6 +9,76 @@ import type { Member } from "@/lib/types";
 export const BODIES = ["rogue", "barbarian", "knight", "mage"] as const;
 export type Body = (typeof BODIES)[number];
 
+export const GENDERS = ["male", "female"] as const;
+export type Gender = (typeof GENDERS)[number];
+export const GENDER_LABELS: Record<Gender, string> = { male: "Male", female: "Female" };
+
+/**
+ * Hairstyles. "long", "tousled", "neat" and "rugged" are KayKit's own sculpted
+ * hair (moved onto any body); the rest are built to match.
+ */
+export const HAIR_STYLES = [
+  "long", "ponytail", "bun", "pigtails", "bob", "braid", "curly", "pixie",
+  "bald", "buzz", "tousled", "neat", "rugged", "spiky", "mohawk", "afro", "manbun",
+] as const;
+export type HairStyle = (typeof HAIR_STYLES)[number];
+export const HAIR_FOR: Record<Gender, HairStyle[]> = {
+  female: ["long", "ponytail", "bun", "pigtails", "bob", "braid", "curly", "pixie", "tousled", "afro"],
+  male: ["bald", "buzz", "tousled", "neat", "rugged", "spiky", "mohawk", "afro", "manbun", "curly"],
+};
+export const HAIR_LABELS: Record<HairStyle, string> = {
+  long: "Long",
+  ponytail: "Ponytail",
+  bun: "Bun",
+  pigtails: "Pigtails",
+  bob: "Bob",
+  braid: "Braid",
+  curly: "Curly",
+  pixie: "Pixie",
+  bald: "Bald",
+  buzz: "Buzz cut",
+  tousled: "Tousled",
+  neat: "Side part",
+  rugged: "Receding",
+  spiky: "Spiky",
+  mohawk: "Mohawk",
+  afro: "Afro",
+  manbun: "Man bun",
+};
+export const FACIAL_HAIR = ["none", "stubble", "mustache", "goatee", "beard"] as const;
+export type FacialHair = (typeof FACIAL_HAIR)[number];
+export const FACIAL_HAIR_LABELS: Record<FacialHair, string> = {
+  none: "None",
+  stubble: "Stubble",
+  mustache: "Mustache",
+  goatee: "Goatee",
+  beard: "Full beard",
+};
+export const EXTRAS = ["none", "studs", "hoops", "flower", "headband", "pearls", "bowtie", "chain", "watch"] as const;
+export type Extra = (typeof EXTRAS)[number];
+export const EXTRAS_FOR: Record<Gender, Extra[]> = {
+  female: ["none", "studs", "hoops", "flower", "headband", "pearls", "watch"],
+  male: ["none", "studs", "bowtie", "chain", "watch"],
+};
+export const EXTRA_LABELS: Record<Extra, string> = {
+  none: "None",
+  studs: "Earrings",
+  hoops: "Hoops",
+  flower: "Flower",
+  headband: "Headband",
+  pearls: "Pearls",
+  bowtie: "Bow tie",
+  chain: "Chain",
+  watch: "Watch",
+};
+/** The hair each outfit style came with, for looks saved before hairstyles existed. */
+export const BODY_HAIR: Record<Body, { gender: Gender; hair: HairStyle; facial: FacialHair }> = {
+  rogue: { gender: "female", hair: "long", facial: "none" },
+  barbarian: { gender: "male", hair: "rugged", facial: "beard" },
+  knight: { gender: "male", hair: "tousled", facial: "none" },
+  mage: { gender: "male", hair: "neat", facial: "none" },
+};
+
 export const SIZES = ["kid", "teen", "adult"] as const;
 export type Size = (typeof SIZES)[number];
 export const BUILDS = ["thin", "normal", "thick"] as const;
@@ -23,6 +93,11 @@ export const GEAR = ["none", "backpack", "binoculars", "camera", "scarf", "cante
 export type Gear = (typeof GEAR)[number];
 
 export interface Look {
+  gender: Gender;
+  hairStyle: HairStyle;
+  facialHair: FacialHair;
+  /** Jewelry and finishing touches. */
+  extra: Extra;
   body: Body;
   /** The body's own hat (bear hat, helmet, wizard hat); the explorer has none. */
   hat: boolean;
@@ -91,8 +166,13 @@ function hash(s: string) {
 /** A starting look for someone who hasn't made one: steady per person, outfit in their map color. */
 export function defaultLook(member: Pick<Member, "userId" | "color">): Look {
   const h = hash(member.userId);
+  const body = BODIES[h % BODIES.length];
   return {
-    body: BODIES[h % BODIES.length],
+    gender: BODY_HAIR[body].gender,
+    hairStyle: BODY_HAIR[body].hair,
+    facialHair: BODY_HAIR[body].facial,
+    extra: "none",
+    body,
     hat: false,
     skin: SKIN_TONES[(h >>> 3) % SKIN_TONES.length],
     hair: HAIR_COLORS[(h >>> 7) % 6],
@@ -110,7 +190,12 @@ export function defaultLook(member: Pick<Member, "userId" | "color">): Look {
 export function randomLook(): Look {
   const any = <T,>(xs: readonly T[]) => xs[Math.floor(Math.random() * xs.length)];
   const headwear = Math.random() < 0.5 ? "none" : any(HEADWEAR);
+  const gender = any(GENDERS);
   return {
+    gender,
+    hairStyle: any(HAIR_FOR[gender]),
+    facialHair: gender === "male" && Math.random() < 0.5 ? any(FACIAL_HAIR) : "none",
+    extra: Math.random() < 0.5 ? "none" : any(EXTRAS_FOR[gender]),
     body: any(BODIES),
     hat: headwear === "none" && Math.random() < 0.3,
     skin: any(SKIN_TONES),
@@ -134,8 +219,18 @@ export function parseLook(value: unknown, fallback: Look): Look {
   const hex = (c: unknown, d: string) => (typeof c === "string" && HEX.test(c) ? c.toLowerCase() : d);
   const one = <T extends string>(xs: readonly T[], x: unknown, d: T) => (xs.includes(x as T) ? (x as T) : d);
   const headwear = one(HEADWEAR, v.headwear, fallback.headwear);
+  const body = one(BODIES, v.body, fallback.body);
+  // Looks saved before hairstyles keep the hair their outfit style came with.
+  const legacy = v.hairStyle === undefined ? BODY_HAIR[body] : null;
+  const gender = legacy ? legacy.gender : one(GENDERS, v.gender, fallback.gender);
+  const hairStyle = legacy ? legacy.hair : one(HAIR_STYLES, v.hairStyle, fallback.hairStyle);
+  const facialHair = legacy ? legacy.facial : one(FACIAL_HAIR, v.facialHair, fallback.facialHair);
   return {
-    body: one(BODIES, v.body, fallback.body),
+    gender,
+    hairStyle,
+    facialHair: gender === "male" ? facialHair : "none",
+    extra: one(EXTRAS, v.extra, fallback.extra),
+    body,
     hat: headwear === "none" && (typeof v.hat === "boolean" ? v.hat : fallback.hat),
     skin: hex(v.skin, fallback.skin),
     hair: hex(v.hair, fallback.hair),

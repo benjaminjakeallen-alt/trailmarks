@@ -9,6 +9,14 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useFamily } from "@/components/family/FamilyProvider";
 import {
+  EXTRAS_FOR,
+  EXTRA_LABELS,
+  FACIAL_HAIR,
+  FACIAL_HAIR_LABELS,
+  GENDERS,
+  GENDER_LABELS,
+  HAIR_FOR,
+  HAIR_LABELS,
   BODIES,
   BODY_LABELS,
   BUILDS,
@@ -39,7 +47,7 @@ const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPre
   loading: () => <Skeleton className="h-[260px] w-[260px] rounded-full" />,
 });
 
-const TABS = ["Body", "Face", "Hair", "Outfit", "Hat", "Gear"] as const;
+const TABS = ["Body", "Face", "Hair", "Outfit", "Hat", "Extras"] as const;
 type Tab = (typeof TABS)[number];
 
 const LIGHT = new Set(["#ececec", "#f2ece0", "#f8d9c0", "#e6c77f", "#f5c542"]);
@@ -189,10 +197,25 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
         ))}
       </div>
 
-      <div role="tabpanel" className="mt-4 min-h-[220px] space-y-5">
+      <div role="tabpanel" className="mt-4 min-h-[260px] space-y-5">
         {tab === "Body" && (
           <>
-            <Choices label="Style" options={BODIES} value={look.body} labels={BODY_LABELS} onPick={(body) => set({ body, hat: false })} />
+            <Choices
+              label="I'm"
+              options={GENDERS}
+              value={look.gender}
+              labels={GENDER_LABELS}
+              onPick={(gender) =>
+                set({
+                  gender,
+                  // Keep what still fits; swap what doesn't.
+                  hairStyle: HAIR_FOR[gender].includes(look.hairStyle) ? look.hairStyle : HAIR_FOR[gender][0],
+                  facialHair: gender === "male" ? look.facialHair : "none",
+                  extra: EXTRAS_FOR[gender].includes(look.extra) ? look.extra : "none",
+                })
+              }
+            />
+            <Choices label="Outfit style" options={BODIES} value={look.body} labels={BODY_LABELS} onPick={(body) => set({ body, hat: false })} />
             <Choices label="Size" options={SIZES} value={look.size} labels={SIZE_LABELS} onPick={(size) => set({ size })} />
             <Choices label="Build" options={BUILDS} value={look.build} labels={BUILD_LABELS} onPick={(build) => set({ build })} />
           </>
@@ -201,9 +224,29 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
           <>
             <Swatches label="Skin" colors={SKIN_TONES} value={look.skin} onPick={(skin) => set({ skin })} />
             <Choices label="Glasses" options={GLASSES} value={look.glasses} labels={GLASSES_LABELS} onPick={(glasses) => set({ glasses })} />
+            {look.gender === "male" && (
+              <Choices
+                label="Facial hair"
+                options={FACIAL_HAIR}
+                value={look.facialHair}
+                labels={FACIAL_HAIR_LABELS}
+                onPick={(facialHair) => set({ facialHair })}
+              />
+            )}
           </>
         )}
-        {tab === "Hair" && <Swatches label="Hair color" colors={HAIR_COLORS} value={look.hair} onPick={(hair) => set({ hair })} />}
+        {tab === "Hair" && (
+          <>
+            <Choices
+              label="Hairstyle"
+              options={HAIR_FOR[look.gender]}
+              value={look.hairStyle}
+              labels={HAIR_LABELS}
+              onPick={(hairStyle) => set({ hairStyle })}
+            />
+            <Swatches label="Hair color" colors={HAIR_COLORS} value={look.hair} onPick={(hair) => set({ hair })} />
+          </>
+        )}
         {tab === "Outfit" && (
           <>
             <Swatches
@@ -215,8 +258,11 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
             {HAS_PANTS[look.body] && <Swatches label="Pants" colors={PANTS_COLORS} value={look.pants} onPick={(pants) => set({ pants })} />}
           </>
         )}
-        {tab === "Gear" && (
-          <Choices label="Adventure gear" options={GEAR} value={look.gear} labels={GEAR_LABELS} onPick={(gear) => set({ gear })} />
+        {tab === "Extras" && (
+          <>
+            <Choices label="Accessories" options={EXTRAS_FOR[look.gender]} value={look.extra} labels={EXTRA_LABELS} onPick={(extra) => set({ extra })} />
+            <Choices label="Adventure gear" options={GEAR} value={look.gear} labels={GEAR_LABELS} onPick={(gear) => set({ gear })} />
+          </>
         )}
         {tab === "Hat" && (
           <Choices

@@ -5,6 +5,7 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
 import { BUILD_WIDTH, SIZE_SCALE } from "@/lib/look";
 import { gear, glasses, headwear } from "@/components/stage3d/accessories";
+import { SCULPTED, builtFacialHair, builtHair, extraPieces, lashes, skull, skullColor, splitHead, transplant, type HeadShape } from "@/components/stage3d/hair";
 
 /**
  * The family's 3D characters: KayKit's CC0 adventurers (built into public/3d by
@@ -438,10 +439,52 @@ function reshape(mesh: THREE.Mesh, k: number) {
   mesh.userData.reshaped = true;
 }
 
+/**
+ * Where the head is and how big, in the head bone's space and stage units: from
+ * the bald head's rest-pose box, carried into the bone's frame by its inverse
+ * bind matrix. Built hair and the skull are placed from this.
+ */
+function headShape(mesh: THREE.SkinnedMesh | null, k: number): HeadShape | null {
+  if (!mesh) return null;
+  const i = mesh.skeleton.bones.findIndex((b) => b.name === "head");
+  if (i < 0) return null;
+  const pos = mesh.geometry.getAttribute("position");
+  const index = mesh.geometry.getIndex();
+  const box = new THREE.Box3();
+  const v = new THREE.Vector3();
+  const n = index ? index.count : pos.count;
+  for (let t = 0; t < n; t++) box.expandByPoint(v.fromBufferAttribute(pos, index ? index.getX(t) : t));
+  const size = box.getSize(new THREE.Vector3());
+  // The skull's rim sits at the brows and its top reaches the top of the head.
+  const brow = Math.min(splitHead(mesh.geometry).browTop, box.max.y - size.y * 0.25);
+  const brow0 = Number.isFinite(brow) ? brow : box.max.y - size.y * 0.35;
+  const r = Math.min(Math.min(size.x, size.z) * 0.48, box.max.y - brow0);
+  const center = new THREE.Vector3((box.min.x + box.max.x) / 2, brow0, (box.min.z + box.max.z) / 2 - size.z * 0.03);
+  const toBone = mesh.bindMatrix.clone().premultiply(mesh.skeleton.boneInverses[i]);
+  center.applyMatrix4(toBone);
+  const scale = new THREE.Vector3().setFromMatrixScale(toBone).x;
+  return { x: center.x / k, y: center.y / k, z: center.z / k, r: (r * scale) / k };
+}
+
 /** Build one person's character. */
 export async function makeActor(member: Member, look: Look): Promise<Actor> {
-  const [body, moves] = await Promise.all([loadBody(look.body), loadMoves()]);
+  // Sculpted hair (and the woodsman's beard) come from whichever body wore them.
+  const hairFrom = SCULPTED[look.hairStyle];
+  const [body, moves, hairSrc, beardSrc] = await Promise.all([
+    loadBody(look.body),
+    loadMoves(),
+    hairFrom ? loadBody(hairFrom) : null,
+    look.facialHair === "beard" ? loadBody("barbarian") : null,
+  ]);
   const model = SkeletonUtils.clone(body.scene);
+  const headPiece = (gltf: GLTF | null) => {
+    let found: THREE.BufferGeometry | null = null;
+    gltf?.scene.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh && /_Head$/.test(o.name)) found = (o as THREE.Mesh).geometry;
+    });
+    return found ? splitHead(found) : null;
+  };
+  let headMesh: THREE.SkinnedMesh | null = null;
   let material: THREE.MeshStandardMaterial | null = null;
   model.traverse((o) => {
     const mesh = o as THREE.SkinnedMesh;
@@ -451,6 +494,11 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
       mesh.userData.headwear = true;
     }
     if (/Mug/.test(mesh.name) || /Mug/.test(mesh.parent?.name ?? "")) mesh.visible = false;
+    if (/_Head$/.test(mesh.name)) {
+      // Everyone starts bald; their hairstyle goes on top.
+      mesh.geometry = splitHead(mesh.geometry).bald;
+      headMesh = mesh;
+    }
     const part = /_(Body)$/.test(mesh.name) ? "torso" : /_(ArmLeft|ArmRight|LegLeft|LegRight)$/.test(mesh.name) ? "limbs" : null;
     if (part) reshape(mesh, BUILD_WIDTH[look.build][part]);
     mesh.castShadow = true;
@@ -466,6 +514,15 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
     }
     mesh.material = material;
   });
+  const head = headMesh as THREE.SkinnedMesh | null;
+  if (head?.parent) {
+    for (const piece of [headPiece(hairSrc)?.hair, headPiece(beardSrc)?.beard]) {
+      if (!piece) continue;
+      const m = transplant(piece, head);
+      m.userData.hair = true;
+      head.parent.add(m);
+    }
+  }
   const actor = new Actor(model, moves.animations, member, look);
   // Their glasses and headwear ride on the head bone, sized to this model.
   if (actor.head) {
@@ -483,6 +540,29 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
       actor.head.add(holder);
     }
   }
+  // Built hairstyles, beards, lashes and jewelry ride on their bones like the hats.
+  const width = BUILD_WIDTH[look.build].torso;
+  const extras = extraPieces(look.extra, look.outfit, width);
+  const onBone = (boneName: string | null, object: THREE.Object3D | null | undefined, tag?: string) => {
+    const bone = boneName ? model.getObjectByName(boneName) : null;
+    if (!bone || !object) return;
+    const holder = new THREE.Group();
+    holder.scale.setScalar(actor.height / 1.55);
+    if (tag) holder.userData[tag] = true;
+    holder.add(object);
+    object.traverse((o) => (o.castShadow = true));
+    bone.add(holder);
+  };
+  const shape = headShape(head, actor.height / 1.55);
+  if (shape) {
+    onBone("head", skull(shape, skullColor(look.hairStyle, look.hair, look.skin)));
+    onBone("head", builtHair(look.hairStyle, look.hair, shape), "hair");
+    onBone("head", builtFacialHair(look.facialHair, look.hair, look.skin, shape));
+  }
+  if (look.gender === "female") onBone("head", lashes());
+  onBone("head", extras.head);
+  onBone("chest", extras.chest);
+  onBone("lowerarml", extras.arm);
   const kit = gear(look.gear, look.outfit, BUILD_WIDTH[look.build].torso);
   const bone = kit && model.getObjectByName(kit.bone);
   if (kit && bone) {

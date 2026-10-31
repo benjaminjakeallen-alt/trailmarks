@@ -110,7 +110,10 @@ Tokens live in `src/app/globals.css`; never hard-code hex values in components.
   (`src/components/stage3d/`). The stats drawer adds a family ranking and an
   "everyone's been" count.
 - **Your character is your profile**: tap your own seat in the map header (or
-  Family → "Make your character") to design a 3D you — style, size (kid,
+  Family → "Make your character") to design a 3D you — male or female, a
+  hairstyle (17 between them, bald included; four are KayKit's own sculpted
+  hair moved onto any body, the rest built to match in `stage3d/hair.ts`),
+  facial hair, jewelry, style, size (kid,
   teen, grown-up), skin, hair, glasses, adventure hats (safari helmet, explorer
   fedora, ranger hat, bandana, headlamp, captain's hat and more), gear (backpack,
   binoculars, camera, scarf, canteen), top and pants — with a live

@@ -6,16 +6,32 @@ import type { Look } from "@/lib/look";
 
 const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPreview"), { ssr: false });
 
-const BASE: Look = { body: "rogue", hat: false, skin: "#f1bf98", hair: "#e6c77f", outfit: "#2f7fd6", pants: "#3a4a6b", size: "adult", build: "normal", glasses: "none", headwear: "none", gear: "none" };
-const LOOKS: Look[] = [
-  { ...BASE, headwear: "safari", gear: "backpack" },
-  { ...BASE, body: "barbarian", skin: "#8e5a3a", hair: "#231a17", outfit: "#e2483d", build: "thick", headwear: "fedora", gear: "binoculars" },
-  { ...BASE, body: "knight", skin: "#dca27a", hair: "#b0442a", outfit: "#3bb54a", headwear: "ranger", gear: "camera" },
-  { ...BASE, body: "mage", skin: "#f8d9c0", hair: "#c58a4f", outfit: "#e45b8a", size: "kid", headwear: "bucket", gear: "scarf" },
-  { ...BASE, skin: "#5f3b27", hair: "#231a17", outfit: "#f5c542", headwear: "bandana", gear: "canteen" },
-  { ...BASE, body: "barbarian", skin: "#bb7f57", hair: "#8d8d8d", outfit: "#2fb59a", headwear: "headlamp", gear: "backpack" },
-  { ...BASE, body: "mage", skin: "#f1bf98", hair: "#ececec", outfit: "#2f7fd6", build: "thin", headwear: "captain", gear: "binoculars" },
-];
+const BASE: Look = { gender: "female", hairStyle: "long", facialHair: "none", extra: "none", body: "rogue", hat: false, skin: "#f1bf98", hair: "#8a5532", outfit: "#2f7fd6", pants: "#3a4a6b", size: "adult", build: "normal", glasses: "none", headwear: "none", gear: "none" };
+const M: Partial<Look> = { gender: "male", body: "knight", outfit: "#3bb54a" };
+const SETS: Record<string, Look[]> = {
+  f1: [
+    { ...BASE, hairStyle: "long", extra: "studs" },
+    { ...BASE, hairStyle: "ponytail", extra: "hoops" },
+    { ...BASE, hairStyle: "bun", extra: "pearls", hair: "#231a17", skin: "#8e5a3a" },
+    { ...BASE, hairStyle: "pigtails", extra: "flower", hair: "#e6c77f" },
+    { ...BASE, hairStyle: "bob", extra: "headband", hair: "#b0442a" },
+    { ...BASE, hairStyle: "braid", hair: "#c58a4f" },
+    { ...BASE, hairStyle: "curly", hair: "#231a17", skin: "#5f3b27" },
+    { ...BASE, hairStyle: "pixie", extra: "watch" },
+  ],
+  m1: [
+    { ...BASE, ...M, hairStyle: "bald", facialHair: "beard" },
+    { ...BASE, ...M, hairStyle: "buzz", facialHair: "stubble", skin: "#8e5a3a", hair: "#231a17" },
+    { ...BASE, ...M, hairStyle: "tousled", facialHair: "mustache", extra: "bowtie" },
+    { ...BASE, ...M, hairStyle: "neat", facialHair: "goatee", hair: "#231a17", extra: "chain" },
+    { ...BASE, ...M, hairStyle: "rugged", facialHair: "beard", hair: "#8a5532" },
+    { ...BASE, ...M, hairStyle: "spiky", hair: "#e6c77f" },
+    { ...BASE, ...M, hairStyle: "mohawk", hair: "#b0442a", extra: "studs" },
+    { ...BASE, ...M, hairStyle: "afro", hair: "#231a17", skin: "#5f3b27" },
+    { ...BASE, ...M, hairStyle: "manbun", facialHair: "beard", hair: "#4f3324" },
+  ],
+};
+const LOOKS: Look[] = SETS[(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("set")) || "f1"] ?? SETS.f1;
 
 function Portraits() {
   const [urls, setUrls] = useState<string[]>([]);
