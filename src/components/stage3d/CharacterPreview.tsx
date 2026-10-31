@@ -46,11 +46,33 @@ export default function CharacterPreview({ member, look, size = 240 }: { member:
     const stand = new THREE.Group();
     scene.add(stand);
 
+    // Drag to spin; let go and it drifts back to a gentle sway.
+    let spin = 0;
+    let dragging = false;
+    let lastX = 0;
+    const el = canvas.current;
+    const down = (e: PointerEvent) => {
+      dragging = true;
+      lastX = e.clientX;
+      el.setPointerCapture(e.pointerId);
+    };
+    const move = (e: PointerEvent) => {
+      if (!dragging) return;
+      spin += (e.clientX - lastX) * 0.012;
+      lastX = e.clientX;
+    };
+    const up = () => (dragging = false);
+    el.addEventListener("pointerdown", down);
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+
     let last = 0;
     renderer.setAnimationLoop((now) => {
       const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
       last = now;
-      stand.rotation.y = Math.sin(now / 2600) * 0.6;
+      if (!dragging) spin *= Math.max(0, 1 - dt * 1.5);
+      stand.rotation.y = Math.sin(now / 2600) * 0.6 + spin;
       world.current?.actor?.update(dt);
       renderer.render(scene, camera);
     });
@@ -59,6 +81,10 @@ export default function CharacterPreview({ member, look, size = 240 }: { member:
       stand,
       actor: null,
       dispose: () => {
+        el.removeEventListener("pointerdown", down);
+        el.removeEventListener("pointermove", move);
+        el.removeEventListener("pointerup", up);
+        el.removeEventListener("pointercancel", up);
         renderer.setAnimationLoop(null);
         world.current?.actor?.dispose();
         plinth.geometry.dispose();
@@ -81,7 +107,7 @@ export default function CharacterPreview({ member, look, size = 240 }: { member:
         const w = world.current;
         if (cancelled || !w) return actor.dispose();
         w.actor?.dispose();
-        actor.unitScale = 1.7 / actor.height;
+        actor.unitScale = (1.7 * actor.sizeScale) / actor.height;
         actor.root.scale.setScalar(actor.unitScale);
         w.stand.add(actor.root);
         w.actor = actor;
@@ -96,5 +122,14 @@ export default function CharacterPreview({ member, look, size = 240 }: { member:
     };
   }, [member, look]);
 
-  return <canvas ref={canvas} width={size} height={size} style={{ width: size, height: size }} aria-hidden />;
+  return (
+    <canvas
+      ref={canvas}
+      width={size}
+      height={size}
+      className="cursor-grab touch-pan-y active:cursor-grabbing"
+      style={{ width: size, height: size }}
+      aria-hidden
+    />
+  );
 }

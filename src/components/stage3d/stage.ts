@@ -296,7 +296,7 @@ export class Stage {
   }
 
   private fit(actor: Actor) {
-    actor.unitScale = ACTOR_HEIGHT / actor.height;
+    actor.unitScale = (ACTOR_HEIGHT * actor.sizeScale) / actor.height;
     actor.root.scale.setScalar(actor.unitScale);
   }
 

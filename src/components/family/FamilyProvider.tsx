@@ -2,7 +2,6 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { InviteSheet } from "@/components/family/Invite";
-import AdventurerMaker from "@/components/family/AdventurerMaker";
 import CharacterMaker from "@/components/family/CharacterMaker";
 import type { Member, Viewer } from "@/lib/types";
 
@@ -19,7 +18,6 @@ interface FamilyContextValue {
   /** After "New link": the fresh code, without a reload. */
   setInviteCode: (code: string) => void;
   openInvite: () => void;
-  openAdventurer: () => void;
   openCharacter: () => void;
 }
 
@@ -30,11 +28,10 @@ const FamilyContext = createContext<FamilyContextValue>({
   family: null,
   setInviteCode: () => {},
   openInvite: () => {},
-  openAdventurer: () => {},
   openCharacter: () => {},
 });
 
-/** The signed-in person and their family, loaded once in the root layout. Owns the invite and adventurer sheets. */
+/** The signed-in person and their family, loaded once in the root layout. Owns the invite and character sheets. */
 export default function FamilyProvider({
   viewer,
   members,
@@ -63,14 +60,6 @@ export default function FamilyProvider({
     [initialFamily],
   );
   const openInvite = useCallback(() => setInviteOpen(true), []);
-  const [adventurerOpen, setAdventurerOpen] = useState(false);
-  // A new key each time, so the maker always starts fresh at the selfie step.
-  const [adventurerRun, setAdventurerRun] = useState(0);
-  const openAdventurer = useCallback(() => {
-    setAdventurerRun((n) => n + 1);
-    setAdventurerOpen(true);
-  }, []);
-
   const [characterOpen, setCharacterOpen] = useState(false);
   const [characterRun, setCharacterRun] = useState(0);
   const openCharacter = useCallback(() => {
@@ -86,16 +75,14 @@ export default function FamilyProvider({
       family,
       setInviteCode,
       openInvite,
-      openAdventurer,
       openCharacter,
     }),
-    [viewer, members, family, setInviteCode, openInvite, openAdventurer, openCharacter],
+    [viewer, members, family, setInviteCode, openInvite, openCharacter],
   );
   return (
     <FamilyContext.Provider value={value}>
       {children}
       {viewer && <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />}
-      {viewer && <AdventurerMaker key={adventurerRun} open={adventurerOpen} onClose={() => setAdventurerOpen(false)} />}
       {viewer && characterRun > 0 && (
         <CharacterMaker key={characterRun} open={characterOpen} onClose={() => setCharacterOpen(false)} />
       )}

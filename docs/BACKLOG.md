@@ -122,8 +122,10 @@ narrow states zoom in until their roomiest spot fits it. Five on stage at
 once; bigger families (up to ten) rotate one in every few seconds.
 
 - Characters: KayKit Adventurers (CC0, Kay Lousberg), one shared skeleton and
-  animation set, recolored per person (body, hat, skin, hair, outfit), made
-  in Family → "Your 3D character" and saved in `profiles.character`.
+  animation set, recolored per person and dressed up (style, size, skin,
+  hair, glasses, headwear, top, pants). Designed in the character maker,
+  saved in `profiles.character`; its portrait is the person's avatar. (This
+  replaced the AI selfie illustrations.)
 - Assets: `scripts/build-cast.mjs` trims the KayKit packs into `public/3d`
   (about 880 KB gzipped, loaded on the first tap of a state).
 - Code: `src/components/stage3d/` — `stage.ts` (slab, camera, lights,
@@ -135,8 +137,7 @@ once; bigger families (up to ten) rotate one in every few seconds.
 Done: UT, CA (two, alternating), OR, NV, AZ, NM, ID, TX, FL, NY, TN, WI, MI,
 LA, GA. Every other state gets the campfire until it has its own.
 
-Next: auto-fill the character from the adventurer selfie (one cheap vision
-call), more states, sound.
+Next: more states, more hairstyles and outfits, sound.
 
 Original idea:
 

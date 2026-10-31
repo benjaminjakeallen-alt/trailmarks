@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Actor, Clip, Clock } from "@/components/stage3d/cast";
+import type { Look } from "@/lib/look";
 import * as P from "@/components/stage3d/props";
 import type { Scene, Spot, StageKit } from "@/components/stage3d/stage";
 
@@ -29,6 +30,9 @@ function ring(i: number, n: number, r: number, cx = 0, cz = 0): Spot {
 
 /** Fill seats from the middle out, so two people sit together, not at the ends. */
 const middleOut = (i: number, n: number) => [2, 1, 3, 0, 4].filter((s) => s < Math.max(n, 5))[i % 5];
+
+/** The parts of a guest's look every guest shares. */
+const GUEST: Look = { body: "rogue", hat: false, skin: "#f1bf98", hair: "#4f3324", outfit: "#2f7fd6", pants: "#2b2b30", size: "adult", glasses: "none", headwear: "none" };
 
 /** Something worn on the head, sitting on top of it. */
 function wear(actor: Actor, object: THREE.Object3D, y = 0.72) {
@@ -921,7 +925,7 @@ function floridaScene(): Scene {
         kit.floor.add(l);
         lights.push(l);
       }
-      cop = await kit.guest({ body: "knight", hat: false, skin: "#c98f68", hair: "#2b211c", outfit: "#1f2d4d" }, "Officer");
+      cop = await kit.guest({ ...GUEST, body: "knight", skin: "#c98f68", hair: "#2b211c", outfit: "#1f2d4d" }, "Officer");
       wear(cop, policeCap(), 0.66);
       cop.root.position.set(lapAt(-1).x, 0, lapAt(-1).z);
       cop.root.visible = false;
@@ -1055,7 +1059,7 @@ function tennesseeScene(): Scene {
     async build(kit) {
       kit.place(P.countryStage(), -0.75, -1.25, { yaw: 0.45 });
       kit.place(P.micStand(), -0.55, -0.95, { y: 0.32 });
-      singer = await kit.guest({ body: "rogue", hat: false, skin: "#f6c6a4", hair: "#f6e2a2", outfit: "#ff5fa2" }, "Singer");
+      singer = await kit.guest({ ...GUEST, body: "rogue", skin: "#f6c6a4", hair: "#f6e2a2", outfit: "#ff5fa2", pants: "#ff5fa2" }, "Singer");
       singer.root.position.set(-0.85, 0.32, -1.15);
       singer.face(0.5);
       // Big, big hair.

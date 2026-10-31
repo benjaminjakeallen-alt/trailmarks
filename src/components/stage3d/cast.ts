@@ -3,6 +3,8 @@ import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
+import { SIZE_SCALE } from "@/lib/look";
+import { glasses, headwear } from "@/components/stage3d/accessories";
 
 /**
  * The family's 3D characters: KayKit's CC0 adventurers (built into public/3d by
@@ -17,11 +19,12 @@ import type { Body, Look } from "@/lib/look";
  * The atlas is an 8×4 grid of gradient swatches; these are the cells (column, row)
  * each body uses for its skin, hair and main outfit.
  */
-const CELLS: Record<Body, { skin: [number, number][]; hair: [number, number][]; outfit: [number, number][] }> = {
-  rogue: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [1, 1]] },
-  barbarian: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [1, 1]] },
-  knight: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [2, 2]] },
-  mage: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [1, 1]] },
+type Cell = [number, number];
+const CELLS: Record<Body, { skin: Cell[]; hair: Cell[]; outfit: Cell[]; pants: Cell[] }> = {
+  rogue: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [1, 1]], pants: [[3, 2]] },
+  barbarian: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [1, 1]], pants: [[3, 2]] },
+  knight: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [2, 2]], pants: [] },
+  mage: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [1, 1]], pants: [[3, 2]] },
 };
 
 const HATS = /_(Hat|Helmet)$/;
@@ -76,7 +79,7 @@ export async function prop(name: string): Promise<THREE.Object3D> {
 const textures = new Map<string, THREE.Texture>();
 
 function recolor(img: CanvasImageSource & { width: number; height: number }, body: Body, look: Look) {
-  const key = `${body}|${look.skin}|${look.hair}|${look.outfit}`;
+  const key = `${body}|${look.skin}|${look.hair}|${look.outfit}|${look.pants}`;
   const cached = textures.get(key);
   if (cached) return cached;
 
@@ -113,6 +116,7 @@ function recolor(img: CanvasImageSource & { width: number; height: number }, bod
   paint(cells.skin, look.skin);
   paint(cells.hair, look.hair);
   paint(cells.outfit, look.outfit);
+  paint(cells.pants, look.pants);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.flipY = false;
@@ -303,6 +307,8 @@ export class Actor {
    */
   hold(object: THREE.Object3D, hand: "right" | "left" | "head" = "right") {
     const bone = hand === "right" ? this.handR : hand === "left" ? this.handL : (this.head ?? this.model);
+    // A scene's hat (cowboy hat, cheesehead, mouse ears) replaces their own.
+    if (hand === "head") this.showHeadwear(false);
     // The hand slots run along the fingers; a quarter turn stands a held thing upright in the fist.
     const grip = new THREE.Group();
     if (hand === "right") grip.rotation.z = Math.PI / 2;
@@ -318,6 +324,18 @@ export class Actor {
   emptyHands() {
     for (const o of this.held) o.removeFromParent();
     this.held = [];
+    this.showHeadwear(true);
+  }
+
+  private showHeadwear(on: boolean) {
+    this.model.traverse((o) => {
+      if (o.userData.headwear) o.visible = on && (o.type === "Group" || this.look.hat);
+    });
+  }
+
+  /** Kid, teen or grown-up, relative to the stage's standard height. */
+  get sizeScale() {
+    return SIZE_SCALE[this.look.size] ?? 1;
   }
 
   drop(object: THREE.Object3D) {
@@ -387,7 +405,10 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
   model.traverse((o) => {
     const mesh = o as THREE.SkinnedMesh;
     if (!mesh.isMesh) return;
-    if (HATS.test(mesh.name) || HATS.test(mesh.parent?.name ?? "")) mesh.visible = look.hat;
+    if (HATS.test(mesh.name) || HATS.test(mesh.parent?.name ?? "")) {
+      mesh.visible = look.hat;
+      mesh.userData.headwear = true;
+    }
     if (/Mug/.test(mesh.name) || /Mug/.test(mesh.parent?.name ?? "")) mesh.visible = false;
     mesh.castShadow = true;
     mesh.frustumCulled = false;
@@ -402,5 +423,22 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
     }
     mesh.material = material;
   });
-  return new Actor(model, moves.animations, member, look);
+  const actor = new Actor(model, moves.animations, member, look);
+  // Their glasses and headwear ride on the head bone, sized to this model.
+  if (actor.head) {
+    const k = actor.height / 1.55;
+    for (const [extra, isHat] of [
+      [glasses(look.glasses), false],
+      [headwear(look.headwear, look.outfit), true],
+    ] as const) {
+      if (!extra) continue;
+      const holder = new THREE.Group();
+      holder.scale.setScalar(k);
+      holder.add(extra);
+      holder.userData.headwear = isHat;
+      extra.traverse((o) => (o.castShadow = true));
+      actor.head.add(holder);
+    }
+  }
+  return actor;
 }

@@ -12,12 +12,12 @@ const HINT_KEY = "trailmarks:crewHint";
 
 /**
  * The family, docked in the map's header: you first (tap to make or change
- * your adventurer), then everyone else, then an empty dashed seat that opens
- * the invite. It replaces separate "take a selfie" / "invite" cards: the
+ * your character), then everyone else, then an empty dashed seat that opens
+ * the invite. It replaces separate "make a character" / "invite" cards: the
  * missing pieces show up as a camera badge and an empty seat, in place.
  */
 export default function CrewDock() {
-  const { viewer, members, openAdventurer, openInvite } = useFamily();
+  const { viewer, members, openCharacter, openInvite } = useFamily();
   const [hint, setHint] = useState<"adventurer" | "invite" | null>(null);
   const dockRef = useRef<HTMLDivElement>(null);
   const meRef = useRef<HTMLButtonElement>(null);
@@ -39,7 +39,7 @@ export default function CrewDock() {
     try {
       seen = JSON.parse(localStorage.getItem(HINT_KEY) ?? "[]");
     } catch {}
-    const next = !viewer.avatarUrl && !seen.includes("adventurer") ? "adventurer" : members.length < 2 && !seen.includes("invite") ? "invite" : null;
+    const next = !viewer.character && !seen.includes("adventurer") ? "adventurer" : members.length < 2 && !seen.includes("invite") ? "invite" : null;
     if (!next) return;
     const t = window.setTimeout(() => setHint(next), 1800);
     return () => window.clearTimeout(t);
@@ -82,9 +82,9 @@ export default function CrewDock() {
         onClick={() => {
           haptic(HAPTICS.select);
           dismiss("adventurer");
-          openAdventurer();
+          openCharacter();
         }}
-        aria-label={viewer.avatarUrl ? "Change your adventurer" : "Make your adventurer"}
+        aria-label={viewer.character ? "Edit your character" : "Make your character"}
         className="relative z-[4] rounded-full transition-transform active:scale-95"
       >
         <Avatar member={viewer} size={40} className="ring-[3px] ring-surface" />
@@ -133,7 +133,7 @@ export default function CrewDock() {
             key={hint}
             onClick={() => {
               dismiss(hint);
-              if (hint === "adventurer") openAdventurer();
+              if (hint === "adventurer") openCharacter();
               else openInvite();
             }}
             initial={{ opacity: 0, y: -6, scale: 0.95 }}
@@ -144,7 +144,7 @@ export default function CrewDock() {
           >
             <span className="absolute -top-1.5 h-3 w-3 rotate-45 bg-fg" style={{ right: arrowRight }} />
             <span className="relative block font-semibold">
-              {hint === "adventurer" ? "Become an adventurer" : "Bring the family"}
+              {hint === "adventurer" ? "Make your character" : "Bring the family"}
             </span>
           </motion.button>
         )}

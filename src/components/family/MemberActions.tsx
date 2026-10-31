@@ -2,7 +2,6 @@
 
 import { useState, useSyncExternalStore } from "react";
 import {
-  CameraIcon,
   ChatCircleTextIcon,
   CheckIcon,
   CopyIcon,
@@ -189,22 +188,12 @@ export function ChangePasswordButton() {
   );
 }
 
-/** Opens the selfie → adventurer maker. */
-export function AdventurerButton({ hasAvatar }: { hasAvatar: boolean }) {
-  const { openAdventurer } = useFamily();
-  return (
-    <button type="button" onClick={openAdventurer} className={pill}>
-      <CameraIcon size={14} weight="fill" /> {hasAvatar ? "New adventurer" : "Make your adventurer"}
-    </button>
-  );
-}
-
 /** Opens the 3D character maker (the one who acts out the state scenes). */
-export function CharacterButton() {
+export function CharacterButton({ made }: { made: boolean }) {
   const { openCharacter } = useFamily();
   return (
     <button type="button" onClick={openCharacter} className={pill}>
-      <PersonSimpleIcon size={14} weight="fill" /> Your 3D character
+      <PersonSimpleIcon size={14} weight="fill" /> {made ? "Edit your character" : "Make your character"}
     </button>
   );
 }

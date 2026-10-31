@@ -4,7 +4,7 @@ import { getFamilyVisits } from "@/lib/stateVisits";
 import Avatar from "@/components/family/Avatar";
 import { SignOutButton } from "@/components/family/FamilyActions";
 import { InviteOptions } from "@/components/family/Invite";
-import { AdventurerButton, ChangePasswordButton, CharacterButton, DarkModeSetting, ResetPasswordButton } from "@/components/family/MemberActions";
+import { ChangePasswordButton, CharacterButton, DarkModeSetting, ResetPasswordButton } from "@/components/family/MemberActions";
 import { cookies } from "next/headers";
 import { THEME_COOKIE } from "@/lib/theme";
 import { Panel } from "@/components/ui/Panel";
@@ -39,8 +39,7 @@ export default async function FamilyPage() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {m.userId === viewer.userId ? (
                     <>
-                      <AdventurerButton hasAvatar={Boolean(m.avatarUrl)} />
-                      <CharacterButton />
+                      <CharacterButton made={Boolean(m.character)} />
                       <ChangePasswordButton />
                     </>
                   ) : (

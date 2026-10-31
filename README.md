@@ -109,19 +109,17 @@ Tokens live in `src/app/globals.css`; never hard-code hex values in components.
   in 3D while the family's characters act out its activity on it
   (`src/components/stage3d/`). The stats drawer adds a family ranking and an
   "everyone's been" count.
-- **3D characters**: Family → "Your 3D character" picks a body, hat, skin,
-  hair and outfit. Models and animations are KayKit's CC0 packs by Kay
-  Lousberg (kaylousberg.com), rebuilt for the web by `scripts/build-cast.mjs`.
+- **Your character is your profile**: tap your own seat in the map header (or
+  Family → "Make your character") to design a 3D you — style, size (kid,
+  teen, grown-up), skin, hair, glasses, headwear, top and pants — with a live
+  preview you can spin. The same character acts out every state's scene, and
+  saving renders its portrait (`src/components/stage3d/portrait.ts`), which
+  becomes your avatar everywhere. No AI, no cost. Models and animations are
+  KayKit's CC0 packs by Kay Lousberg (kaylousberg.com), rebuilt for the web by
+  `scripts/build-cast.mjs`.
 - **Invites**: the dashed "+" seat in the map header (or Invite in the nav)
   opens a sheet with the share sheet, Text, Email, Copy and a QR code; any
   member can make a new link. `/join` also takes a typed code.
-- **Adventurer avatars**: tap your own avatar in the map header to pick or
-  make one. A selfie becomes the free in-browser comic badge
-  (`src/lib/photoBadge.ts`, unlimited) or, **up to 5 times per person**, an
-  AI illustration (`/api/avatar/illustrate`, AI Gateway, medium quality,
-  about 1 cent each). Every illustration is kept in `adventurers` to switch
-  between; a failed call doesn't use a try. Only finished avatars are stored,
-  never the selfie, in the private `avatars` bucket (`/a/<file>`).
 - **Password reset** without email: on `/family`, anyone can make another
   member a one-time, 48-hour link (`src/lib/passwordReset.ts`; only a hash is
   stored). You can change your own password there too.
