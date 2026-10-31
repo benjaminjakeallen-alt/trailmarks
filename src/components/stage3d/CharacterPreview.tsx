@@ -10,7 +10,18 @@ import type { Member } from "@/lib/types";
  * One character on a little round plinth, turning slowly. Every change of look
  * swaps the model in place and gets a cheer, so you can see it's you now.
  */
-export default function CharacterPreview({ member, look, size = 240 }: { member: Member; look: Look; size?: number }) {
+export default function CharacterPreview({
+  member,
+  look,
+  size = 240,
+  facing = 0,
+}: {
+  member: Member;
+  look: Look;
+  size?: number;
+  /** Starting turn, in radians (π shows their back). */
+  facing?: number;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const world = useRef<{ scene: THREE.Scene; stand: THREE.Group; actor: Actor | null; dispose: () => void } | null>(null);
 
@@ -47,7 +58,7 @@ export default function CharacterPreview({ member, look, size = 240 }: { member:
     scene.add(stand);
 
     // Drag to spin; let go and it drifts back to a gentle sway.
-    let spin = 0;
+    let spin = facing;
     let dragging = false;
     let lastX = 0;
     const el = canvas.current;
@@ -71,7 +82,7 @@ export default function CharacterPreview({ member, look, size = 240 }: { member:
     renderer.setAnimationLoop((now) => {
       const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
       last = now;
-      if (!dragging) spin *= Math.max(0, 1 - dt * 1.5);
+      if (!dragging) spin = facing + (spin - facing) * Math.max(0, 1 - dt * 1.5);
       stand.rotation.y = Math.sin(now / 2600) * 0.6 + spin;
       world.current?.actor?.update(dt);
       renderer.render(scene, camera);
@@ -96,7 +107,7 @@ export default function CharacterPreview({ member, look, size = 240 }: { member:
       world.current?.dispose();
       world.current = null;
     };
-  }, [size]);
+  }, [size, facing]);
 
   // A new look: build it, swap it in, cheer.
   useEffect(() => {

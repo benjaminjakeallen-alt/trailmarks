@@ -4,7 +4,7 @@ import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
 import { BUILD_WIDTH, SIZE_SCALE } from "@/lib/look";
-import { glasses, headwear } from "@/components/stage3d/accessories";
+import { gear, glasses, headwear } from "@/components/stage3d/accessories";
 
 /**
  * The family's 3D characters: KayKit's CC0 adventurers (built into public/3d by
@@ -482,6 +482,15 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
       extra.traverse((o) => (o.castShadow = true));
       actor.head.add(holder);
     }
+  }
+  const kit = gear(look.gear, look.outfit, BUILD_WIDTH[look.build].torso);
+  const bone = kit && model.getObjectByName(kit.bone);
+  if (kit && bone) {
+    const holder = new THREE.Group();
+    holder.scale.setScalar(actor.height / 1.55);
+    holder.add(kit.object);
+    kit.object.traverse((o) => (o.castShadow = true));
+    bone.add(holder);
   }
   return actor;
 }

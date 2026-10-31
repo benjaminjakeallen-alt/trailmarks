@@ -15,8 +15,12 @@ export const BUILDS = ["thin", "normal", "thick"] as const;
 export type Build = (typeof BUILDS)[number];
 export const GLASSES = ["none", "round", "square", "sun"] as const;
 export type Glasses = (typeof GLASSES)[number];
-export const HEADWEAR = ["none", "cap", "beanie", "bow", "cowboy"] as const;
+export const HEADWEAR = [
+  "none", "safari", "fedora", "ranger", "bucket", "bandana", "headlamp", "captain", "cap", "beanie", "cowboy", "bow",
+] as const;
 export type Headwear = (typeof HEADWEAR)[number];
+export const GEAR = ["none", "backpack", "binoculars", "camera", "scarf", "canteen"] as const;
+export type Gear = (typeof GEAR)[number];
 
 export interface Look {
   body: Body;
@@ -31,6 +35,8 @@ export interface Look {
   glasses: Glasses;
   /** Extra headwear; replaces the body's own hat. */
   headwear: Headwear;
+  /** Adventure gear on the back, chest or hip. */
+  gear: Gear;
 }
 
 /** How tall each size stands, relative to an adult. */
@@ -44,7 +50,28 @@ export const BUILD_WIDTH: Record<Build, { torso: number; limbs: number }> = {
   thick: { torso: 1.42, limbs: 1.3 },
 };
 export const GLASSES_LABELS: Record<Glasses, string> = { none: "None", round: "Round", square: "Square", sun: "Shades" };
-export const HEADWEAR_LABELS: Record<Headwear, string> = { none: "None", cap: "Cap", beanie: "Beanie", bow: "Bow", cowboy: "Cowboy hat" };
+export const HEADWEAR_LABELS: Record<Headwear, string> = {
+  none: "None",
+  safari: "Safari helmet",
+  fedora: "Explorer fedora",
+  ranger: "Ranger hat",
+  bucket: "Bucket hat",
+  bandana: "Bandana",
+  headlamp: "Headlamp",
+  captain: "Captain's hat",
+  cap: "Cap",
+  beanie: "Beanie",
+  cowboy: "Cowboy hat",
+  bow: "Bow",
+};
+export const GEAR_LABELS: Record<Gear, string> = {
+  none: "None",
+  backpack: "Backpack",
+  binoculars: "Binoculars",
+  camera: "Camera",
+  scarf: "Scarf",
+  canteen: "Canteen",
+};
 export const PANTS_COLORS = ["#3a4a6b", "#2b2b30", "#7a5232", "#c9a46a", "#5b6b3a", "#9aa4a8", "#b0442a", "#f2ece0"];
 /** The knight's legs are armor; there are no pants to color. */
 export const HAS_PANTS: Record<Body, boolean> = { rogue: true, barbarian: true, knight: false, mage: true };
@@ -75,6 +102,7 @@ export function defaultLook(member: Pick<Member, "userId" | "color">): Look {
     build: "normal",
     glasses: "none",
     headwear: "none",
+    gear: "none",
   };
 }
 
@@ -93,6 +121,7 @@ export function randomLook(): Look {
     build: any(BUILDS),
     glasses: Math.random() < 0.6 ? "none" : any(GLASSES),
     headwear,
+    gear: Math.random() < 0.4 ? "none" : any(GEAR),
   };
 }
 
@@ -116,6 +145,7 @@ export function parseLook(value: unknown, fallback: Look): Look {
     build: one(BUILDS, v.build, fallback.build),
     glasses: one(GLASSES, v.glasses, fallback.glasses),
     headwear,
+    gear: one(GEAR, v.gear, fallback.gear),
   };
 }
 

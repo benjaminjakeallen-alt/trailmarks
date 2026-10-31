@@ -13,6 +13,8 @@ import {
   BODY_LABELS,
   BUILDS,
   BUILD_LABELS,
+  GEAR,
+  GEAR_LABELS,
   GLASSES,
   GLASSES_LABELS,
   HAIR_COLORS,
@@ -37,7 +39,7 @@ const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPre
   loading: () => <Skeleton className="h-[260px] w-[260px] rounded-full" />,
 });
 
-const TABS = ["Body", "Face", "Hair", "Outfit", "Hat"] as const;
+const TABS = ["Body", "Face", "Hair", "Outfit", "Hat", "Gear"] as const;
 type Tab = (typeof TABS)[number];
 
 const LIGHT = new Set(["#ececec", "#f2ece0", "#f8d9c0", "#e6c77f", "#f5c542"]);
@@ -212,6 +214,9 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
             />
             {HAS_PANTS[look.body] && <Swatches label="Pants" colors={PANTS_COLORS} value={look.pants} onPick={(pants) => set({ pants })} />}
           </>
+        )}
+        {tab === "Gear" && (
+          <Choices label="Adventure gear" options={GEAR} value={look.gear} labels={GEAR_LABELS} onPick={(gear) => set({ gear })} />
         )}
         {tab === "Hat" && (
           <Choices
