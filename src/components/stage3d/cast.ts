@@ -3,7 +3,7 @@ import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
-import { SIZE_SCALE } from "@/lib/look";
+import { BUILD_WIDTH, SIZE_SCALE } from "@/lib/look";
 import { glasses, headwear } from "@/components/stage3d/accessories";
 
 /**
@@ -390,11 +390,52 @@ export class Actor {
   }
 
   dispose() {
+    // Reshaped bodies own their geometry copies.
+    this.model.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh && mesh.userData.reshaped) mesh.geometry.dispose();
+    });
     this.mixer.stopAllAction();
     this.mixer.uncacheRoot(this.model);
     for (const o of this.held) o.parent?.remove(o);
     this.root.removeFromParent();
   }
+}
+
+/**
+ * Thin, normal or thick: widen or slim one body part around its own center line
+ * (the long axis of its rest pose: up for the torso and legs, sideways for the
+ * T-posed arms). Works on this actor's own copy, so the shared model stays as is;
+ * the skeleton is untouched, so every animation still bends right.
+ */
+function reshape(mesh: THREE.Mesh, k: number) {
+  if (k === 1) return;
+  const src = mesh.geometry;
+  const geo = src.clone();
+  const pos = src.getAttribute("position");
+  // Quantized positions can't hold a wider shape; unpack them to floats first.
+  const out = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    out[i * 3] = pos.getX(i);
+    out[i * 3 + 1] = pos.getY(i);
+    out[i * 3 + 2] = pos.getZ(i);
+  }
+  const box = new THREE.Box3().setFromArray(out);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const long = size.x > size.y && size.x > size.z ? 0 : size.z > size.y ? 2 : 1;
+  const c = [center.x, center.y, center.z];
+  for (let i = 0; i < pos.count; i++) {
+    for (let a = 0; a < 3; a++) {
+      if (a === long) continue;
+      out[i * 3 + a] = c[a] + (out[i * 3 + a] - c[a]) * k;
+    }
+  }
+  geo.setAttribute("position", new THREE.BufferAttribute(out, 3));
+  geo.computeBoundingBox();
+  geo.computeBoundingSphere();
+  mesh.geometry = geo;
+  mesh.userData.reshaped = true;
 }
 
 /** Build one person's character. */
@@ -410,6 +451,8 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
       mesh.userData.headwear = true;
     }
     if (/Mug/.test(mesh.name) || /Mug/.test(mesh.parent?.name ?? "")) mesh.visible = false;
+    const part = /_(Body)$/.test(mesh.name) ? "torso" : /_(ArmLeft|ArmRight|LegLeft|LegRight)$/.test(mesh.name) ? "limbs" : null;
+    if (part) reshape(mesh, BUILD_WIDTH[look.build][part]);
     mesh.castShadow = true;
     mesh.frustumCulled = false;
     if (!material) {

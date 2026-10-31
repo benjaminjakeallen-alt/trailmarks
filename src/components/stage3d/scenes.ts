@@ -32,7 +32,7 @@ function ring(i: number, n: number, r: number, cx = 0, cz = 0): Spot {
 const middleOut = (i: number, n: number) => [2, 1, 3, 0, 4].filter((s) => s < Math.max(n, 5))[i % 5];
 
 /** The parts of a guest's look every guest shares. */
-const GUEST: Look = { body: "rogue", hat: false, skin: "#f1bf98", hair: "#4f3324", outfit: "#2f7fd6", pants: "#2b2b30", size: "adult", glasses: "none", headwear: "none" };
+const GUEST: Look = { body: "rogue", hat: false, skin: "#f1bf98", hair: "#4f3324", outfit: "#2f7fd6", pants: "#2b2b30", size: "adult", build: "normal", glasses: "none", headwear: "none" };
 
 /** Something worn on the head, sitting on top of it. */
 function wear(actor: Actor, object: THREE.Object3D, y = 0.72) {

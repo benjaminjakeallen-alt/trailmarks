@@ -112,7 +112,7 @@ Tokens live in `src/app/globals.css`; never hard-code hex values in components.
 - **Your character is your profile**: tap your own seat in the map header (or
   Family → "Make your character") to design a 3D you — style, size (kid,
   teen, grown-up), skin, hair, glasses, headwear, top and pants — with a live
-  preview you can spin. The same character acts out every state's scene, and
+  preview you can spin, plus a thin, normal or thick build. The same character acts out every state's scene, and
   saving renders its portrait (`src/components/stage3d/portrait.ts`), which
   becomes your avatar everywhere. No AI, no cost. Models and animations are
   KayKit's CC0 packs by Kay Lousberg (kaylousberg.com), rebuilt for the web by

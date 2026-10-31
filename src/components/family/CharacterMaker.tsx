@@ -11,6 +11,8 @@ import { useFamily } from "@/components/family/FamilyProvider";
 import {
   BODIES,
   BODY_LABELS,
+  BUILDS,
+  BUILD_LABELS,
   GLASSES,
   GLASSES_LABELS,
   HAIR_COLORS,
@@ -185,11 +187,12 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
         ))}
       </div>
 
-      <div role="tabpanel" className="mt-4 min-h-[148px] space-y-5">
+      <div role="tabpanel" className="mt-4 min-h-[220px] space-y-5">
         {tab === "Body" && (
           <>
             <Choices label="Style" options={BODIES} value={look.body} labels={BODY_LABELS} onPick={(body) => set({ body, hat: false })} />
             <Choices label="Size" options={SIZES} value={look.size} labels={SIZE_LABELS} onPick={(size) => set({ size })} />
+            <Choices label="Build" options={BUILDS} value={look.build} labels={BUILD_LABELS} onPick={(build) => set({ build })} />
           </>
         )}
         {tab === "Face" && (

@@ -6,12 +6,13 @@ import type { Look } from "@/lib/look";
 
 const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPreview"), { ssr: false });
 
+const BASE: Look = { body: "rogue", hat: false, skin: "#f1bf98", hair: "#e6c77f", outfit: "#2f7fd6", pants: "#3a4a6b", size: "adult", build: "normal", glasses: "none", headwear: "none" };
 const LOOKS: Look[] = [
-  { body: "rogue", hat: false, skin: "#f1bf98", hair: "#e6c77f", outfit: "#2f7fd6", pants: "#3a4a6b", size: "adult", glasses: "round", headwear: "none" },
-  { body: "barbarian", hat: false, skin: "#8e5a3a", hair: "#231a17", outfit: "#e2483d", pants: "#2b2b30", size: "adult", glasses: "sun", headwear: "cap" },
-  { body: "knight", hat: false, skin: "#dca27a", hair: "#b0442a", outfit: "#3bb54a", pants: "#2b2b30", size: "teen", glasses: "square", headwear: "beanie" },
-  { body: "mage", hat: false, skin: "#f8d9c0", hair: "#c58a4f", outfit: "#e45b8a", pants: "#c9a46a", size: "kid", glasses: "none", headwear: "bow" },
-  { body: "rogue", hat: false, skin: "#5f3b27", hair: "#231a17", outfit: "#f5c542", pants: "#7a5232", size: "adult", glasses: "none", headwear: "cowboy" },
+  { ...BASE, build: "thin" },
+  BASE,
+  { ...BASE, build: "thick" },
+  { ...BASE, body: "barbarian", skin: "#8e5a3a", hair: "#231a17", outfit: "#e2483d", build: "thin", headwear: "cap" },
+  { ...BASE, body: "barbarian", skin: "#8e5a3a", hair: "#231a17", outfit: "#e2483d", build: "thick", headwear: "cap", glasses: "sun" },
 ];
 
 function Portraits() {
