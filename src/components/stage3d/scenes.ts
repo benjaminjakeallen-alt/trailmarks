@@ -84,15 +84,12 @@ async function walkAround(actor: Actor, kit: StageKit, clock: Clock, x: number, 
 const middleOut = (i: number, n: number) => [2, 1, 3, 0, 4].filter((s) => s < Math.max(n, 5))[i % 5];
 
 /** The parts of a guest's look every guest shares. */
-const GUEST: Look = { gender: "male", hairStyle: "tousled", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: false, hat: false, skin: "#f1bf98", hair: "#4f3324", outfit: "#2f7fd6", pants: "#2b2b30", size: "adult", build: "normal", glasses: "none", headwear: "none", gear: "none" };
+const GUEST: Look = { gender: "male", hairStyle: "tousled", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: false, hat: false, skin: "#f1bf98", hair: "#4f3324", outfit: "#2f7fd6", pants: "#2b2b30", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
 
 /** Something worn on the head, sitting on top of it. */
-function wear(actor: Actor, object: THREE.Object3D, y = 0.72) {
-  const holder = new THREE.Group();
-  object.position.y += y;
-  holder.add(object);
-  actor.hold(holder, "head");
-  return object;
+/** Put something on someone's head, sized and fitted to them (see Actor.wear). */
+function wear(actor: Actor, object: THREE.Object3D, how: Parameters<Actor["wear"]>[1]) {
+  return actor.wear(object, how);
 }
 
 function cowboyHat(color = "#8a5a33") {
@@ -300,7 +297,7 @@ function fireworksScene(): Scene {
     async role(actor, slot, kit, clock) {
       const ears = P.mouseEars(slot % 2 ? "#1d1d22" : "#e2364a");
       ears.scale.setScalar(1.35);
-      wear(actor, ears, 0.62);
+      wear(actor, ears, { top: -0.06 });
       actor.lookAt(kit.toWorld(sky.x, sky.y, sky.z));
       for (;;) {
         await beat(clock, 1.5, 3.5);
@@ -898,7 +895,7 @@ function texasScene(): Scene {
       return seats[i - 1];
     },
     async role(actor, slot, kit, clock) {
-      wear(actor, cowboyHat(pick(["#8a5a33", "#d9b77e", "#3a2416", "#f2ece0"])), 0.66);
+      wear(actor, cowboyHat(pick(["#8a5a33", "#d9b77e", "#3a2416", "#f2ece0"])), { hat: 0.25 });
       if (slot === 0) {
         // The pitmaster: check the meat, big puff of smoke, proud nod.
         for (;;) {
@@ -969,7 +966,7 @@ function floridaScene(): Scene {
         lights.push(l);
       }
       cop = await kit.guest({ ...GUEST, hairStyle: "buzz", facialHair: "mustache", body: "knight", legs: "knight", skin: "#c98f68", hair: "#2b211c", outfit: "#1f2d4d" }, "Officer");
-      wear(cop, policeCap(), 0.66);
+      wear(cop, policeCap(), { hat: 0.28 });
       cop.root.position.set(lapAt(-1).x, 0, lapAt(-1).z);
       cop.root.visible = false;
     },
@@ -1114,8 +1111,8 @@ function tennesseeScene(): Scene {
         puff.position.set(x, y, z);
         hair.add(puff);
       }
-      wear(singer, hair, 0.05);
-      wear(singer, cowboyHat("#fbf7f0"), 0.98);
+      wear(singer, hair, { y: 0.05 });
+      wear(singer, cowboyHat("#fbf7f0"), { y: 0.98 });
       const g = P.guitar("#e9b52a");
       g.rotation.set(0, 0, -0.9);
       singer.hold(g, "left");
@@ -1209,11 +1206,11 @@ function wisconsinScene(): Scene {
     async role(actor, slot, kit, clock) {
       const hat = cheeseHat();
       hat.scale.setScalar(1.1);
-      wear(actor, hat, 0.62);
+      wear(actor, hat, { top: -0.1 });
       // Green and gold scarf.
       const scarf = new THREE.Group();
       scarf.add(P.box(0.5, 0.08, 0.1, slot % 2 ? "#1f5135" : "#ffb81c"));
-      wear(actor, scarf, -0.05);
+      wear(actor, scarf, { y: -0.05 });
       for (;;) {
         await clock.wait(0.2);
         const cast = onStage(kit);
@@ -1491,7 +1488,7 @@ function labScene(): Scene {
       if (slot === 0) {
         const ears = P.mouseEars();
         ears.scale.setScalar(1.35);
-        wear(actor, ears, 0.62);
+        wear(actor, ears, { top: -0.06 });
       }
       for (;;) {
         actor.play(clips[slot % clips.length], { fade: 0.2 });

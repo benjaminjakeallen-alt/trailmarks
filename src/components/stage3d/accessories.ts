@@ -1,45 +1,56 @@
 import * as THREE from "three";
 import { ball, box, cyl, mat } from "@/components/stage3d/props";
 import type { Gear, Glasses, Headwear } from "@/lib/look";
+import type { HeadFit } from "@/components/stage3d/fit";
 
 /**
  * Glasses and headwear for the characters, sized in stage units for a 1.55-tall
  * person and placed in the head bone's space (its origin is at the neck; the
- * big chibi head sits above it). The actor scales the group to its own model.
+ * big chibi head sits above it). Glasses are built on the measured head; hats
+ * are made on one standard head and fitted to the real one (fitHat).
  */
 
-/** Where the face and the crown of the head are, relative to the head bone. */
-export const HEAD = { eyeY: 0.36, faceZ: 0.33, crownY: 0.56 } as const;
+/** The standard head hats are made on (fitHat moves them onto the real one). */
+const HEAD = { crownY: 0.56 } as const;
 
-export function glasses(kind: Glasses): THREE.Object3D | null {
+/** Glasses on this head's eyes, the arms running back to its ears. */
+export function glasses(kind: Glasses, fit: HeadFit): THREE.Object3D | null {
   if (kind === "none") return null;
   const g = new THREE.Group();
   const frame = kind === "sun" ? "#1d1d22" : kind === "round" ? "#6b4a2a" : "#2b2b30";
+  // Each lens rings its eye; the two meet over the nose.
+  const r = THREE.MathUtils.clamp(fit.eyeX * 0.6, 0.06, 0.1);
+  const t = r * 0.2;
   const lens = (x: number) => {
     const shape =
       kind === "square"
-        ? new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.016, 4, 4), mat(frame))
-        : new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.016, 6, 16), mat(frame));
+        ? new THREE.Mesh(new THREE.TorusGeometry(r * 1.06, t, 4, 4), mat(frame))
+        : new THREE.Mesh(new THREE.TorusGeometry(r, t, 6, 16), mat(frame));
     if (kind === "square") shape.rotation.z = Math.PI / 4;
     shape.position.set(x, 0, 0);
     g.add(shape);
     if (kind === "sun") {
-      const dark = new THREE.Mesh(new THREE.CircleGeometry(0.08, 16), mat("#1d2733", { rough: 0.2 }));
+      const dark = new THREE.Mesh(new THREE.CircleGeometry(r, 16), mat("#1d2733", { rough: 0.2 }));
       dark.position.set(x, 0, 0.002);
       g.add(dark);
     }
   };
-  lens(-0.12);
-  lens(0.12);
-  const bridge = box(0.07, 0.016, 0.016, frame);
-  bridge.position.set(0, -0.008, 0);
+  lens(-fit.eyeX);
+  lens(fit.eyeX);
+  const bridge = box(Math.max(0.02, fit.eyeX * 2 - r * 2 + t), t, t, frame);
+  bridge.position.set(0, r * 0.1, 0);
   g.add(bridge);
-  for (const x of [-0.2, 0.2]) {
-    const arm = box(0.016, 0.016, 0.28, frame);
-    arm.position.set(x, -0.008, -0.14);
-    g.add(arm);
+  // Arms from the lenses' outer edges back along the sides of the head to the ears.
+  const armX = Math.max(fit.eyeX + r, fit.faceX * 0.98);
+  const depth = Math.max(0.12, fit.eyeZ + 0.03 - fit.earZ);
+  for (const side of [-1, 1]) {
+    const hinge = box(armX - fit.eyeX - r + t, t, t, frame);
+    hinge.position.set(side * (fit.eyeX + r + (armX - fit.eyeX - r) / 2), 0, 0);
+    const arm = box(t, t, depth, frame);
+    arm.position.set(side * armX, 0, -depth / 2);
+    g.add(hinge, arm);
   }
-  g.position.set(0, HEAD.eyeY, HEAD.faceZ);
+  g.position.set(0, fit.eyeY, fit.eyeZ + 0.035);
   return g;
 }
 
@@ -146,7 +157,7 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
     const glow = new THREE.PointLight("#fff2b0", 0.8, 1.5, 2);
     glow.position.set(0, 0, 0.6);
     g.add(strap, lamp, lens, glow);
-    g.position.y = HEAD.crownY - 0.18;
+    g.position.y = HEAD.crownY - 0.05;
   } else if (kind === "captain") {
     const top = cyl(0.36, 0.3, 0.16, "#fbf7f0", 16);
     const band = cyl(0.31, 0.31, 0.06, "#1f2d4d", 16);
@@ -244,7 +255,7 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
     trim.rotation.x = Math.PI / 2;
     trim.position.y = 0.14;
     g.add(skull, trim);
-    g.position.y = HEAD.crownY - 0.08;
+    g.position.y = HEAD.crownY - 0.01;
   } else if (kind === "chef") {
     const band = cyl(0.3, 0.3, 0.16, "#fbf7f0", 18);
     g.add(band);
@@ -272,8 +283,9 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
     g.position.y = HEAD.crownY - 0.12;
   } else if (kind === "unicorn") {
     const band = new THREE.Mesh(new THREE.TorusGeometry(0.39, 0.025, 6, 26, Math.PI), mat("#ff8fb1"));
-    band.rotation.y = Math.PI / 2;
-    band.position.y = -0.04;
+    // Ear to ear over the top, tipped back a little.
+    band.rotation.x = -0.3;
+    band.position.set(0, -0.06, -0.04);
     const horn = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.42, 12), mat("#fff4c4", { emissive: "#ffe9a8" }));
     horn.position.set(0, 0.33, 0.12);
     horn.rotation.x = 0.35;
@@ -288,8 +300,9 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
     const fur = kind === "bunny" ? "#fbf7f0" : color;
     const inner = "#ffb3c8";
     const band = new THREE.Mesh(new THREE.TorusGeometry(0.39, 0.022, 6, 26, Math.PI), mat(fur));
-    band.rotation.y = Math.PI / 2;
-    band.position.y = -0.04;
+    // Ear to ear over the top, tipped back a little.
+    band.rotation.x = -0.3;
+    band.position.set(0, -0.06, -0.04);
     g.add(band);
     for (const side of [-1, 1]) {
       const ear = new THREE.Group();
@@ -350,8 +363,45 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
     g.add(brim, crown, band);
     g.position.y = HEAD.crownY - 0.08;
   }
+  // How wide its opening is (on the standard head), and whether it fits down
+  // over the head or perches on top wherever it comes to rest.
+  g.userData.fit = {
+    r: HAT_OPENING[kind],
+    perch: kind === "party" || kind === "crown",
+    // Bands, bows and the headlamp go round or on the head without covering the crown.
+    cover: !["bow", "headlamp", "unicorn", "catears", "bunny", "flowers"].includes(kind),
+    // The inside height of crowns with something on top (a button, a pom-pom, a propeller).
+    crown: ({ cap: 0.28, beanie: 0.31, propeller: 0.3, safari: 0.36 } as Partial<Record<Headwear, number>>)[kind],
+  };
   return g;
 }
+
+/** Each hat's opening, the radius that goes round the head (standard-head units). */
+const HAT_OPENING: Record<Exclude<Headwear, "none">, number> = {
+  cap: 0.37,
+  beanie: 0.38,
+  bow: 0.38,
+  safari: 0.38,
+  fedora: 0.26,
+  ranger: 0.29,
+  bucket: 0.33,
+  bandana: 0.39,
+  headlamp: 0.38,
+  captain: 0.31,
+  party: 0.2,
+  propeller: 0.37,
+  crown: 0.27,
+  tophat: 0.26,
+  pirate: 0.33,
+  chef: 0.3,
+  viking: 0.39,
+  unicorn: 0.39,
+  catears: 0.39,
+  bunny: 0.39,
+  flowers: 0.34,
+  santa: 0.34,
+  cowboy: 0.27,
+};
 
 /** Where gear sits relative to the chest bone (stage units, a 1.55-tall person). */
 export const CHEST = { frontZ: 0.17, backZ: -0.17, neckY: 0.17 } as const;

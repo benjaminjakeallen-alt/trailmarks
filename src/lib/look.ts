@@ -83,6 +83,9 @@ export const SIZES = ["kid", "teen", "adult"] as const;
 export type Size = (typeof SIZES)[number];
 export const BUILDS = ["thin", "normal", "thick"] as const;
 export type Build = (typeof BUILDS)[number];
+export const HEAD_SHAPES = ["oval", "round", "square", "long", "heart"] as const;
+export type HeadShapeName = (typeof HEAD_SHAPES)[number];
+export const HEAD_SHAPE_LABELS: Record<HeadShapeName, string> = { oval: "Oval", round: "Round", square: "Square", long: "Long", heart: "Heart" };
 export const GLASSES = ["none", "round", "square", "sun"] as const;
 export type Glasses = (typeof GLASSES)[number];
 export const HEADWEAR = [
@@ -116,6 +119,8 @@ export interface Look {
   pants: string;
   size: Size;
   build: Build;
+  /** The shape of the head and jaw. */
+  headShape: HeadShapeName;
   glasses: Glasses;
   /** Extra headwear; replaces the body's own hat. */
   headwear: Headwear;
@@ -203,6 +208,7 @@ export function defaultLook(member: Pick<Member, "userId" | "color">): Look {
     pants: PANTS_COLORS[(h >>> 11) % 3],
     size: "adult",
     build: "normal",
+    headShape: "oval",
     glasses: "none",
     headwear: "none",
     gear: "none",
@@ -230,6 +236,7 @@ export function randomLook(): Look {
     pants: any(PANTS_COLORS),
     size: any(SIZES),
     build: any(BUILDS),
+    headShape: any(HEAD_SHAPES),
     glasses: Math.random() < 0.6 ? "none" : any(GLASSES),
     headwear,
     gear: Math.random() < 0.4 ? "none" : any(GEAR),
@@ -266,6 +273,7 @@ export function parseLook(value: unknown, fallback: Look): Look {
     pants: hex(v.pants, fallback.pants),
     size: one(SIZES, v.size, fallback.size),
     build: one(BUILDS, v.build, fallback.build),
+    headShape: one(HEAD_SHAPES, v.headShape, fallback.headShape),
     glasses: one(GLASSES, v.glasses, fallback.glasses),
     headwear,
     gear: one(GEAR, v.gear, fallback.gear),

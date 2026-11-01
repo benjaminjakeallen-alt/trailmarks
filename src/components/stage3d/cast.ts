@@ -5,6 +5,7 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
 import { BUILD_WIDTH, SIZE_SCALE } from "@/lib/look";
 import { gear, glasses, headwear } from "@/components/stage3d/accessories";
+import { HAT_BAND, HEAD_FORMS, faceMarks, fitHat, fitHead, pointsOf, shapeHead, type HeadFit } from "@/components/stage3d/fit";
 import { SCULPTED, builtFacialHair, builtHair, extraPieces, fullSkull, lashes, skull, skullColor, splitHead, transplant, type HeadShape } from "@/components/stage3d/hair";
 
 /**
@@ -29,6 +30,8 @@ const CELLS: Record<Body, { skin: Cell[]; hair: Cell[]; outfit: Cell[]; pants: C
 };
 
 const HATS = /_(Hat|Helmet)$/;
+/** A character's height (feet to the top of the head) per unit of neck height, in the shared skeleton's rest pose. */
+const MODEL_PER_NECK = 1.8;
 
 // ---------------------------------------------------------------------------
 // Loading
@@ -128,7 +131,7 @@ function recolor(img: CanvasImageSource & { width: number; height: number }, bod
       b += d[i + 2];
     }
     const n = d.length / 4 || 1;
-    skinOut = new THREE.Color(r / n / 255, g / n / 255, b / n / 255).getHexString();
+    skinOut = new THREE.Color().setRGB(r / n / 255, g / n / 255, b / n / 255, THREE.SRGBColorSpace).getHexString();
   }
   paint(cells.outfit, look.outfit);
   paint(cells.pants, look.pants);
@@ -182,7 +185,7 @@ export class Actor {
   readonly handR: THREE.Object3D;
   readonly handL: THREE.Object3D;
   readonly head: THREE.Object3D | undefined;
-  /** Model height in its own units, for scaling to the stage. */
+  /** Model height in its own units, for scaling to the stage (the same for everyone: see below). */
   readonly height: number;
   private current: THREE.AnimationAction | null = null;
   private clips: THREE.AnimationClip[];
@@ -207,15 +210,16 @@ export class Actor {
     this.handR = model.getObjectByName("handslotr") ?? model.getObjectByName("handslot.r") ?? model;
     this.handL = model.getObjectByName("handslotl") ?? model.getObjectByName("handslot.l") ?? model;
     this.head = model.getObjectByName("head");
-    // Only what shows: a hidden wizard hat or helmet mustn't make them shorter.
-    const box = new THREE.Box3();
+    // Everyone is measured by the one skeleton they share, never by their hair,
+    // hat or costume: so the same person is the same size whatever they wear.
     model.updateMatrixWorld(true);
-    model.traverse((o) => {
-      let visible = o.visible;
-      for (let p = o.parent; p && visible; p = p.parent) visible = p.visible;
-      if ((o as THREE.Mesh).isMesh && visible && !o.userData.headwear && !/_Cape$/.test(o.name)) box.expandByObject(o);
-    });
-    this.height = Math.max(1, box.max.y - Math.max(0, box.min.y));
+    const neck = this.head?.getWorldPosition(new THREE.Vector3()).y ?? 0;
+    if (neck > 0.1) {
+      this.height = neck * MODEL_PER_NECK;
+    } else {
+      const box = new THREE.Box3().setFromObject(model);
+      this.height = Math.max(1, box.max.y - Math.max(0, box.min.y));
+    }
   }
 
   play(name: Clip, { fade = 0.25, speed = 1, hold = false }: PlayOptions = {}) {
@@ -340,6 +344,37 @@ export class Actor {
     grip.add(object);
     bone.add(grip);
     this.held.push(grip);
+    return object;
+  }
+
+  /** This head as measured (set by makeActor): where the eyes, hair and hat band are. */
+  fit: HeadFit | null = null;
+
+  /**
+   * Put something on their head, in the same units as their own hats (so it's
+   * sized to them, kid or grown-up): `hat` fits it like a hat whose opening has
+   * that radius, `top` sets it on top of the head or hair, `y` places it as is.
+   */
+  wear(object: THREE.Object3D, how: { hat: number; lift?: number } | { top: number } | { y: number }) {
+    if (!this.head) return object;
+    this.showHeadwear(false);
+    const holder = new THREE.Group();
+    holder.scale.setScalar(this.height / 1.55);
+    const fit = this.fit;
+    if ("hat" in how && fit) {
+      object.position.y += HAT_BAND + (how.lift ?? 0);
+      object.userData.fit = { r: how.hat };
+      holder.add(fitHat(object, fit)!);
+    } else if ("top" in how && fit) {
+      object.position.y += fit.top + how.top;
+      object.position.z += fit.bandZ;
+      holder.add(object);
+    } else {
+      object.position.y += "y" in how ? how.y : 0.62;
+      holder.add(object);
+    }
+    this.head.add(holder);
+    this.held.push(holder);
     return object;
   }
 
@@ -476,19 +511,20 @@ function reshape(mesh: THREE.Mesh, k: number) {
  * the bald head's rest-pose box, carried into the bone's frame by its inverse
  * bind matrix. Built hair and the skull are placed from this.
  */
-function headShape(mesh: THREE.SkinnedMesh | null, k: number): HeadShape | null {
+function headShape(mesh: THREE.SkinnedMesh | null, k: number, geometry: THREE.BufferGeometry | null = null): HeadShape | null {
   if (!mesh) return null;
+  const geo = geometry ?? mesh.geometry;
   const i = mesh.skeleton.bones.findIndex((b) => b.name === "head");
   if (i < 0) return null;
-  const pos = mesh.geometry.getAttribute("position");
-  const index = mesh.geometry.getIndex();
+  const pos = geo.getAttribute("position");
+  const index = geo.getIndex();
   const box = new THREE.Box3();
   const v = new THREE.Vector3();
   const n = index ? index.count : pos.count;
   for (let t = 0; t < n; t++) box.expandByPoint(v.fromBufferAttribute(pos, index ? index.getX(t) : t));
   const size = box.getSize(new THREE.Vector3());
   // The skull's rim sits at the brows and its top reaches the top of the head.
-  const brow = Math.min(splitHead(mesh.geometry).browTop, box.max.y - size.y * 0.25);
+  const brow = Math.min(splitHead(geo).browTop, box.max.y - size.y * 0.25);
   const brow0 = Number.isFinite(brow) ? brow : box.max.y - size.y * 0.35;
   const r = Math.min(Math.min(size.x, size.z) * 0.48, box.max.y - brow0);
   const center = new THREE.Vector3((box.min.x + box.max.x) / 2, brow0, (box.min.z + box.max.z) / 2 - size.z * 0.03);
@@ -508,6 +544,38 @@ function headShape(mesh: THREE.SkinnedMesh | null, k: number): HeadShape | null 
     ry: size.y * 0.47 * u,
     rz: size.z * 0.42 * u,
   };
+}
+
+/**
+ * The face's skin color as painted: the average of the texture under the
+ * face's own skin, so a bald scalp matches it exactly.
+ */
+function faceSkin(face: THREE.SkinnedMesh | null, geo: THREE.BufferGeometry | null): string | null {
+  const map = (face?.material as THREE.MeshStandardMaterial | undefined)?.map;
+  const img = map?.image as HTMLCanvasElement | undefined;
+  if (!face || !map || !geo || !(img instanceof HTMLCanvasElement)) return (map?.userData.skin as string | undefined) ?? null;
+  const cached = (map.userData.faceSkin as string | undefined) ?? null;
+  if (cached) return cached;
+  const px = img.getContext("2d")!.getImageData(0, 0, img.width, img.height).data;
+  const uv = geo.getAttribute("uv");
+  const index = geo.getIndex();
+  let r = 0, g = 0, b = 0, n = 0;
+  for (let t = 0; t < (index ? index.count : uv.count); t++) {
+    const i = index ? index.getX(t) : t;
+    const u = uv.getX(i);
+    const v = uv.getY(i);
+    if (Math.floor(u * 8) !== 0 || Math.floor(v * 4) !== 0) continue;
+    const o = (Math.min(img.height - 1, Math.floor(v * img.height)) * img.width + Math.min(img.width - 1, Math.floor(u * img.width))) * 4;
+    r += px[o];
+    g += px[o + 1];
+    b += px[o + 2];
+    n++;
+  }
+  if (!n) return null;
+  // Canvas pixels are sRGB already.
+  const hex = `#${new THREE.Color().setRGB(r / n / 255, g / n / 255, b / n / 255, THREE.SRGBColorSpace).getHexString()}`;
+  map.userData.faceSkin = hex;
+  return hex;
 }
 
 /** The first mesh in a model whose name matches. */
@@ -578,7 +646,7 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
       const side = /Left$/.test(own.name) ? "Left" : "Right";
       const src = meshIn(legsSrc, new RegExp(`_Leg${side}$`));
       if (!src || !own.parent) continue;
-      const leg = transplant(src.geometry, own);
+      const leg = transplant(src.geometry, src, own);
       leg.material = legMaterial;
       leg.name = `Mixed_Leg${side}`;
       reshape(leg, BUILD_WIDTH[look.build].limbs);
@@ -588,73 +656,81 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
 
   // The face, then hair and beard on it.
   let head: THREE.SkinnedMesh | null = null;
+  const hairMeshes: THREE.SkinnedMesh[] = [];
+  let skullFrom: THREE.BufferGeometry | null = null;
   const own = ownHead as THREE.SkinnedMesh | null;
-  const faceGeo = meshIn(faceSrc, /_Head$/)?.geometry;
-  if (own?.parent && faceGeo) {
-    head = transplant(splitHead(faceGeo).bald, own);
+  const faceMesh = meshIn(faceSrc, /_Head$/);
+  if (own?.parent && faceMesh) {
+    // Shaped for their head shape (and with the crown rounded off).
+    const bald = splitHead(faceMesh.geometry).bald;
+    const marks = faceMarks(bald, faceMesh);
+    head = transplant(shapeHead(bald, faceMesh, marks, look.headShape, !hairFrom), faceMesh, own);
+    skullFrom = bald;
     head.material = faceMaterial;
     head.name = "Face";
     own.parent.add(head);
     for (const piece of [meshIn(hairSrc, /_Head$/), meshIn(beardSrc, /_Head$/)]) {
       if (!piece) continue;
       const parts = splitHead(piece.geometry);
-      const m = transplant(piece === meshIn(beardSrc, /_Head$/) ? parts.beard : parts.hair, own);
+      const isBeard = piece === meshIn(beardSrc, /_Head$/);
+      // A beard follows the jaw's shape.
+      const m = transplant(isBeard ? shapeHead(parts.beard, piece, marks, look.headShape) : parts.hair, piece, own);
       m.material = faceMaterial;
       m.userData.hair = true;
       own.parent.add(m);
+      hairMeshes.push(m);
     }
   }
   const actor = new Actor(model, moves.animations, member, look);
-  // Their glasses and headwear ride on the head bone, sized to this model.
-  if (actor.head) {
-    const k = actor.height / 1.55;
-    for (const [extra, isHat] of [
-      [glasses(look.glasses), false],
-      [headwear(look.headwear, look.outfit), true],
-    ] as const) {
-      if (!extra) continue;
-      const holder = new THREE.Group();
-      holder.scale.setScalar(k);
-      holder.add(extra);
-      holder.userData.headwear = isHat;
-      extra.traverse((o) => (o.castShadow = true));
-      actor.head.add(holder);
-    }
-  }
-  // Built hairstyles, beards, lashes and jewelry ride on their bones like the hats.
-  const width = BUILD_WIDTH[look.build].torso;
-  const extras = extraPieces(look.extra, look.outfit, width);
-  const onBone = (boneName: string | null, object: THREE.Object3D | null | undefined, tag?: string) => {
-    const bone = boneName ? model.getObjectByName(boneName) : null;
-    if (!bone || !object) return;
+  // The head's overall proportions: the head bone carries the face, hair and
+  // everything worn on it (the clips never animate scale, so this stays).
+  actor.head?.scale.set(...HEAD_FORMS[look.headShape].scale);
+  // Everything worn rides on a bone, in a holder sized to this model.
+  const k = actor.height / 1.55;
+  const onBone = (boneName: string, object: THREE.Object3D | null | undefined, tag?: string) => {
+    const bone = model.getObjectByName(boneName);
+    if (!bone || !object) return null;
     const holder = new THREE.Group();
-    holder.scale.setScalar(actor.height / 1.55);
+    holder.scale.setScalar(k);
     if (tag) holder.userData[tag] = true;
     holder.add(object);
     object.traverse((o) => (o.castShadow = true));
     bone.add(holder);
+    return holder;
   };
-  const shape = headShape(head, actor.height / 1.55);
+
+  // The head: a skull under the face, then hair. Measure the result so
+  // everything worn on it fits this head and this hair.
+  // The skull is measured on the face as sculpted (before rounding it into that skull).
+  const shape = headShape(head, k, skullFrom);
+  const cover: THREE.Object3D[] = [...hairMeshes];
   if (shape) {
     // The scalp in the face's own painted skin tone, so the two meet without a seam.
-    const painted = ((head?.material as THREE.MeshStandardMaterial | undefined)?.map?.userData.skin as string | undefined) ?? look.skin;
-    onBone("head", fullSkull(shape, painted));
-    if (look.hairStyle !== "bald" && look.hairStyle !== "mohawk") onBone("head", skull(shape, skullColor(look.hairStyle, look.hair, look.skin)));
-    onBone("head", builtHair(look.hairStyle, look.hair, shape), "hair");
-    onBone("head", builtFacialHair(look.facialHair, look.hair, look.skin, shape));
+    const painted = faceSkin(head, skullFrom) ?? look.skin;
+    cover.push(onBone("head", fullSkull(shape, painted))!);
+    if (look.hairStyle !== "bald" && look.hairStyle !== "mohawk" && look.hairStyle !== "rugged") cover.push(onBone("head", skull(shape, skullColor(look.hairStyle, look.hair, look.skin), !hairFrom))!);
+    const hair = onBone("head", builtHair(look.hairStyle, look.hair, shape), "hair");
+    if (hair) cover.push(hair);
   }
-  if (look.gender === "female" && shape) onBone("head", lashes(shape));
+  let fit: HeadFit | null = null;
+  if (head && actor.head) {
+    const face = pointsOf([head], actor.head, k);
+    fit = fitHead(face, [...face, ...pointsOf(cover.filter(Boolean), actor.head, k)]);
+    actor.fit = fit;
+  }
+  if (fit) {
+    onBone("head", builtFacialHair(look.facialHair, look.hair, look.skin, fit, shape!));
+    if (look.gender === "female") onBone("head", lashes(fit));
+    onBone("head", glasses(look.glasses, fit));
+    const hat = onBone("head", fitHat(headwear(look.headwear, look.outfit), fit), "headwear");
+    hat?.traverse((o) => (o.castShadow = true));
+  }
+  const width = BUILD_WIDTH[look.build].torso;
+  const extras = extraPieces(look.extra, look.outfit, width, fit);
   onBone("head", extras.head);
   onBone("chest", extras.chest);
   onBone("lowerarml", extras.arm);
-  const kit = gear(look.gear, look.outfit, BUILD_WIDTH[look.build].torso);
-  const bone = kit && model.getObjectByName(kit.bone);
-  if (kit && bone) {
-    const holder = new THREE.Group();
-    holder.scale.setScalar(actor.height / 1.55);
-    holder.add(kit.object);
-    kit.object.traverse((o) => (o.castShadow = true));
-    bone.add(holder);
-  }
+  const kit = gear(look.gear, look.outfit, width);
+  if (kit) onBone(kit.bone, kit.object);
   return actor;
 }

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ball, box, cyl, mat } from "@/components/stage3d/props";
-import { HEAD } from "@/components/stage3d/accessories";
+import type { HeadFit } from "@/components/stage3d/fit";
 import type { Body, Extra, FacialHair, Gender, HairStyle } from "@/lib/look";
 
 /**
@@ -87,7 +87,6 @@ export const SCULPTED: Partial<Record<HairStyle, Body>> = {
   long: "rogue",
   tousled: "knight",
   neat: "mage",
-  rugged: "barbarian",
   ponytail: "mage",
   bun: "mage",
   pigtails: "mage",
@@ -127,13 +126,20 @@ export function fullSkull(head: HeadShape, skin: string) {
  * Fill the top of the bald head (hair was sculpted there, so there's no skull
  * under it): a dome in skin color, or in hair color under a buzz cut or hair.
  */
-export function skull(head: HeadShape, color: string) {
+export function skull(head: HeadShape, color: string, whole = false) {
+  const material = new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0 });
+  if (whole) {
+    // No sculpted hair on top: the hair is a cap over the whole skull, down to the brows.
+    const rim = THREE.MathUtils.clamp((head.y - head.cy) / head.ry, -0.9, 0.9);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(1, 30, 16, 0, Math.PI * 2, 0, Math.acos(rim)), material);
+    cap.scale.set(head.rx * 1.03, head.ry * 1.03, head.rz * 1.03);
+    cap.position.set(head.x, head.cy, head.z - head.rz * 0.12);
+    cap.castShadow = true;
+    return cap;
+  }
   // A half dome whose rim sits at the brows: it fills the crown and never covers the face.
   // Smooth-shaded (unlike the faceted props) so a bald scalp blends into the face.
-  const dome = new THREE.Mesh(
-    new THREE.SphereGeometry(head.r, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0 }),
-  );
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(head.r, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2), material);
   dome.position.set(head.x, head.y, head.z);
   dome.castShadow = true;
   return dome;
@@ -147,10 +153,23 @@ export function skullColor(style: HairStyle, hair: string, skin: string) {
   return `#${c.getHexString()}`;
 }
 
-/** A piece of another body's head (its hair or beard), skinned onto this body's head. */
-export function transplant(piece: THREE.BufferGeometry, onto: THREE.SkinnedMesh) {
+/**
+ * A piece of another body (its face, hair, beard or legs), skinned onto this
+ * body's skeleton. It keeps the bind pose it was sculpted with: each body binds
+ * its head bone a little differently (the wizard's bigger and further back, the
+ * knight's higher), so binding with this body's own would resize and shift it.
+ */
+export function transplant(piece: THREE.BufferGeometry, from: THREE.SkinnedMesh, onto: THREE.SkinnedMesh) {
   const mesh = new THREE.SkinnedMesh(piece, onto.material);
-  mesh.bind(onto.skeleton, onto.bindMatrix);
+  const inverses = from.skeleton.bones.map((b) => b.name);
+  const skeleton = new THREE.Skeleton(
+    onto.skeleton.bones,
+    onto.skeleton.bones.map((b, i) => {
+      const j = inverses.indexOf(b.name);
+      return (j >= 0 ? from.skeleton.boneInverses[j] : onto.skeleton.boneInverses[i]).clone();
+    }),
+  );
+  mesh.bind(skeleton, from.bindMatrix);
   mesh.castShadow = true;
   mesh.frustumCulled = false;
   return mesh;
@@ -166,11 +185,21 @@ export function builtHair(style: HairStyle, color: string, head: HeadShape): THR
   const g = new THREE.Group();
   const { x, y, z, r } = head;
   const top = y + r;
+  // The smooth skull (as fullSkull draws it), for styles built all over it.
+  const sz = z - head.rz * 0.12;
+  const onSkull = (n: THREE.Vector3, k: number) =>
+    new THREE.Vector3(head.x + n.x * head.rx * k, head.cy + n.y * head.ry * k, sz + n.z * head.rz * k);
   const back = z - r;
   const tie = (at: THREE.Vector3) => {
     const t = ball(0.05, "#e45b8a");
     t.position.copy(at);
+    t.userData.tail = true;
     return t;
+  };
+  // Tails, knots and braids hang off the head: hats go over the hair, not them.
+  const hanging = (o: THREE.Object3D) => {
+    o.userData.tail = true;
+    return o;
   };
   switch (style) {
     case "ponytail": {
@@ -178,19 +207,19 @@ export function builtHair(style: HairStyle, color: string, head: HeadShape): THR
       tail.rotation.x = Math.PI - 0.4;
       tail.position.set(x, y + r * 0.15, back - 0.2);
       tail.castShadow = true;
-      g.add(tail, tie(new THREE.Vector3(x, y + r * 0.45, back + 0.02)));
+      g.add(hanging(tail), tie(new THREE.Vector3(x, y + r * 0.45, back + 0.02)));
       break;
     }
     case "bun": {
       const knot = ball(0.17, color, { detail: 2 });
       knot.position.set(x, top + 0.04, z - r * 0.35);
-      g.add(knot);
+      g.add(hanging(knot));
       break;
     }
     case "manbun": {
       const knot = ball(0.13, color, { detail: 2 });
       knot.position.set(x, y + r * 0.75, back + 0.04);
-      g.add(knot);
+      g.add(hanging(knot));
       break;
     }
     case "pigtails": {
@@ -199,7 +228,7 @@ export function builtHair(style: HairStyle, color: string, head: HeadShape): THR
         tail.position.set(x + side * (r + 0.06), y - r * 0.25, z - r * 0.25);
         tail.rotation.set(Math.PI, 0, side * 0.4);
         tail.castShadow = true;
-        g.add(tail, tie(new THREE.Vector3(x + side * (r - 0.02), y + r * 0.2, z - r * 0.25)));
+        g.add(hanging(tail), tie(new THREE.Vector3(x + side * (r - 0.02), y + r * 0.2, z - r * 0.25)));
       }
       break;
     }
@@ -208,7 +237,7 @@ export function builtHair(style: HairStyle, color: string, head: HeadShape): THR
         const knot = ball(0.09 - i * 0.007, color);
         knot.position.set(x, y - i * 0.13, back - 0.06 - Math.min(i, 2) * 0.02);
         knot.scale.set(1, 0.8, 1);
-        g.add(knot);
+        g.add(hanging(knot));
       }
       g.add(tie(new THREE.Vector3(x, y - 0.78, back - 0.1)));
       break;
@@ -235,44 +264,68 @@ export function builtHair(style: HairStyle, color: string, head: HeadShape): THR
       break;
     }
     case "spiky": {
-      for (let i = 0; i < 11; i++) {
-        const a = (i / 11) * Math.PI * 2;
-        const ring = i % 2 ? 0.55 : 0.25;
-        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.26, 5), hairMat(color));
-        spike.position.set(x + Math.cos(a) * r * ring, top - 0.02 - ring * 0.08, z + Math.sin(a) * r * ring);
-        spike.rotation.set(Math.sin(a) * ring * 0.9, 0, -Math.cos(a) * ring * 0.9);
+      // Spikes standing out of the crown, each along the skull's own normal.
+      const size = head.rx / 0.3;
+      for (let i = 0; i < 13; i++) {
+        const a = (i / 13) * Math.PI * 2;
+        const phi = i % 2 ? 0.75 : 0.35;
+        const n = new THREE.Vector3(Math.sin(phi) * Math.cos(a), Math.cos(phi), Math.sin(phi) * Math.sin(a));
+        // Not down over the forehead.
+        if (n.z > 0.45) n.z = 0.45;
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.09 * size, 0.28 * size, 5), hairMat(color));
+        spike.position.copy(onSkull(n, 0.92));
+        spike.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n.normalize());
         spike.castShadow = true;
         g.add(spike);
       }
       break;
     }
     case "mohawk": {
-      for (let i = 0; i < 6; i++) {
-        const fin = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.28, 4), hairMat(color));
-        fin.scale.z = 0.5;
-        const a = 0.4 - i * 0.32;
-        fin.position.set(x, y + Math.cos(a) * r + 0.06, z + Math.sin(a) * r);
-        fin.rotation.x = a;
+      // A crest of fins from the hairline over the crown to the back.
+      const size = head.rx / 0.3;
+      for (let i = 0; i < 7; i++) {
+        const a = -0.55 + i * 0.36;
+        const n = new THREE.Vector3(0, Math.cos(a), Math.sin(-a));
+        const fin = new THREE.Mesh(new THREE.ConeGeometry(0.085 * size, 0.3 * size, 4), hairMat(color));
+        fin.scale.z = 0.45;
+        fin.position.copy(onSkull(n, 0.97));
+        fin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n.normalize());
         fin.castShadow = true;
         g.add(fin);
       }
       break;
     }
+    case "rugged": {
+      // Receding: bare on top, a horseshoe of short hair round the sides and back.
+      const band = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 30, 10, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9, 0.95, 0.85),
+        hairMat(color),
+      );
+      band.scale.set(head.rx * 1.05, head.ry * 1.05, head.rz * 1.05);
+      band.position.set(head.x, head.cy, sz);
+      band.castShadow = true;
+      g.add(band);
+      break;
+    }
     case "afro": {
-      const puff = ball(r * 1.18, color, { detail: 2 });
-      puff.position.set(x, y + r * 0.55, z - r * 0.32);
+      // A big round puff sitting back from the hairline, wider than the head.
+      const puff = ball(1, color, { detail: 2 });
+      puff.scale.set(head.rx * 1.35, head.ry * 1.12, head.rz * 1.22);
+      puff.position.set(head.x, head.cy + head.ry * 0.38, sz - head.rz * 0.32);
       g.add(puff);
       break;
     }
     case "curly": {
-      for (let i = 0; i < 18; i++) {
+      const size = head.rx / 0.3;
+      for (let i = 0; i < 30; i++) {
+        // A spiral over the skull, front to back.
         const a = i * 2.4;
-        const lift = (i % 4) / 4;
-        const curl = ball(0.1, color);
-        const phi = 0.25 + lift * 0.9;
-        curl.position.set(x + Math.cos(a) * Math.sin(phi) * r, y + Math.cos(phi) * r + 0.02, z + Math.sin(a) * Math.sin(phi) * r - 0.02);
+        const phi = Math.acos(1 - ((i + 0.5) / 30) * 1.25);
+        const n = new THREE.Vector3(Math.sin(phi) * Math.cos(a), Math.cos(phi), Math.sin(phi) * Math.sin(a));
         // Keep the face clear.
-        if (curl.position.z > z + r * 0.55 && curl.position.y < y + r * 0.6) continue;
+        if (n.z > 0.35 && n.y < 0.55) continue;
+        const curl = ball(0.1 * size, color);
+        curl.position.copy(onSkull(n, 1.0));
         g.add(curl);
       }
       break;
@@ -283,47 +336,49 @@ export function builtHair(style: HairStyle, color: string, head: HeadShape): THR
   return g;
 }
 
-/** Beards that aren't the woodsman's sculpted one. */
-export function builtFacialHair(kind: FacialHair, color: string, skin: string, head: HeadShape): THREE.Object3D | null {
+/** Beards that aren't the woodsman's sculpted one, on this face's lip and chin. */
+export function builtFacialHair(kind: FacialHair, color: string, skin: string, fit: HeadFit, head: HeadShape): THREE.Object3D | null {
   if (kind === "none" || kind === "beard") return null;
   const g = new THREE.Group();
-  const mouthY = HEAD.eyeY - 0.17;
-  const z = HEAD.faceZ + 0.02;
+  // Sized to the face: a mustache spans about the gap between the eyes.
+  const span = fit.eyeX * 1.25;
+  const lip = fit.mouthY + (fit.eyeY - fit.mouthY) * 0.18;
   if (kind === "stubble") {
     // A shadow along the lower jaw, hugging the head.
     const shade = new THREE.Color(skin).lerp(new THREE.Color(color), 0.4);
     const jaw = new THREE.Mesh(
-      new THREE.SphereGeometry(head.r * 1.02, 20, 10, Math.PI * 0.2, Math.PI * 0.6, Math.PI * 0.62, Math.PI * 0.2),
+      new THREE.SphereGeometry(1, 20, 10, Math.PI * 0.2, Math.PI * 0.6, Math.PI * 0.55, Math.PI * 0.3),
       mat(`#${shade.getHexString()}`, { rough: 1 }),
     );
-    jaw.position.set(head.x, head.y, head.z);
+    jaw.scale.set(head.rx * 1.02, head.ry * 1.04, head.rz * 1.04);
+    jaw.position.set(head.x, head.cy, head.z - head.rz * 0.12);
     g.add(jaw);
     return g;
   }
-  const stache = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.16, 4, 8), hairMat(color));
+  const thick = span * 0.18;
+  const stache = new THREE.Mesh(new THREE.CapsuleGeometry(thick, span, 4, 8), hairMat(color));
   stache.rotation.z = Math.PI / 2;
-  stache.position.set(0, mouthY + 0.05, z);
+  stache.position.set(0, lip, fit.mouthZ + thick * 0.6);
   stache.castShadow = true;
   g.add(stache);
   if (kind === "goatee") {
-    const chin = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 8), hairMat(color));
+    const h = Math.max(0.08, (lip - fit.chinY) * 0.9);
+    const chin = new THREE.Mesh(new THREE.ConeGeometry(span * 0.35, h, 8), hairMat(color));
     chin.rotation.x = Math.PI;
-    chin.position.set(0, mouthY - 0.1, z - 0.03);
+    chin.position.set(0, fit.chinY + h * 0.3, fit.mouthZ - 0.01);
     g.add(chin);
   }
   return g;
 }
 
 /** Eyelashes: a little flick at each eye's outer corner. */
-export function lashes(head: HeadShape): THREE.Object3D {
+export function lashes(fit: HeadFit): THREE.Object3D {
   const g = new THREE.Group();
-  // Just under the brows, at the outer corners of the eyes, on the face's front.
-  const y = head.y - 0.07;
-  const z = head.z + head.rz * 0.86;
+  const corner = fit.eyeX * 1.32;
   for (const side of [-1, 1]) {
     for (let i = 0; i < 2; i++) {
       const lash = box(0.05, 0.014, 0.012, "#1d1d22");
-      lash.position.set(side * (head.rx * 0.5 + i * 0.03), y + i * 0.012, z - i * 0.02);
+      lash.position.set(side * (corner + i * 0.025), fit.eyeY + 0.03 + i * 0.012, fit.eyeZ - 0.03 - i * 0.02);
       lash.rotation.z = side * (0.5 + i * 0.3);
       g.add(lash);
     }
@@ -332,7 +387,7 @@ export function lashes(head: HeadShape): THREE.Object3D {
 }
 
 /** Jewelry and finishing touches: head-bone pieces and chest-bone pieces. */
-export function extraPieces(kind: Extra, color: string, width = 1): { head?: THREE.Object3D; chest?: THREE.Object3D; arm?: THREE.Object3D } {
+export function extraPieces(kind: Extra, color: string, width = 1, fit: HeadFit | null = null): { head?: THREE.Object3D; chest?: THREE.Object3D; arm?: THREE.Object3D } {
   const gold = "#e9b52a";
   switch (kind) {
     case "studs":
@@ -343,7 +398,7 @@ export function extraPieces(kind: Extra, color: string, width = 1): { head?: THR
           kind === "studs"
             ? ball(0.035, "#dfe7ea", { emissive: "#9ab" })
             : new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 6, 16), mat(gold));
-        piece.position.set(side * 0.4, HEAD.eyeY - 0.1, -0.02);
+        piece.position.set(side * ((fit?.earX ?? 0.4) + 0.01), (fit?.earY ?? 0.2) - (kind === "hoops" ? 0.05 : 0), fit?.earZ ?? 0);
         if (kind === "hoops") piece.rotation.y = Math.PI / 2;
         g.add(piece);
       }
@@ -359,15 +414,23 @@ export function extraPieces(kind: Extra, color: string, width = 1): { head?: THR
         g.add(petal);
       }
       g.add(ball(0.035, "#ffd34a"));
-      g.position.set(-0.3, HEAD.crownY - 0.12, 0.16);
-      g.rotation.y = -0.6;
+      // Tucked over the left ear, on the hair.
+      const f = fit;
+      g.position.set(-(f ? f.rx * 0.92 : 0.3), f ? f.bandY + 0.03 : 0.44, f ? f.bandZ + f.rz * 0.35 : 0.16);
+      g.rotation.y = -1.0;
       return { head: g };
     }
     case "headband": {
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.03, 6, 26, Math.PI), mat(color));
-      band.rotation.y = Math.PI / 2;
-      band.rotation.z = -0.3;
-      band.position.set(0, HEAD.crownY - 0.18, 0.02);
+      // An arc from ear to ear over the hair, just behind the hairline.
+      const f = fit ?? { rx: 0.38, bandY: 0.36, bandZ: 0, top: 0.62, rz: 0.36 };
+      const pts: THREE.Vector3[] = [];
+      for (let i = 0; i <= 16; i++) {
+        const a = (i / 16) * Math.PI;
+        pts.push(new THREE.Vector3(Math.cos(a) * (f.rx + 0.025), f.bandY - 0.04 + Math.sin(a) * (f.top - f.bandY + 0.07), 0));
+      }
+      const band = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.028, 6), mat(color));
+      band.position.z = f.bandZ + f.rz * 0.15;
+      band.rotation.x = -0.25;
       return { head: band };
     }
     case "pearls": {

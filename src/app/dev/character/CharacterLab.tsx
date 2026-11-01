@@ -6,7 +6,7 @@ import type { Look } from "@/lib/look";
 
 const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPreview"), { ssr: false });
 
-const BASE: Look = { gender: "female", hairStyle: "long", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: true, hat: false, skin: "#f1bf98", hair: "#8a5532", outfit: "#2f7fd6", pants: "#3a4a6b", size: "adult", build: "normal", glasses: "none", headwear: "none", gear: "none" };
+const BASE: Look = { gender: "female", hairStyle: "long", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: true, hat: false, skin: "#f1bf98", hair: "#8a5532", outfit: "#2f7fd6", pants: "#3a4a6b", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
 const M: Partial<Look> = { gender: "male", body: "knight", outfit: "#3bb54a" };
 const SETS: Record<string, Look[]> = {
   f1: [
@@ -25,6 +25,61 @@ const SETS: Record<string, Look[]> = {
     { ...BASE, ...M, body: "knight", hairStyle: "bald" },
     { ...BASE, ...M, body: "mage", hairStyle: "bald" },
   ],
+  audit: (["rogue", "barbarian", "knight", "mage"] as const).flatMap((body) =>
+    (["kid", "adult"] as const).map((size, i) => ({
+      ...BASE,
+      body,
+      legs: body,
+      size,
+      build: (i ? "thick" : "thin") as Look["build"],
+      headShape: (["round", "square", "heart", "long"] as const)[["rogue", "barbarian", "knight", "mage"].indexOf(body)],
+      gender: (i ? "male" : "female") as Look["gender"],
+      hairStyle: (i ? "tousled" : "ponytail") as Look["hairStyle"],
+      headwear: (i ? "cowboy" : "party") as Look["headwear"],
+      glasses: "round" as Look["glasses"],
+      gear: "backpack" as Look["gear"],
+    })),
+  ),
+  heights: (["rogue", "barbarian", "knight", "mage"] as const).flatMap((body) =>
+    (["female", "male"] as const).flatMap((gender) =>
+      (gender === "female" ? (["long", "ponytail", "bald"] as const) : (["bald", "tousled", "rugged"] as const)).map((hairStyle) => ({
+        ...BASE,
+        body,
+        legs: body,
+        gender,
+        hairStyle: hairStyle as Look["hairStyle"],
+        facialHair: (gender === "male" && hairStyle === "rugged" ? "beard" : "none") as Look["facialHair"],
+      })),
+    ),
+  ),
+  shapes: (["oval", "round", "square", "long", "heart"] as const).flatMap((headShape) => [
+    { ...BASE, headShape, hairStyle: "bob" as Look["hairStyle"], glasses: "round" as Look["glasses"] },
+    { ...BASE, ...M, headShape, hairStyle: "buzz" as Look["hairStyle"], facialHair: "goatee" as Look["facialHair"], headwear: (headShape === "long" ? "cowboy" : "none") as Look["headwear"] },
+  ]),
+  fit: [
+    { ...BASE, hairStyle: "long", glasses: "round", headwear: "cap", extra: "hoops" },
+    { ...BASE, hairStyle: "bald", glasses: "square", headwear: "cowboy", extra: "studs" },
+    { ...BASE, hairStyle: "ponytail", glasses: "sun", headwear: "beanie", extra: "flower", body: "mage" },
+    { ...BASE, hairStyle: "bob", extra: "headband", body: "knight", glasses: "round" },
+    { ...BASE, ...M, hairStyle: "bald", glasses: "round", facialHair: "mustache", headwear: "fedora" },
+    { ...BASE, ...M, hairStyle: "tousled", glasses: "square", facialHair: "goatee", headwear: "safari", body: "mage" },
+    { ...BASE, ...M, hairStyle: "afro", glasses: "sun", headwear: "tophat", skin: "#5f3b27", hair: "#231a17", body: "rogue" },
+    { ...BASE, ...M, hairStyle: "rugged", facialHair: "beard", headwear: "viking", body: "barbarian", glasses: "round" },
+    { ...BASE, ...M, hairStyle: "neat", facialHair: "stubble", headwear: "ranger" },
+    { ...BASE, ...M, hairStyle: "spiky", headwear: "party", glasses: "square", hair: "#e6c77f" },
+  ],
+  hats2: (["cap", "propeller", "safari", "beanie", "pirate", "tophat", "viking", "cowboy"] as const).map((headwear, i) => ({
+    ...BASE,
+    ...(i % 2 || i === 4 ? M : {}),
+    hairStyle: (["long", "tousled", "ponytail", "bald", "afro", "afro", "long", "spiky"] as const)[i] as Look["hairStyle"],
+    headwear: headwear as Look["headwear"],
+  })),
+  hats: (["cap", "beanie", "bow", "safari", "fedora", "ranger", "bucket", "bandana", "headlamp", "captain", "cowboy", "party", "propeller", "crown", "tophat", "pirate", "chef", "viking", "unicorn", "catears", "bunny", "flowers", "santa"] as const).map((headwear, i) => ({
+    ...BASE,
+    ...(i % 2 ? M : {}),
+    hairStyle: (["long", "bald", "ponytail", "afro", "bob", "tousled", "curly", "neat", "pixie", "spiky", "bun", "buzz"] as const)[i % 12] as Look["hairStyle"],
+    headwear: headwear as Look["headwear"],
+  })),
   fun: [
     { ...BASE, headwear: "party", outfit: "#e45b8a" },
     { ...BASE, ...M, headwear: "propeller" },
@@ -61,7 +116,9 @@ SETS.mix = [
 ];
 const pick = (SETS[(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("set")) || "f1"] ?? SETS.f1);
 // Every set but "mix" wears full costumes.
-const LOOKS: Look[] = pick === SETS.mix ? pick : pick.map((l) => ({ ...l, legs: l.body }));
+const LOOKS: Look[] = pick === SETS.mix || pick === SETS.audit ? pick : pick.map((l) => ({ ...l, legs: l.body }));
+
+const big = typeof window !== "undefined" && window.location.search.includes("big");
 
 function Portraits() {
   const [urls, setUrls] = useState<string[]>([]);
@@ -80,16 +137,34 @@ function Portraits() {
     };
   }, []);
   return (
-    <div className="flex gap-4 p-6" data-portraits>
+    <div className="flex flex-wrap gap-4 p-6" data-portraits>
       {urls.map((u) => (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={u} src={u} alt="" className="h-24 w-24 rounded-full" />
+        <img key={u} src={u} alt="" className={big ? "h-56 w-56 rounded-full" : "h-24 w-24 rounded-full"} />
       ))}
     </div>
   );
 }
 
+/** ?measure: each look's model height and head metrics, as JSON (for tuning fit). */
+function Measure() {
+  const [out, setOut] = useState("");
+  useEffect(() => {
+    void import("@/components/stage3d/cast").then(async ({ makeActor }) => {
+      const rows: unknown[] = [];
+      for (const [i, look] of LOOKS.entries()) {
+        const a = await makeActor({ userId: `m-${i}`, displayName: "M", color: look.outfit, avatarUrl: null }, look);
+        rows.push({ i, body: look.body, gender: look.gender, hair: look.hairStyle, size: look.size, build: look.build, height: +a.height.toFixed(4), head: a.fit && { ...a.fit, profile: undefined } });
+        a.dispose();
+      }
+      setOut(JSON.stringify(rows));
+    });
+  }, []);
+  return <pre data-measure>{out}</pre>;
+}
+
 export default function CharacterLab() {
+  if (typeof window !== "undefined" && window.location.search.includes("measure")) return <Measure />;
   return (
     <>
     <Portraits />

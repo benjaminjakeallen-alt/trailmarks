@@ -29,6 +29,8 @@ import {
   GLASSES_LABELS,
   HAIR_COLORS,
   HAS_PANTS,
+  HEAD_SHAPES,
+  HEAD_SHAPE_LABELS,
   HAT_LABELS,
   HEADWEAR_LABELS,
   OUTFIT_COLORS,
@@ -224,6 +226,7 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
         {tab === "Face" && (
           <>
             <Swatches label="Skin" colors={SKIN_TONES} value={look.skin} onPick={(skin) => set({ skin })} />
+            <Choices label="Head shape" options={HEAD_SHAPES} value={look.headShape} labels={HEAD_SHAPE_LABELS} onPick={(headShape) => set({ headShape })} />
             <Choices label="Glasses" options={GLASSES} value={look.glasses} labels={GLASSES_LABELS} onPick={(glasses) => set({ glasses })} />
             {look.gender === "male" && (
               <Choices
