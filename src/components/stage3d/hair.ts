@@ -117,6 +117,8 @@ export interface HeadShape {
 export function fullSkull(head: HeadShape, skin: string) {
   const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 18), new THREE.MeshStandardMaterial({ color: skin, roughness: 0.85, metalness: 0 }));
   ball.scale.set(head.rx, head.ry, head.rz);
+  // Its color is the face's own: leave it exactly as is.
+  ball.userData.exact = true;
   ball.position.set(head.x, head.cy, head.z - head.rz * 0.12);
   ball.castShadow = true;
   return ball;

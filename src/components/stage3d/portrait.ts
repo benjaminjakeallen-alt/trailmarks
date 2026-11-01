@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { makeActor } from "@/components/stage3d/cast";
-import type { Look } from "@/lib/look";
+import { tone, type Look } from "@/lib/look";
 import type { Member } from "@/lib/types";
 
 const SIZE = 512;
@@ -44,8 +44,8 @@ export async function renderPortrait(member: Member, look: Look): Promise<Blob> 
     const out = document.createElement("canvas");
     out.width = out.height = SIZE;
     const ctx = out.getContext("2d")!;
-    const tint = new THREE.Color(look.outfit).lerp(new THREE.Color("#ffffff"), 0.72);
-    const deep = new THREE.Color(look.outfit).lerp(new THREE.Color("#ffffff"), 0.45);
+    const tint = new THREE.Color(tone(look.outfit)).lerp(new THREE.Color("#ffffff"), 0.72);
+    const deep = new THREE.Color(tone(look.outfit)).lerp(new THREE.Color("#ffffff"), 0.45);
     const g = ctx.createRadialGradient(SIZE / 2, SIZE * 0.42, SIZE * 0.05, SIZE / 2, SIZE / 2, SIZE * 0.72);
     g.addColorStop(0, `#${tint.getHexString()}`);
     g.addColorStop(1, `#${deep.getHexString()}`);

@@ -49,7 +49,7 @@ export default function CharacterPreview({
     scene.add(sun);
     const plinth = new THREE.Mesh(
       new THREE.CylinderGeometry(0.95, 1.0, 0.16, 40),
-      new THREE.MeshStandardMaterial({ color: "#1aa898", roughness: 0.8 }),
+      new THREE.MeshStandardMaterial({ color: "#8fb0ad", roughness: 0.9 }),
     );
     plinth.position.y = -0.08;
     plinth.receiveShadow = true;

@@ -94,7 +94,7 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
     const khaki = "#d9c08f";
     const dome = new THREE.Mesh(new THREE.SphereGeometry(0.38, 16, 9, 0, Math.PI * 2, 0, Math.PI / 2), mat(khaki));
     dome.scale.set(1.0, 0.95, 1.08);
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.52, 0.06, 20), mat(khaki));
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.48, 0.06, 20), mat(khaki));
     const band = cyl(0.385, 0.385, 0.06, "#7a5232", 18);
     band.position.y = 0.0;
     const top = ball(0.04, khaki);
@@ -104,7 +104,7 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
   } else if (kind === "fedora") {
     // The explorer's fedora: pinched crown, dark band, slightly turned-down brim.
     const felt = "#8a5a33";
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.46, 0.035, 18), mat(felt));
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.4, 0.035, 18), mat(felt));
     brim.scale.z = 0.92;
     const crown = cyl(0.25, 0.28, 0.25, felt, 12);
     crown.position.y = 0.13;
@@ -118,7 +118,7 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
   } else if (kind === "ranger") {
     // A park ranger's campaign hat: flat wide brim, four-dent peaked crown.
     const tan = "#b98e57";
-    const brim = cyl(0.5, 0.5, 0.03, tan, 22);
+    const brim = cyl(0.44, 0.44, 0.03, tan, 22);
     const crown = new THREE.Mesh(new THREE.ConeGeometry(0.29, 0.34, 4), mat(tan));
     crown.rotation.y = Math.PI / 4;
     crown.position.y = 0.19;
@@ -355,7 +355,7 @@ export function headwear(kind: Headwear, color: string): THREE.Object3D | null {
     g.add(cone, trim, pom);
     g.position.y = HEAD.crownY - 0.1;
   } else if (kind === "cowboy") {
-    const brim = cyl(0.46, 0.46, 0.03, color, 18);
+    const brim = cyl(0.4, 0.4, 0.03, color, 18);
     const crown = cyl(0.24, 0.27, 0.27, color, 12);
     crown.position.y = 0.15;
     const band = cyl(0.275, 0.275, 0.05, "#3a2416", 12);

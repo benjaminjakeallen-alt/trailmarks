@@ -3,7 +3,7 @@ import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
-import { BUILD_WIDTH, SIZE_SCALE } from "@/lib/look";
+import { BUILD_WIDTH, SIZE_SCALE, tone } from "@/lib/look";
 import { gear, glasses, headwear } from "@/components/stage3d/accessories";
 import { HAT_BAND, HEAD_FORMS, faceMarks, fitHat, fitHead, pointsOf, shapeHead, type HeadFit } from "@/components/stage3d/fit";
 import { SCULPTED, builtFacialHair, builtHair, extraPieces, fullSkull, lashes, skull, skullColor, splitHead, transplant, type HeadShape } from "@/components/stage3d/hair";
@@ -81,6 +81,8 @@ export async function prop(name: string): Promise<THREE.Object3D> {
 // Recoloring
 
 const textures = new Map<string, THREE.Texture>();
+/** How much of the texture's color saturation stays (the app's look is calm, not candy). */
+const SHEET_SATURATION = 0.82;
 
 function recolor(img: CanvasImageSource & { width: number; height: number }, body: Body, look: Look) {
   const key = `${body}|${look.skin}|${look.hair}|${look.outfit}|${look.pants}`;
@@ -133,8 +135,18 @@ function recolor(img: CanvasImageSource & { width: number; height: number }, bod
     const n = d.length / 4 || 1;
     skinOut = new THREE.Color().setRGB(r / n / 255, g / n / 255, b / n / 255, THREE.SRGBColorSpace).getHexString();
   }
-  paint(cells.outfit, look.outfit);
-  paint(cells.pants, look.pants);
+  paint(cells.outfit, tone(look.outfit));
+  paint(cells.pants, tone(look.pants));
+  // KayKit's own trims (belts, buckles, straps) are toy-bright: calm the whole sheet a touch.
+  {
+    const data = ctx.getImageData(0, 0, W, H);
+    const px = data.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const l = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+      for (let c = 0; c < 3; c++) px[i + c] = l + (px[i + c] - l) * SHEET_SATURATION;
+    }
+    ctx.putImageData(data, 0, 0);
+  }
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.flipY = false;
@@ -578,6 +590,25 @@ function faceSkin(face: THREE.SkinnedMesh | null, geo: THREE.BufferGeometry | nu
   return hex;
 }
 
+const calmed = new WeakMap<THREE.Material, THREE.Material>();
+
+/**
+ * A plain-colored material (a hat, a backpack) toned down like the clothes;
+ * textured ones (the body, already calmed) pass through. Shared per material.
+ */
+function calm(material: THREE.Material): THREE.Material {
+  const m = material as THREE.MeshStandardMaterial;
+  if (!m.isMeshStandardMaterial || m.map) return material;
+  let out = calmed.get(material);
+  if (!out) {
+    const c = m.clone();
+    c.color.set(tone(`#${m.color.getHexString()}`, { maxS: 0.5, minL: 0.1, maxL: 0.92 }));
+    calmed.set(material, c);
+    out = c;
+  }
+  return out;
+}
+
 /** The first mesh in a model whose name matches. */
 function meshIn(gltf: GLTF | null, name: RegExp): THREE.SkinnedMesh | null {
   let found: THREE.SkinnedMesh | null = null;
@@ -732,5 +763,10 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
   onBone("lowerarml", extras.arm);
   const kit = gear(look.gear, look.outfit, width);
   if (kit) onBone(kit.bone, kit.object);
+  // Hats, gear, jewelry and built hair in the same calm palette as the clothes.
+  model.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (mesh.isMesh && !mesh.userData.exact) mesh.material = calm(mesh.material as THREE.Material);
+  });
   return actor;
 }

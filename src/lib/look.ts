@@ -173,13 +173,50 @@ export const GEAR_LABELS: Record<Gear, string> = {
   scarf: "Scarf",
   canteen: "Canteen",
 };
-export const PANTS_COLORS = ["#3a4a6b", "#2b2b30", "#7a5232", "#c9a46a", "#5b6b3a", "#9aa4a8", "#b0442a", "#f2ece0"];
+// Natural, outdoor-gear colors (the app's own calm palette), not toy-box primaries.
+export const PANTS_COLORS = ["#3d4a63", "#2e3236", "#6b4b33", "#b09a72", "#56613d", "#858d91", "#7a3f30", "#d6cebc"];
 /** The knight's legs are armor; there are no pants to color. */
 export const HAS_PANTS: Record<Body, boolean> = { rogue: true, barbarian: true, knight: false, mage: true };
 
-export const SKIN_TONES = ["#f8d9c0", "#f1bf98", "#dca27a", "#bb7f57", "#8e5a3a", "#5f3b27"];
-export const HAIR_COLORS = ["#231a17", "#4f3324", "#8a5532", "#c58a4f", "#e6c77f", "#b0442a", "#8d8d8d", "#ececec"];
-export const OUTFIT_COLORS = ["#e2483d", "#f39a2b", "#f5c542", "#3bb54a", "#2fb59a", "#2f7fd6", "#7c4ddb", "#e45b8a", "#3a3f45", "#f2ece0"];
+export const SKIN_TONES = ["#f0d4c1", "#e0b597", "#c79474", "#9f6d50", "#774e38", "#4c3226"];
+export const HAIR_COLORS = ["#231a17", "#4a3326", "#7c5236", "#a97a4f", "#d2b47e", "#8c4128", "#8d8d8d", "#e2e0dc"];
+export const OUTFIT_COLORS = ["#a5483c", "#b5713f", "#c2a052", "#6d7b48", "#3f6a52", "#2f6b6e", "#46658a", "#2f3f5a", "#6a5076", "#454c52", "#d6cdb8"];
+
+/** Colors from before the natural palette, mapped to their new shades so old picks still match a swatch. */
+const LEGACY: Record<string, string> = Object.fromEntries([
+  ...zip(["#f8d9c0", "#f1bf98", "#dca27a", "#bb7f57", "#8e5a3a", "#5f3b27"], SKIN_TONES),
+  ...zip(["#4f3324", "#8a5532", "#c58a4f", "#e6c77f", "#b0442a", "#ececec"], ["#4a3326", "#7c5236", "#a97a4f", "#d2b47e", "#8c4128", "#e2e0dc"]),
+  ...zip(["#3a4a6b", "#2b2b30", "#7a5232", "#c9a46a", "#5b6b3a", "#9aa4a8", "#b0442a", "#f2ece0"], PANTS_COLORS),
+]);
+function zip(a: string[], b: string[]) {
+  return a.map((x, i) => [x, b[i]] as const);
+}
+
+/**
+ * Calm a color down to the app's natural look: no more saturated than a dyed
+ * jacket, no darker than charcoal or lighter than canvas. Idempotent, so any
+ * color (a vivid map color, an old saved pick) comes out in the same family.
+ */
+export function tone(hex: string, { maxS = 0.36, minL = 0.18, maxL = 0.78 } = {}): string {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255);
+  const hi = Math.max(r, g, b);
+  const lo = Math.min(r, g, b);
+  let l = (hi + lo) / 2;
+  const d = hi - lo;
+  let s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let h = 0;
+  if (d) h = hi === r ? ((g - b) / d) % 6 : hi === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = (h * 60 + 360) % 360;
+  s = Math.min(s, maxS);
+  l = Math.min(maxL, Math.max(minL, l));
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  const [r1, g1, b1] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return `#${[r1, g1, b1].map((v) => Math.round((v + m) * 255).toString(16).padStart(2, "0")).join("")}`;
+}
+
 export const BODY_LABELS: Record<Body, string> = { rogue: "Explorer", barbarian: "Woodsman", knight: "Knight", mage: "Wizard" };
 export const HAT_LABELS: Record<Body, string | null> = { rogue: null, barbarian: "Bear hat", knight: "Helmet", mage: "Wizard hat" };
 
@@ -204,7 +241,7 @@ export function defaultLook(member: Pick<Member, "userId" | "color">): Look {
     hat: false,
     skin: SKIN_TONES[(h >>> 3) % SKIN_TONES.length],
     hair: HAIR_COLORS[(h >>> 7) % 6],
-    outfit: member.color,
+    outfit: tone(member.color),
     pants: PANTS_COLORS[(h >>> 11) % 3],
     size: "adult",
     build: "normal",
@@ -249,7 +286,7 @@ const HEX = /^#[0-9a-f]{6}$/i;
 export function parseLook(value: unknown, fallback: Look): Look {
   if (!value || typeof value !== "object") return fallback;
   const v = value as Partial<Look>;
-  const hex = (c: unknown, d: string) => (typeof c === "string" && HEX.test(c) ? c.toLowerCase() : d);
+  const hex = (c: unknown, d: string) => (typeof c === "string" && HEX.test(c) ? (LEGACY[c.toLowerCase()] ?? c.toLowerCase()) : d);
   const one = <T extends string>(xs: readonly T[], x: unknown, d: T) => (xs.includes(x as T) ? (x as T) : d);
   const headwear = one(HEADWEAR, v.headwear, fallback.headwear);
   const body = one(BODIES, v.body, fallback.body);

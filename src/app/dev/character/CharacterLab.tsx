@@ -6,8 +6,8 @@ import type { Look } from "@/lib/look";
 
 const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPreview"), { ssr: false });
 
-const BASE: Look = { gender: "female", hairStyle: "long", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: true, hat: false, skin: "#f1bf98", hair: "#8a5532", outfit: "#2f7fd6", pants: "#3a4a6b", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
-const M: Partial<Look> = { gender: "male", body: "knight", outfit: "#3bb54a" };
+const BASE: Look = { gender: "female", hairStyle: "long", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: true, hat: false, skin: "#e0b597", hair: "#7c5236", outfit: "#46658a", pants: "#3d4a63", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
+const M: Partial<Look> = { gender: "male", body: "knight", outfit: "#3f6a52" };
 const SETS: Record<string, Look[]> = {
   f1: [
     { ...BASE, hairStyle: "long", extra: "studs" },

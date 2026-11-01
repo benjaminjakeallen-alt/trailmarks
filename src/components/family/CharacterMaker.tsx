@@ -40,6 +40,7 @@ import {
   SKIN_TONES,
   lookOf,
   randomLook,
+  tone,
   type Look,
 } from "@/lib/look";
 import { HAPTICS, haptic } from "@/lib/motion";
@@ -53,7 +54,11 @@ const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPre
 const TABS = ["Body", "Face", "Hair", "Outfit", "Hat", "Extras"] as const;
 type Tab = (typeof TABS)[number];
 
-const LIGHT = new Set(["#ececec", "#f2ece0", "#f8d9c0", "#e6c77f", "#f5c542"]);
+/** Light swatches get a dark check mark. */
+const isLight = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 170;
+};
 
 function Swatches({ label, colors, value, onPick }: { label: string; colors: string[]; value: string; onPick: (c: string) => void }) {
   return (
@@ -74,7 +79,7 @@ function Swatches({ label, colors, value, onPick }: { label: string; colors: str
               }`}
               style={{ background: c }}
             >
-              {on && <CheckIcon size={16} weight="bold" color={LIGHT.has(c) ? "#0e1b1f" : "#fff"} />}
+              {on && <CheckIcon size={16} weight="bold" color={isLight(c) ? "#0e1b1f" : "#fff"} />}
             </button>
           );
         })}
@@ -280,7 +285,7 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
             />
             <Swatches
               label="Top color"
-              colors={[me.color, ...OUTFIT_COLORS.filter((c) => c !== me.color)]}
+              colors={[tone(me.color), ...OUTFIT_COLORS.filter((c) => c !== tone(me.color))]}
               value={look.outfit}
               onPick={(outfit) => set({ outfit })}
             />
