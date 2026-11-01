@@ -125,6 +125,7 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
   const me = members.find((m) => m.userId === viewer?.userId) ?? viewer;
   const [look, setLook] = useState<Look | null>(me ? lookOf(me) : null);
   const [tab, setTab] = useState<Tab>("Body");
+  const [mix, setMix] = useState(() => Boolean(look && look.legs !== look.body));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -216,7 +217,6 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
                 })
               }
             />
-            <Choices label="Outfit style" options={BODIES} value={look.body} labels={BODY_LABELS} onPick={(body) => set({ body, hat: false })} />
             <Choices label="Size" options={SIZES} value={look.size} labels={SIZE_LABELS} onPick={(size) => set({ size })} />
             <Choices label="Build" options={BUILDS} value={look.build} labels={BUILD_LABELS} onPick={(build) => set({ build })} />
           </>
@@ -250,13 +250,38 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
         )}
         {tab === "Outfit" && (
           <>
+            <Choices
+              label="Wear"
+              options={["full", "mix"] as const}
+              value={mix ? "mix" : "full"}
+              labels={{ full: "Full costume", mix: "Mix & match" }}
+              onPick={(v) => {
+                setMix(v === "mix");
+                if (v === "full") set({ legs: look.body });
+              }}
+            />
+            {mix ? (
+              <>
+                <Choices label="Top" options={BODIES} value={look.body} labels={BODY_LABELS} onPick={(body) => set({ body, hat: false })} />
+                <Choices label="Bottoms" options={BODIES} value={look.legs} labels={BODY_LABELS} onPick={(legs) => set({ legs })} />
+              </>
+            ) : (
+              <Choices label="Costume" options={BODIES} value={look.body} labels={BODY_LABELS} onPick={(body) => set({ body, legs: body, hat: false })} />
+            )}
+            <Choices
+              label="Cape"
+              options={["on", "off"] as const}
+              value={look.cape ? "on" : "off"}
+              labels={{ on: "Cape on", off: "No cape" }}
+              onPick={(v) => set({ cape: v === "on" })}
+            />
             <Swatches
-              label="Top"
+              label="Top color"
               colors={[me.color, ...OUTFIT_COLORS.filter((c) => c !== me.color)]}
               value={look.outfit}
               onPick={(outfit) => set({ outfit })}
             />
-            {HAS_PANTS[look.body] && <Swatches label="Pants" colors={PANTS_COLORS} value={look.pants} onPick={(pants) => set({ pants })} />}
+            {HAS_PANTS[look.legs] && <Swatches label="Pants color" colors={PANTS_COLORS} value={look.pants} onPick={(pants) => set({ pants })} />}
           </>
         )}
         {tab === "Extras" && (

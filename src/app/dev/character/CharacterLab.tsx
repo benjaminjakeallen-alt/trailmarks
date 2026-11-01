@@ -6,7 +6,7 @@ import type { Look } from "@/lib/look";
 
 const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPreview"), { ssr: false });
 
-const BASE: Look = { gender: "female", hairStyle: "long", facialHair: "none", extra: "none", body: "rogue", hat: false, skin: "#f1bf98", hair: "#8a5532", outfit: "#2f7fd6", pants: "#3a4a6b", size: "adult", build: "normal", glasses: "none", headwear: "none", gear: "none" };
+const BASE: Look = { gender: "female", hairStyle: "long", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: true, hat: false, skin: "#f1bf98", hair: "#8a5532", outfit: "#2f7fd6", pants: "#3a4a6b", size: "adult", build: "normal", glasses: "none", headwear: "none", gear: "none" };
 const M: Partial<Look> = { gender: "male", body: "knight", outfit: "#3bb54a" };
 const SETS: Record<string, Look[]> = {
   f1: [
@@ -18,6 +18,12 @@ const SETS: Record<string, Look[]> = {
     { ...BASE, hairStyle: "braid", hair: "#c58a4f" },
     { ...BASE, hairStyle: "curly", hair: "#231a17", skin: "#5f3b27" },
     { ...BASE, hairStyle: "pixie", extra: "watch" },
+  ],
+  bald: [
+    { ...BASE, ...M, body: "rogue", hairStyle: "bald" },
+    { ...BASE, ...M, body: "barbarian", hairStyle: "bald" },
+    { ...BASE, ...M, body: "knight", hairStyle: "bald" },
+    { ...BASE, ...M, body: "mage", hairStyle: "bald" },
   ],
   fun: [
     { ...BASE, headwear: "party", outfit: "#e45b8a" },
@@ -45,7 +51,17 @@ const SETS: Record<string, Look[]> = {
     { ...BASE, ...M, hairStyle: "manbun", facialHair: "beard", hair: "#4f3324" },
   ],
 };
-const LOOKS: Look[] = SETS[(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("set")) || "f1"] ?? SETS.f1;
+SETS.mix = [
+  { ...BASE, gender: "male", hairStyle: "bald", body: "rogue", legs: "rogue" },
+  { ...BASE, gender: "male", hairStyle: "bald", body: "barbarian", legs: "barbarian" },
+  { ...BASE, gender: "female", hairStyle: "bald" as Look["hairStyle"], body: "mage", legs: "mage" },
+  { ...BASE, gender: "male", hairStyle: "neat", body: "knight", legs: "rogue", cape: false },
+  { ...BASE, gender: "female", hairStyle: "ponytail", body: "mage", legs: "barbarian", cape: false },
+  { ...BASE, gender: "male", hairStyle: "tousled", body: "barbarian", legs: "knight" },
+];
+const pick = (SETS[(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("set")) || "f1"] ?? SETS.f1);
+// Every set but "mix" wears full costumes.
+const LOOKS: Look[] = pick === SETS.mix ? pick : pick.map((l) => ({ ...l, legs: l.body }));
 
 function Portraits() {
   const [urls, setUrls] = useState<string[]>([]);

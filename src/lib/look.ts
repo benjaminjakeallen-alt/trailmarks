@@ -102,7 +102,12 @@ export interface Look {
   facialHair: FacialHair;
   /** Jewelry and finishing touches. */
   extra: Extra;
+  /** The top half of the outfit (torso and arms) and its hat. */
   body: Body;
+  /** The bottom half (legs): the same style for a full costume, or mix and match. */
+  legs: Body;
+  /** Wear the outfit's cape. */
+  cape: boolean;
   /** The body's own hat (bear hat, helmet, wizard hat); the explorer has none. */
   hat: boolean;
   skin: string;
@@ -189,6 +194,8 @@ export function defaultLook(member: Pick<Member, "userId" | "color">): Look {
     facialHair: BODY_HAIR[body].facial,
     extra: "none",
     body,
+    legs: body,
+    cape: true,
     hat: false,
     skin: SKIN_TONES[(h >>> 3) % SKIN_TONES.length],
     hair: HAIR_COLORS[(h >>> 7) % 6],
@@ -212,7 +219,10 @@ export function randomLook(): Look {
     hairStyle: any(HAIR_FOR[gender]),
     facialHair: gender === "male" && Math.random() < 0.5 ? any(FACIAL_HAIR) : "none",
     extra: Math.random() < 0.5 ? "none" : any(EXTRAS_FOR[gender]),
-    body: any(BODIES),
+    ...(() => {
+      const body = any(BODIES);
+      return { body, legs: Math.random() < 0.6 ? body : any(BODIES), cape: Math.random() < 0.6 };
+    })(),
     hat: headwear === "none" && Math.random() < 0.3,
     skin: any(SKIN_TONES),
     hair: any(HAIR_COLORS),
@@ -247,6 +257,8 @@ export function parseLook(value: unknown, fallback: Look): Look {
     facialHair: gender === "male" ? facialHair : "none",
     extra: one(EXTRAS, v.extra, fallback.extra),
     body,
+    legs: one(BODIES, v.legs, body),
+    cape: typeof v.cape === "boolean" ? v.cape : true,
     hat: headwear === "none" && (typeof v.hat === "boolean" ? v.hat : fallback.hat),
     skin: hex(v.skin, fallback.skin),
     hair: hex(v.hair, fallback.hair),

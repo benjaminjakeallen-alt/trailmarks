@@ -5,7 +5,7 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
 import { BUILD_WIDTH, SIZE_SCALE } from "@/lib/look";
 import { gear, glasses, headwear } from "@/components/stage3d/accessories";
-import { SCULPTED, builtFacialHair, builtHair, extraPieces, lashes, skull, skullColor, splitHead, transplant, type HeadShape } from "@/components/stage3d/hair";
+import { SCULPTED, builtFacialHair, builtHair, extraPieces, fullSkull, lashes, skull, skullColor, splitHead, transplant, type HeadShape } from "@/components/stage3d/hair";
 
 /**
  * The family's 3D characters: KayKit's CC0 adventurers (built into public/3d by
@@ -114,14 +114,29 @@ function recolor(img: CanvasImageSource & { width: number; height: number }, bod
     }
   };
   const cells = CELLS[body];
+  let skinOut = "";
   paint(cells.skin, look.skin);
   paint(cells.hair, look.hair);
+  // The painted skin, as it actually comes out: the bald scalp is matched to it.
+  {
+    const [cx, cy] = cells.skin[0];
+    const d = ctx.getImageData(cx * cw + cw * 0.2, cy * ch + ch * 0.55, cw * 0.5, ch * 0.35).data;
+    let r = 0, g = 0, b = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      r += d[i];
+      g += d[i + 1];
+      b += d[i + 2];
+    }
+    const n = d.length / 4 || 1;
+    skinOut = new THREE.Color(r / n / 255, g / n / 255, b / n / 255).getHexString();
+  }
   paint(cells.outfit, look.outfit);
   paint(cells.pants, look.pants);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.flipY = false;
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.userData.skin = `#${skinOut}`;
   tex.magFilter = THREE.LinearFilter;
   textures.set(key, tex);
   return tex;
@@ -192,7 +207,14 @@ export class Actor {
     this.handR = model.getObjectByName("handslotr") ?? model.getObjectByName("handslot.r") ?? model;
     this.handL = model.getObjectByName("handslotl") ?? model.getObjectByName("handslot.l") ?? model;
     this.head = model.getObjectByName("head");
-    const box = new THREE.Box3().setFromObject(model);
+    // Only what shows: a hidden wizard hat or helmet mustn't make them shorter.
+    const box = new THREE.Box3();
+    model.updateMatrixWorld(true);
+    model.traverse((o) => {
+      let visible = o.visible;
+      for (let p = o.parent; p && visible; p = p.parent) visible = p.visible;
+      if ((o as THREE.Mesh).isMesh && visible && !o.userData.headwear && !/_Cape$/.test(o.name)) box.expandByObject(o);
+    });
     this.height = Math.max(1, box.max.y - Math.max(0, box.min.y));
   }
 
@@ -473,29 +495,57 @@ function headShape(mesh: THREE.SkinnedMesh | null, k: number): HeadShape | null 
   const toBone = mesh.bindMatrix.clone().premultiply(mesh.skeleton.boneInverses[i]);
   center.applyMatrix4(toBone);
   const scale = new THREE.Vector3().setFromMatrixScale(toBone).x;
-  return { x: center.x / k, y: center.y / k, z: center.z / k, r: (r * scale) / k };
+  // The whole head, ears and nose aside: a little narrower than the box.
+  const mid = box.getCenter(new THREE.Vector3()).applyMatrix4(toBone);
+  const u = scale / k;
+  return {
+    x: center.x / k,
+    y: center.y / k,
+    z: center.z / k,
+    r: r * u,
+    cy: mid.y / k,
+    rx: size.x * 0.4 * u,
+    ry: size.y * 0.47 * u,
+    rz: size.z * 0.42 * u,
+  };
+}
+
+/** The first mesh in a model whose name matches. */
+function meshIn(gltf: GLTF | null, name: RegExp): THREE.SkinnedMesh | null {
+  let found: THREE.SkinnedMesh | null = null;
+  gltf?.scene.traverse((o) => {
+    if (!found && (o as THREE.Mesh).isMesh && name.test(o.name)) found = o as THREE.SkinnedMesh;
+  });
+  return found;
+}
+
+/** A body's palette, recolored for this person (cached by body and colors). */
+function paletteFor(gltf: GLTF, body: Body, look: Look) {
+  const src = meshIn(gltf, /_(Body|Head)$/)?.material as THREE.MeshStandardMaterial | undefined;
+  const img = src?.map?.image as (CanvasImageSource & { width: number; height: number }) | undefined;
+  return new THREE.MeshStandardMaterial({ map: img ? recolor(img, body, look) : src?.map ?? null, roughness: 0.85, metalness: 0 });
 }
 
 /** Build one person's character. */
 export async function makeActor(member: Member, look: Look): Promise<Actor> {
-  // Sculpted hair (and the woodsman's beard) come from whichever body wore them.
+  // Everyone wears one clean face (the explorer's for women, the knight's for men);
+  // sculpted hair, the woodsman's beard and a different style's legs come from
+  // whichever body has them. All four share one skeleton, so any part fits any body.
+  const faceFrom: Body = look.gender === "female" ? "rogue" : "knight";
   const hairFrom = SCULPTED[look.hairStyle];
-  const [body, moves, hairSrc, beardSrc] = await Promise.all([
+  const [body, moves, faceSrc, hairSrc, beardSrc, legsSrc] = await Promise.all([
     loadBody(look.body),
     loadMoves(),
+    loadBody(faceFrom),
     hairFrom ? loadBody(hairFrom) : null,
     look.facialHair === "beard" ? loadBody("barbarian") : null,
+    look.legs !== look.body ? loadBody(look.legs) : null,
   ]);
   const model = SkeletonUtils.clone(body.scene);
-  const headPiece = (gltf: GLTF | null) => {
-    let found: THREE.BufferGeometry | null = null;
-    gltf?.scene.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh && /_Head$/.test(o.name)) found = (o as THREE.Mesh).geometry;
-    });
-    return found ? splitHead(found) : null;
-  };
-  let headMesh: THREE.SkinnedMesh | null = null;
-  let material: THREE.MeshStandardMaterial | null = null;
+  const material = paletteFor(body, look.body, look);
+  const faceMaterial = faceFrom === look.body ? material : paletteFor(faceSrc, faceFrom, look);
+  let ownHead: THREE.SkinnedMesh | null = null;
+  const ownLegs: THREE.SkinnedMesh[] = [];
   model.traverse((o) => {
     const mesh = o as THREE.SkinnedMesh;
     if (!mesh.isMesh) return;
@@ -504,33 +554,54 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
       mesh.userData.headwear = true;
     }
     if (/Mug/.test(mesh.name) || /Mug/.test(mesh.parent?.name ?? "")) mesh.visible = false;
+    if (/_Cape$/.test(mesh.name) || /_Cape$/.test(mesh.parent?.name ?? "")) mesh.visible = look.cape;
     if (/_Head$/.test(mesh.name)) {
-      // Everyone starts bald; their hairstyle goes on top.
-      mesh.geometry = splitHead(mesh.geometry).bald;
-      headMesh = mesh;
+      // Kept for its skeleton binding; the shared face replaces it.
+      mesh.visible = false;
+      ownHead = mesh;
+    }
+    if (/_Leg(Left|Right)$/.test(mesh.name) && legsSrc) {
+      mesh.visible = false;
+      ownLegs.push(mesh);
     }
     const part = /_(Body)$/.test(mesh.name) ? "torso" : /_(ArmLeft|ArmRight|LegLeft|LegRight)$/.test(mesh.name) ? "limbs" : null;
     if (part) reshape(mesh, BUILD_WIDTH[look.build][part]);
     mesh.castShadow = true;
     mesh.frustumCulled = false;
-    if (!material) {
-      const src = mesh.material as THREE.MeshStandardMaterial;
-      const img = src.map?.image as (CanvasImageSource & { width: number; height: number }) | undefined;
-      material = new THREE.MeshStandardMaterial({
-        map: img ? recolor(img, look.body, look) : src.map,
-        roughness: 0.85,
-        metalness: 0,
-      });
-    }
     mesh.material = material;
   });
-  const head = headMesh as THREE.SkinnedMesh | null;
-  if (head?.parent) {
-    for (const piece of [headPiece(hairSrc)?.hair, headPiece(beardSrc)?.beard]) {
+
+  // Mix and match: another style's legs, in that style's own (recolored) palette.
+  if (legsSrc) {
+    const legMaterial = paletteFor(legsSrc, look.legs, look);
+    for (const own of ownLegs) {
+      const side = /Left$/.test(own.name) ? "Left" : "Right";
+      const src = meshIn(legsSrc, new RegExp(`_Leg${side}$`));
+      if (!src || !own.parent) continue;
+      const leg = transplant(src.geometry, own);
+      leg.material = legMaterial;
+      leg.name = `Mixed_Leg${side}`;
+      reshape(leg, BUILD_WIDTH[look.build].limbs);
+      own.parent.add(leg);
+    }
+  }
+
+  // The face, then hair and beard on it.
+  let head: THREE.SkinnedMesh | null = null;
+  const own = ownHead as THREE.SkinnedMesh | null;
+  const faceGeo = meshIn(faceSrc, /_Head$/)?.geometry;
+  if (own?.parent && faceGeo) {
+    head = transplant(splitHead(faceGeo).bald, own);
+    head.material = faceMaterial;
+    head.name = "Face";
+    own.parent.add(head);
+    for (const piece of [meshIn(hairSrc, /_Head$/), meshIn(beardSrc, /_Head$/)]) {
       if (!piece) continue;
-      const m = transplant(piece, head);
+      const parts = splitHead(piece.geometry);
+      const m = transplant(piece === meshIn(beardSrc, /_Head$/) ? parts.beard : parts.hair, own);
+      m.material = faceMaterial;
       m.userData.hair = true;
-      head.parent.add(m);
+      own.parent.add(m);
     }
   }
   const actor = new Actor(model, moves.animations, member, look);
@@ -565,11 +636,14 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
   };
   const shape = headShape(head, actor.height / 1.55);
   if (shape) {
-    onBone("head", skull(shape, skullColor(look.hairStyle, look.hair, look.skin)));
+    // The scalp in the face's own painted skin tone, so the two meet without a seam.
+    const painted = ((head?.material as THREE.MeshStandardMaterial | undefined)?.map?.userData.skin as string | undefined) ?? look.skin;
+    onBone("head", fullSkull(shape, painted));
+    if (look.hairStyle !== "bald" && look.hairStyle !== "mohawk") onBone("head", skull(shape, skullColor(look.hairStyle, look.hair, look.skin)));
     onBone("head", builtHair(look.hairStyle, look.hair, shape), "hair");
     onBone("head", builtFacialHair(look.facialHair, look.hair, look.skin, shape));
   }
-  if (look.gender === "female") onBone("head", lashes());
+  if (look.gender === "female" && shape) onBone("head", lashes(shape));
   onBone("head", extras.head);
   onBone("chest", extras.chest);
   onBone("lowerarml", extras.arm);

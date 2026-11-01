@@ -103,6 +103,24 @@ export interface HeadShape {
   y: number;
   z: number;
   r: number;
+  /** The whole head as an ellipsoid (center and radii), for the skull underneath. */
+  cy: number;
+  rx: number;
+  ry: number;
+  rz: number;
+}
+
+/**
+ * The head's sculpted hair also formed the back and sides of the skull, so a
+ * bald head has holes there. A smooth skin-colored head underneath fills them;
+ * the face sits just in front of it.
+ */
+export function fullSkull(head: HeadShape, skin: string) {
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 18), new THREE.MeshStandardMaterial({ color: skin, roughness: 0.85, metalness: 0 }));
+  ball.scale.set(head.rx, head.ry, head.rz);
+  ball.position.set(head.x, head.cy, head.z - head.rz * 0.12);
+  ball.castShadow = true;
+  return ball;
 }
 
 /**
@@ -297,12 +315,15 @@ export function builtFacialHair(kind: FacialHair, color: string, skin: string, h
 }
 
 /** Eyelashes: a little flick at each eye's outer corner. */
-export function lashes(): THREE.Object3D {
+export function lashes(head: HeadShape): THREE.Object3D {
   const g = new THREE.Group();
+  // Just under the brows, at the outer corners of the eyes, on the face's front.
+  const y = head.y - 0.07;
+  const z = head.z + head.rz * 0.86;
   for (const side of [-1, 1]) {
     for (let i = 0; i < 2; i++) {
       const lash = box(0.05, 0.014, 0.012, "#1d1d22");
-      lash.position.set(side * (0.17 + i * 0.03), HEAD.eyeY + 0.05 + i * 0.012, HEAD.faceZ - 0.01 - i * 0.02);
+      lash.position.set(side * (head.rx * 0.5 + i * 0.03), y + i * 0.012, z - i * 0.02);
       lash.rotation.z = side * (0.5 + i * 0.3);
       g.add(lash);
     }

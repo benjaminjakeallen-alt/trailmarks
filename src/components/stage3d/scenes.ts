@@ -32,7 +32,7 @@ function ring(i: number, n: number, r: number, cx = 0, cz = 0): Spot {
 const middleOut = (i: number, n: number) => [2, 1, 3, 0, 4].filter((s) => s < Math.max(n, 5))[i % 5];
 
 /** The parts of a guest's look every guest shares. */
-const GUEST: Look = { gender: "male", hairStyle: "tousled", facialHair: "none", extra: "none", body: "rogue", hat: false, skin: "#f1bf98", hair: "#4f3324", outfit: "#2f7fd6", pants: "#2b2b30", size: "adult", build: "normal", glasses: "none", headwear: "none", gear: "none" };
+const GUEST: Look = { gender: "male", hairStyle: "tousled", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: false, hat: false, skin: "#f1bf98", hair: "#4f3324", outfit: "#2f7fd6", pants: "#2b2b30", size: "adult", build: "normal", glasses: "none", headwear: "none", gear: "none" };
 
 /** Something worn on the head, sitting on top of it. */
 function wear(actor: Actor, object: THREE.Object3D, y = 0.72) {
@@ -925,7 +925,7 @@ function floridaScene(): Scene {
         kit.floor.add(l);
         lights.push(l);
       }
-      cop = await kit.guest({ ...GUEST, hairStyle: "buzz", facialHair: "mustache", body: "knight", skin: "#c98f68", hair: "#2b211c", outfit: "#1f2d4d" }, "Officer");
+      cop = await kit.guest({ ...GUEST, hairStyle: "buzz", facialHair: "mustache", body: "knight", legs: "knight", skin: "#c98f68", hair: "#2b211c", outfit: "#1f2d4d" }, "Officer");
       wear(cop, policeCap(), 0.66);
       cop.root.position.set(lapAt(-1).x, 0, lapAt(-1).z);
       cop.root.visible = false;
