@@ -566,3 +566,129 @@ export function saguaro(color = "#3e9e5a") {
   g.add(at(ball(0.06, "#ff7aa8", { detail: 0 }), 0, 1.43, 0));
   return g;
 }
+
+/**
+ * Delicate Arch: one continuous piece of sandstone swept up the slender,
+ * pinched left leg, over a heavy lintel and down the broad right leg; banded
+ * in Entrada sandstone colors, lumpy like weathered rock, standing on a pale
+ * slickrock bowl with the snowy La Sal Mountains behind.
+ */
+export function delicateArch() {
+  const g = new THREE.Group();
+
+  // The arch's centerline: left foot, up, over, down to the right foot.
+  const path = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-0.78, -0.1, 0),
+    new THREE.Vector3(-0.8, 0.55, 0),
+    new THREE.Vector3(-0.74, 1.25, 0.02),
+    new THREE.Vector3(-0.55, 1.85, 0),
+    new THREE.Vector3(-0.1, 2.12, 0),
+    new THREE.Vector3(0.38, 2.02, 0),
+    new THREE.Vector3(0.7, 1.6, 0),
+    new THREE.Vector3(0.82, 0.9, 0),
+    new THREE.Vector3(0.84, -0.1, 0),
+  ]);
+  // How thick it is along the way (half-width across, half-depth front to back):
+  // a thin "waist" low on the left leg, a heavy top, a fat right leg.
+  // Its signature: a slender left leg pinched to a narrow "waist" near the
+  // bottom, a heavy lintel, and a broad, blocky right leg.
+  const waist = (t: number) => 1 - 0.62 * Math.exp(-(((t - 0.12) / 0.07) ** 2));
+  const left = (t: number) => 0.72 + 0.28 * THREE.MathUtils.smoothstep(t, 0.15, 0.4);
+  const width = (t: number) => {
+    const top = 1 + 0.6 * Math.exp(-(((t - 0.48) / 0.14) ** 2));
+    const right = 1 + 0.95 * THREE.MathUtils.smoothstep(t, 0.58, 0.95);
+    return 0.2 * waist(t) * left(t) * top * right;
+  };
+  const depth = (t: number) =>
+    (0.24 + 0.1 * Math.exp(-(((t - 0.5) / 0.2) ** 2)) + 0.1 * THREE.MathUtils.smoothstep(t, 0.65, 1)) * (0.55 + 0.45 * waist(t));
+
+  const SEG = 64;
+  const RING = 12;
+  const pos: number[] = [];
+  const col: number[] = [];
+  const idx: number[] = [];
+  // Entrada sandstone in sun: pale salmon at the foot, glowing orange, rust at the top.
+  const bands = [new THREE.Color("#f3c39b"), new THREE.Color("#ec9058"), new THREE.Color("#e07a43"), new THREE.Color("#d46a37")];
+  const tmp = new THREE.Color();
+  const noise = (a: number, b: number) => Math.sin(a * 12.9 + b * 4.1) * 0.5 + Math.sin(a * 5.3 - b * 7.7) * 0.5;
+  for (let i = 0; i <= SEG; i++) {
+    const t = i / SEG;
+    const p = path.getPointAt(t);
+    const tan = path.getTangentAt(t);
+    // Across the arch (in its plane) and front-to-back.
+    const across = new THREE.Vector3(-tan.y, tan.x, 0).normalize();
+    const front = new THREE.Vector3(0, 0, 1);
+    for (let j = 0; j < RING; j++) {
+      const a = (j / RING) * Math.PI * 2;
+      const bump = 1 + 0.12 * noise(t * 9, j);
+      const v = p
+        .clone()
+        .addScaledVector(across, Math.cos(a) * width(t) * bump)
+        .addScaledVector(front, Math.sin(a) * depth(t) * bump);
+      pos.push(v.x, v.y, v.z);
+      // Bands by height: pale at the foot, rich orange, darker rust on top.
+      const h = THREE.MathUtils.clamp(v.y / 2.2, 0, 1);
+      const k = h * (bands.length - 1);
+      const lo = Math.floor(k);
+      tmp.lerpColors(bands[lo], bands[Math.min(bands.length - 1, lo + 1)], k - lo);
+      tmp.offsetHSL(0, 0, 0.03 * noise(v.y * 6, j));
+      col.push(tmp.r, tmp.g, tmp.b);
+    }
+  }
+  for (let i = 0; i < SEG; i++) {
+    for (let j = 0; j < RING; j++) {
+      const a = i * RING + j;
+      const b = i * RING + ((j + 1) % RING);
+      const c = (i + 1) * RING + j;
+      const d = (i + 1) * RING + ((j + 1) % RING);
+      idx.push(a, c, b, b, c, d);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  // A little warm glow, so the shaded side still reads as sunlit orange rock.
+  const rock = new THREE.Mesh(
+    geo,
+    new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true, emissive: "#6a2e12", emissiveIntensity: 0.45 }),
+  );
+  rock.castShadow = true;
+  rock.receiveShadow = true;
+  g.add(rock);
+
+  // A cap of slightly darker rock on top of the span, like the real one's lip.
+  const cap = ball(0.34, "#c9653a");
+  cap.scale.set(1.5, 0.45, 1.0);
+  cap.position.set(-0.15, 2.28, 0);
+  g.add(cap);
+
+  // Slickrock: a pale, smooth sandstone bowl it stands on, with rounded humps.
+  const slick = "#e2b48d";
+  const base = ball(1.6, slick, { detail: 2 });
+  base.scale.set(1.05, 0.12, 0.62);
+  base.position.y = -0.06;
+  g.add(base);
+  for (const [x, z, r] of [[-1.35, 0.3, 0.45], [1.4, 0.25, 0.4], [0.2, -0.55, 0.35]] as const) {
+    const hump = ball(r, "#d9a77f", { detail: 2 });
+    hump.scale.y = 0.4;
+    hump.position.set(x, 0.02, z);
+    g.add(hump);
+  }
+
+  // The La Sal Mountains, far behind and snow-capped.
+  const range = new THREE.Group();
+  for (const [x, h, r] of [[-1.7, 0.85, 0.6], [-0.9, 1.15, 0.7], [0.1, 0.95, 0.62], [1.1, 1.05, 0.66], [1.9, 0.8, 0.55]] as const) {
+    // Far off: hazy blue-grey, so they sit behind the arch instead of beside it.
+    const peak = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), mat("#a9b8cc"));
+    peak.position.set(x, h / 2, 0);
+    const snow = new THREE.Mesh(new THREE.ConeGeometry(r * 0.38, h * 0.38, 7), mat("#f4f7fb"));
+    snow.position.set(x, h - h * 0.19, 0.01);
+    range.add(peak, snow);
+  }
+  range.position.set(0, 0, -0.95);
+  range.scale.setScalar(0.62);
+  g.add(range);
+  return g;
+}

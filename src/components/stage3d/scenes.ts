@@ -221,23 +221,15 @@ function utahScene(): Scene {
   return {
     slots: 5,
     build(kit) {
-      const arch = new THREE.Group();
-      const rock = "#c8643b";
-      const left = P.box(0.5, 1.5, 0.55, rock);
-      const right = P.box(0.5, 1.5, 0.55, rock);
-      left.position.x = -0.95;
-      right.position.x = 0.95;
-      const top = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.27, 6, 14, Math.PI), P.mat(rock));
-      top.position.y = 1.45;
-      top.castShadow = true;
-      arch.add(left, right, top);
-      kit.place(arch, 0.2, -1.55);
-      kit.place(P.box(0.7, 0.5, 0.5, "#b4552f"), -1.7, -1.2, { yaw: 0.4 });
-      kit.place(P.box(0.5, 0.8, 0.5, "#c8643b"), 1.9, -0.9, { yaw: -0.3 });
+      // Delicate Arch on its slickrock bowl, the La Sals behind.
+      const arch = P.delicateArch();
+      kit.place(arch, 0.1, -1.45, { scale: 1.25 });
+      // A scrubby juniper on the slickrock.
+      kit.place(P.tree("round", "#5f7d3c"), 2.15, 0.2, { scale: 0.45 });
       kit.place(P.tufts(14, 2.1, ["#c9a46a", "#d8b37a"]), 0, 0.3);
-      for (let i = 0; i < 5; i++) kit.place(P.lawnChair(stripes[i]), seatX(i), 0.18, { scale: 0.92 });
+      for (let i = 0; i < 5; i++) kit.place(P.lawnChair(stripes[i]), seatX(i), 0.62, { scale: 0.92 });
     },
-    spot: (i, n) => ({ x: seatX(middleOut(i, n)), z: 0.32, yaw: 0 }),
+    spot: (i, n) => ({ x: seatX(middleOut(i, n)), z: 0.76, yaw: 0 }),
     async role(actor, slot, kit, clock) {
       const cup = P.bigCup(cups[slot % 5]);
       await beat(clock, 0.2, 0.4);
