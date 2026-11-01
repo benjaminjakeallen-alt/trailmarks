@@ -14,8 +14,6 @@ import type { Member } from "@/lib/types";
 export const TILT = THREE.MathUtils.degToRad(52);
 /** Characters stand this many stage units tall. */
 const ACTOR_HEIGHT = 1.55;
-/** KayKit props are modeled for characters about 2.4 units tall; ours are 1.7. */
-const PROP_SCALE = 0.72;
 /** The stage floor reaches this far from its center, in stage units. */
 export const STAGE_RADIUS = 2.4;
 
@@ -64,8 +62,15 @@ export interface StageKit {
   place(object: THREE.Object3D, x: number, z: number, opts?: { yaw?: number; scale?: number; y?: number }): THREE.Object3D;
   /** A character who isn't family (a singer, a police officer), placed and updated with the rest. */
   guest(look: Look, name: string): Promise<Actor>;
-  /** Copy of a KayKit prop by name, sized in stage units. */
-  prop(name: string, scale?: number): Promise<THREE.Object3D>;
+  /**
+   * Copy of a KayKit prop by name, sized to real dimensions in stage units (a
+   * person is 1.55 tall): `w` across, `d` deep, `h` tall. One of them scales it
+   * evenly; `w` with `h` sets the footprint and the height separately.
+   */
+  prop(name: string, fit: { w?: number; d?: number; h?: number }): Promise<THREE.Object3D>;
+  /** Things people walk around (circles on the floor). */
+  obstacles: { x: number; z: number; r: number }[];
+  block(x: number, z: number, r: number): void;
 }
 
 export interface Scene {
@@ -223,6 +228,7 @@ export class Stage {
 
   private makeKit(): StageKit {
     const floor = this.floor;
+    const obstacles: StageKit["obstacles"] = [];
     return {
       floor,
       fx: this.fx,
@@ -245,11 +251,16 @@ export class Stage {
         if (this.disposed) actor.dispose();
         return actor;
       },
-      prop: async (name, scale = 1) => {
+      prop: async (name, fit) => {
         const object = await prop(name);
-        object.scale.multiplyScalar(scale * PROP_SCALE);
+        const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+        const even = fit.w ? fit.w / size.x : fit.d ? fit.d / size.z : fit.h ? fit.h / size.y : 1;
+        const tall = fit.h && (fit.w || fit.d) ? fit.h / size.y : even;
+        object.scale.set(even, tall, even);
         return object;
       },
+      obstacles,
+      block: (x, z, r) => void obstacles.push({ x, z, r }),
     };
   }
 

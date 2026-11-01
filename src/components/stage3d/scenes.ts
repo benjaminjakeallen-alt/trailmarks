@@ -28,6 +28,58 @@ function ring(i: number, n: number, r: number, cx = 0, cz = 0): Spot {
   return { x, z, yaw: Math.atan2(cx - x, cz - z) };
 }
 
+/**
+ * Seats around a table, everyone facing in. `angles` in radians: 0 is the side
+ * nearest the viewer, π the far side.
+ */
+function around(cx: number, cz: number, r: number, angles: number[]): Spot[] {
+  return angles.map((a) => {
+    const x = cx + Math.sin(a) * r;
+    const z = cz + Math.cos(a) * r;
+    return { x, z, yaw: Math.atan2(cx - x, cz - z) };
+  });
+}
+
+/** Real sizes for the KayKit props (the packs each use their own scale). */
+const TABLE = { w: 1.25, h: 0.6 };
+const CHAIR = { h: 0.78 };
+const STOOL = { h: 0.36 };
+
+/**
+ * Walk to a spot, stepping around anything in the way (tables, crates, trees)
+ * instead of through it.
+ */
+async function walkAround(actor: Actor, kit: StageKit, clock: Clock, x: number, z: number, opts?: { run?: boolean; then?: Clip }) {
+  const path: [number, number][] = [];
+  let from = new THREE.Vector2(actor.root.position.x, actor.root.position.z);
+  const to = new THREE.Vector2(x, z);
+  for (let hop = 0; hop < 3; hop++) {
+    const seg = to.clone().sub(from);
+    const len = seg.length();
+    if (len < 1e-3) break;
+    const dir = seg.clone().divideScalar(len);
+    // The first obstacle the straight line passes through.
+    let hit: { o: StageKit["obstacles"][number]; t: number } | null = null;
+    for (const o of kit.obstacles) {
+      const c = new THREE.Vector2(o.x, o.z);
+      const t = THREE.MathUtils.clamp(c.clone().sub(from).dot(dir), 0, len);
+      const closest = from.clone().addScaledVector(dir, t);
+      const clearance = o.r + 0.22;
+      if (closest.distanceTo(c) < clearance && to.distanceTo(c) > o.r && (!hit || t < hit.t)) hit = { o, t };
+    }
+    if (!hit) break;
+    // Step out to the side of it, whichever side is closer.
+    const c = new THREE.Vector2(hit.o.x, hit.o.z);
+    const side = new THREE.Vector2(-dir.y, dir.x);
+    if (side.dot(from.clone().addScaledVector(dir, hit.t).sub(c)) < 0) side.negate();
+    const way = c.clone().addScaledVector(side, hit.o.r + 0.35);
+    path.push([way.x, way.y]);
+    from = way;
+  }
+  for (const [wx, wz] of path) await actor.walkTo(clock, wx, wz, { run: opts?.run, then: "Walking_A" });
+  await actor.walkTo(clock, x, z, opts);
+}
+
 /** Fill seats from the middle out, so two people sit together, not at the ends. */
 const middleOut = (i: number, n: number) => [2, 1, 3, 0, 4].filter((s) => s < Math.max(n, 5))[i % 5];
 
@@ -468,22 +520,21 @@ function nevadaScene(): Scene {
   let spinning = false;
   let win = false;
   const pot = new THREE.Group();
-  const seats: Spot[] = [
-    { x: 0.55, z: 0.15, yaw: Math.PI * 0.25 },
-    { x: 1.55, z: 0.05, yaw: -Math.PI * 0.25 },
-    { x: 1.05, z: -0.75, yaw: Math.PI },
-  ];
+  const T = { x: 1.05, z: -0.35 };
+  const seats = around(T.x, T.z, 0.88, [-1.2, 1.2, Math.PI]);
   return {
     slots: 5,
     async build(kit) {
       machine = P.slotMachine();
       kit.place(machine.object, -1.0, -0.9, { yaw: 0.35 });
-      const table = await kit.prop("table_round_A", 1.1);
-      kit.place(table, 1.05, -0.3);
-      const felt = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.02, 20), P.mat("#1f7a4a"));
-      felt.position.set(1.05, 0.59, -0.3);
+      kit.block(-1.0, -0.9, 0.4);
+      const table = await kit.prop("table_round_A", TABLE);
+      kit.place(table, T.x, T.z);
+      kit.block(T.x, T.z, TABLE.w / 2);
+      const felt = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.02, 20), P.mat("#1f7a4a"));
+      felt.position.set(T.x, TABLE.h + 0.01, T.z);
       kit.floor.add(felt);
-      pot.position.set(1.05, 0.61, -0.3);
+      pot.position.set(T.x, TABLE.h + 0.02, T.z);
       kit.floor.add(pot);
       for (let i = 0; i < 3; i++) {
         const stack = P.pokerChips(2 + i);
@@ -491,8 +542,8 @@ function nevadaScene(): Scene {
         pot.add(stack);
       }
       for (const s of seats) {
-        const stool = await kit.prop("chair_stool_wood", 1.05);
-        kit.place(stool, s.x - Math.sin(s.yaw ?? 0) * 0.18, s.z - Math.cos(s.yaw ?? 0) * 0.18);
+        const stool = await kit.prop("chair_stool_wood", STOOL);
+        kit.place(stool, s.x - Math.sin(s.yaw ?? 0) * 0.14, s.z - Math.cos(s.yaw ?? 0) * 0.14);
       }
       const sign = P.box(1.1, 0.35, 0.06, "#1d1d22");
       const lights = P.box(1.02, 0.25, 0.07, "#ffd34a", { emissive: "#ffb000" });
@@ -584,7 +635,7 @@ function arizonaScene(): Scene {
       kit.place(P.saguaro(), -1.95, 0.25, { scale: 1.0 });
       kit.place(P.saguaro("#4aa865"), 1.95, 0.55, { scale: 0.75, yaw: 1.2 });
       kit.place(P.saguaro(), 2.05, -0.75, { scale: 0.9, yaw: 0.5 });
-      void kit.prop("rocks_A", 0.6).then((c) => kit.place(c, -1.4, 1.1));
+      void kit.prop("rocks_A", { w: 0.7 }).then((c) => kit.place(c, -1.4, 1.1));
     },
     spot: (i) => ({ x: [-1.2, 1.4, -0.2, 0.9][i % 4], z: [0.55, 0.45, 0.9, 0.95][i % 4], yaw: 0 }),
     async role(actor, slot, kit, clock) {
@@ -637,7 +688,7 @@ function newMexicoScene(): Scene {
       kit.place(ship.object, 0, -0.3, { y: 2.5, scale: 0.85 });
       kit.place(P.saguaro(), -1.95, -0.7, { scale: 1.0 });
       kit.place(P.saguaro("#4aa865"), 2.0, -0.4, { scale: 0.85, yaw: 2 });
-      void kit.prop("rock_A", 0.7).then((c) => kit.place(c, 1.6, 1.0));
+      void kit.prop("rock_A", { w: 0.5 }).then((c) => kit.place(c, 1.6, 1.0));
       kit.place(P.tufts(12, 2.1, ["#c9a46a", "#b8955a"]), 0, 0.4);
     },
     spot: (i, n) => {
@@ -748,7 +799,7 @@ function idahoScene(): Scene {
       }
       fire = P.campfire();
       kit.place(fire.object, 1.55, 0.2, { scale: 0.8 });
-      void kit.prop("crate_potatoes", 1.1).then((c) => kit.place(c, 1.7, -0.9, { yaw: -0.3 }));
+      void kit.prop("crate_potatoes", { w: 0.8 }).then((c) => kit.place(c, 1.7, -0.9, { yaw: -0.3 }));
     },
     spot: (i) => (i === 4 ? { x: 1.3, z: 0.85, yaw: -0.5 } : { x: -1.3 + i * 0.75, z: 0.25 + (i % 2) * 0.3, yaw: 0 }),
     async role(actor, slot, kit, clock) {
@@ -784,7 +835,7 @@ function idahoScene(): Scene {
           }
         }
         // Up pops a potato! Hold it high, then toss it in the coals.
-        const spud = await kit.prop("food_ingredient_potato", 0.7);
+        const spud = await kit.prop("food_ingredient_potato", { w: 0.2 });
         actor.drop(spade);
         actor.hold(spud);
         actor.bounce(1);
@@ -823,28 +874,28 @@ function idahoScene(): Scene {
 
 function texasScene(): Scene {
   let pit: ReturnType<typeof P.smoker>;
-  const plate = new THREE.Vector3(0.95, 0.62, -0.1);
-  const seats: Spot[] = [
-    { x: 0.35, z: 0.25, yaw: Math.PI * 0.7 },
-    { x: 1.55, z: 0.25, yaw: -Math.PI * 0.7 },
-    { x: 0.95, z: -0.85, yaw: Math.PI },
-  ];
+  const plate = new THREE.Vector3(0.95, TABLE.h, -0.15);
+  const seats = around(plate.x, plate.z, 0.88, [-1.25, 1.25, Math.PI]);
   return {
     slots: 5,
     async build(kit) {
       pit = P.smoker();
       kit.place(pit.object, -1.15, -0.85, { yaw: 0.3 });
-      const table = await kit.prop("table_round_A", 1.15);
+      kit.block(-1.15, -0.85, 0.75);
+      const table = await kit.prop("table_round_A", TABLE);
       kit.place(table, plate.x, plate.z);
+      kit.block(plate.x, plate.z, TABLE.w / 2);
       for (const s of seats) {
-        const chair = await kit.prop("chair_A", 1.0);
-        kit.place(chair, s.x - Math.sin(s.yaw!) * 0.16, s.z - Math.cos(s.yaw!) * 0.16, { yaw: s.yaw! });
+        const chair = await kit.prop("chair_A", CHAIR);
+        kit.place(chair, s.x - Math.sin(s.yaw!) * 0.12, s.z - Math.cos(s.yaw!) * 0.12, { yaw: s.yaw! });
       }
       for (let i = 0; i < 3; i++) {
-        const dish = await kit.prop("plate", 1.2);
-        kit.place(dish, plate.x + Math.cos(i * 2.1) * 0.25, plate.z + Math.sin(i * 2.1) * 0.25, { y: plate.y });
-        const meat = await kit.prop("food_ingredient_steak", 1.4);
-        kit.place(meat, plate.x + Math.cos(i * 2.1) * 0.25, plate.z + Math.sin(i * 2.1) * 0.25, { y: plate.y + 0.03 });
+        const a = Math.PI + (i - 1) * 1.25;
+        const at = { x: plate.x + Math.sin(a) * 0.36, z: plate.z + Math.cos(a) * 0.36 };
+        const dish = await kit.prop("plate", { w: 0.32 });
+        kit.place(dish, at.x, at.z, { y: plate.y });
+        const meat = await kit.prop("food_ingredient_steak", { w: 0.24 });
+        kit.place(meat, at.x, at.z, { y: plate.y + 0.02 });
       }
       kit.place(P.saguaro(), -2.0, 0.55, { scale: 0.8 });
       kit.place(P.tufts(12, 2.1, ["#c9a46a", "#a8b25a"]), 0, 0.6);
@@ -876,7 +927,7 @@ function texasScene(): Scene {
       }
       await beat(clock, 0.1, 0.4);
       await actor.once(clock, "Sit_Chair_Down", "Sit_Chair_Idle");
-      const rib = await kit.prop("food_ingredient_steak", 1.1);
+      const rib = await kit.prop("food_ingredient_steak", { w: 0.22 });
       actor.hold(rib);
       for (;;) {
         await beat(clock, 1.8, 3.5);
@@ -917,7 +968,7 @@ function floridaScene(): Scene {
       kit.place(P.palmTree(), 0, -0.15, { scale: 0.8 });
       kit.place(P.palmTree(), -2.0, -1.0, { scale: 0.6, yaw: 1 });
       kit.place(P.palmTree(), 2.05, 0.7, { scale: 0.55, yaw: 2 });
-      const car = await kit.prop("car_police", 1.6);
+      const car = await kit.prop("car_police", { d: 1.6 });
       kit.place(car, 1.6, -1.25, { yaw: -0.6 });
       for (const [c, x] of [["#ff2a2a", -0.12], ["#2a6bff", 0.12]] as const) {
         const l = new THREE.PointLight(c, 0, 2.5, 1.4);
@@ -994,14 +1045,15 @@ function newYorkScene(): Scene {
       walk.position.set(0, 0.02, 0.35);
       walk.receiveShadow = true;
       kit.floor.add(walk);
-      const building = await kit.prop("building_B", 0.85);
-      kit.place(building, -1.3, -1.7);
-      const taxi = await kit.prop("car_taxi", 1.5);
-      kit.place(taxi, 1.25, -1.15, { yaw: Math.PI / 2 });
-      kit.place(P.streetLamp(), 2.0, -0.3);
-      const table = await kit.prop("table_round_A", 1.0);
+      const building = await kit.prop("building_B", { w: 1.5 });
+      kit.place(building, -1.45, -2.0);
+      const taxi = await kit.prop("car_taxi", { d: 1.6 });
+      kit.place(taxi, 1.45, -1.8, { yaw: Math.PI / 2 });
+      kit.place(P.streetLamp(), 2.05, -0.3);
+      const table = await kit.prop("table_round_A", { w: 1.15, h: TABLE.h });
       kit.place(table, 0, -0.35);
-      kit.place(P.pizza(), 0, -0.35, { y: 0.56, scale: 0.85 });
+      kit.block(0, -0.35, 0.58);
+      kit.place(P.pizza(), 0, -0.35, { y: TABLE.h, scale: 0.85 });
       for (let i = 0; i < 3; i++) {
         const bird = new THREE.Group();
         const body = P.ball(0.1, "#8b97a3");
@@ -1018,9 +1070,10 @@ function newYorkScene(): Scene {
         pigeons.push(bird);
       }
     },
-    spot: (i, n) => {
-      const s = ring(i, n, 0.95, 0, -0.35);
-      return { ...s, yaw: s.yaw! + Math.PI * 0.85 * Math.sign(s.x || 1) * 0.3 };
+    spot: (i) => {
+      // Round the front and sides of the table; nobody hidden behind it.
+      const s = around(0, -0.35, 0.98, [0, -1.0, 1.0, -1.85, 1.85])[i % 5];
+      return { ...s, yaw: s.yaw! * 0.5 };
     },
     async role(actor, slot, kit, clock) {
       await beat(clock, 0.1, 0.5);
@@ -1372,9 +1425,11 @@ function georgiaScene(): Scene {
         kit.place(t.object, x, z, { scale: s });
         trees.push(t);
       }
-      const box = await kit.prop("crate", 1.3);
+      const box = await kit.prop("crate", { w: 0.9 });
       kit.place(box, crate.x, crate.z);
-      pile.position.set(crate.x, 0.38, crate.z);
+      kit.block(crate.x, crate.z, 0.5);
+      for (const [x, z] of [[-1.25, -1.15], [1.25, -1.25], [0, -1.75]]) kit.block(x, z, 0.2);
+      pile.position.set(crate.x, 0.34, crate.z);
       kit.floor.add(pile);
       kit.place(P.tufts(22, 2.2), 0, 0.3);
     },
@@ -1390,7 +1445,7 @@ function georgiaScene(): Scene {
         }
         const peach = pick(ripe);
         const target = kit.floor.worldToLocal(peach.getWorldPosition(new THREE.Vector3()));
-        await actor.walkTo(clock, target.x * 0.8, target.z + 0.55);
+        await walkAround(actor, kit, clock, target.x * 0.8, target.z + 0.55);
         actor.faceToward(target.x, target.z);
         await actor.gesture(clock, "Spellcast_Raise", "armR", { hold: 0.2, speed: 1.4 });
         peach.visible = false;
@@ -1406,12 +1461,12 @@ function georgiaScene(): Scene {
           await clock.wait(0.6);
           continue;
         }
-        await actor.walkTo(clock, crate.x + (slot - 2) * 0.25, crate.z + 0.5);
+        await walkAround(actor, kit, clock, crate.x + (slot - 2) * 0.28, crate.z + 0.72);
         actor.faceToward(crate.x, crate.z);
         await actor.gesture(clock, "Interact", "armR", { hold: 0.1, speed: 1.3 });
         actor.drop(mine);
         const p = P.peach();
-        p.position.set(rand(-0.3, 0.3), Math.min(0.25, pile.children.length * 0.012), rand(-0.2, 0.2));
+        p.position.set(rand(-0.28, 0.28), Math.min(0.2, pile.children.length * 0.01), rand(-0.28, 0.28));
         pile.add(p);
         if (pile.children.length > 18) pile.children[0].removeFromParent();
         actor.bounce(0.5);
