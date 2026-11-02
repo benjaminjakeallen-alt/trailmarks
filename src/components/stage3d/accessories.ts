@@ -406,30 +406,44 @@ const HAT_OPENING: Record<Exclude<Headwear, "none">, number> = {
 /** Where gear sits relative to the chest bone (stage units, a 1.55-tall person). */
 export const CHEST = { frontZ: 0.17, backZ: -0.17, neckY: 0.17 } as const;
 
-/**
- * Adventure gear, placed in the chest bone's space. `width` is the build's torso
- * width, so a backpack sits on a thick back and not inside it.
- */
-export function gear(kind: Gear, color: string, width = 1): { object: THREE.Object3D; bone: "chest" | "hips" } | null {
+/** The torso it's worn on, in the chest bone's space: how far its front, back and sides are, and its shoulders' top. */
+export interface Torso {
+  front: number;
+  back: number;
+  side: number;
+  /** The hips' half-width, for things hung at the hip. */
+  hip: number;
+  shoulder: number;
+}
+
+/** Adventure gear, placed on the torso as measured (so a backpack sits on a thick back, not inside it). */
+export function gear(kind: Gear, color: string, body: Torso): { object: THREE.Object3D; bone: "chest" | "hips" } | null {
   if (kind === "none") return null;
   const g = new THREE.Group();
+  const width = body.side / 0.21;
   if (kind === "backpack") {
-    const pack = box(0.36, 0.38, 0.17, color);
-    pack.position.y = -0.2;
-    const flap = box(0.37, 0.12, 0.18, "#7a5232");
-    flap.position.y = 0.06;
-    const pocket = box(0.24, 0.13, 0.06, "#7a5232");
-    pocket.position.set(0, -0.15, -0.1);
-    const roll = cyl(0.07, 0.07, 0.38, "#4f6b3a", 10);
+    // The pack against the back, its straps over the shoulders and down the front.
+    const pack = new THREE.Group();
+    const bag = box(0.34 * Math.min(1.2, width), 0.36, 0.16, color);
+    bag.position.y = -0.2;
+    const flap = box(0.35 * Math.min(1.2, width), 0.1, 0.17, "#7a5232");
+    flap.position.y = 0.02;
+    const pocket = box(0.22, 0.12, 0.06, "#7a5232");
+    pocket.position.set(0, -0.22, -0.1);
+    const roll = cyl(0.065, 0.065, 0.36, "#4f6b3a", 10);
     roll.rotation.z = Math.PI / 2;
-    roll.position.set(0, 0.24, 0.0);
-    g.add(pack, flap, pocket, roll);
-    for (const x of [-0.12, 0.12]) {
-      const strap = box(0.05, 0.36, 0.03, "#5b3a22");
-      strap.position.set(x, -0.18, 0.1 + 0.17 * width * 2 - 0.02);
-      g.add(strap);
+    roll.position.set(0, 0.1, 0.0);
+    pack.add(bag, flap, pocket, roll);
+    pack.position.z = -body.back - 0.085;
+    g.add(pack);
+    const leather = "#5b3a22";
+    for (const x of [-0.11, 0.11]) {
+      const down = box(0.045, 0.24, 0.018, leather);
+      down.position.set(x, -0.02, body.front + 0.012);
+      const over = box(0.045, 0.02, body.front + body.back + 0.03, leather);
+      over.position.set(x, body.shoulder + 0.008, (body.front - body.back) / 2);
+      g.add(down, over);
     }
-    g.position.set(0, -0.02, CHEST.backZ * width - 0.08);
     return { object: g, bone: "chest" };
   }
   if (kind === "binoculars") {
@@ -443,12 +457,12 @@ export function gear(kind: Gear, color: string, width = 1): { object: THREE.Obje
     strap.position.set(0, 0.0, -0.06);
     strap.rotation.x = -0.3;
     g.add(strap);
-    g.position.set(0, CHEST.neckY - 0.12, CHEST.frontZ * width + 0.05);
+    g.position.set(0, CHEST.neckY - 0.12, body.front + 0.05);
     return { object: g, bone: "chest" };
   }
   if (kind === "camera") {
-    const body = box(0.2, 0.12, 0.08, "#2b2b30");
-    body.position.y = -0.06;
+    const shell = box(0.2, 0.12, 0.08, "#2b2b30");
+    shell.position.y = -0.06;
     const lens = cyl(0.045, 0.045, 0.07, "#9aa4a8", 12);
     lens.rotation.x = Math.PI / 2;
     lens.position.set(0, 0, 0.06);
@@ -457,8 +471,8 @@ export function gear(kind: Gear, color: string, width = 1): { object: THREE.Obje
     const strap = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.012, 4, 20, Math.PI), mat("#e2483d"));
     strap.position.set(0, 0.02, -0.05);
     strap.rotation.x = -0.3;
-    g.add(body, lens, flash, strap);
-    g.position.set(0, CHEST.neckY - 0.1, CHEST.frontZ * width + 0.04);
+    g.add(shell, lens, flash, strap);
+    g.position.set(0, CHEST.neckY - 0.1, body.front + 0.04);
     return { object: g, bone: "chest" };
   }
   if (kind === "scarf") {
@@ -478,6 +492,6 @@ export function gear(kind: Gear, color: string, width = 1): { object: THREE.Obje
   const cap = cyl(0.025, 0.025, 0.04, "#2b2b30", 8);
   cap.position.y = 0.09;
   g.add(flask, cap);
-  g.position.set(0.24 * width, 0.0, 0.02);
+  g.position.set(body.hip + 0.03, 0.09, 0.02);
   return { object: g, bone: "hips" };
 }

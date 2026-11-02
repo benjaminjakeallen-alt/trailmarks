@@ -84,7 +84,7 @@ async function walkAround(actor: Actor, kit: StageKit, clock: Clock, x: number, 
 const middleOut = (i: number, n: number) => [2, 1, 3, 0, 4].filter((s) => s < Math.max(n, 5))[i % 5];
 
 /** The parts of a guest's look every guest shares. */
-const GUEST: Look = { gender: "male", hairStyle: "tousled", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: false, hat: false, skin: "#e0b597", hair: "#4a3326", outfit: "#46658a", pants: "#2e3236", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
+const GUEST: Look = { gender: "male", hairStyle: "tousled", facialHair: "none", extra: "none", top: "tee", bottom: "jeans", shoes: "sneakers", shoeColor: "#ebe8e1", body: "rogue", legs: "rogue", cape: false, hat: false, skin: "#e0b597", hair: "#4a3326", outfit: "#46658a", pants: "#2e3236", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
 
 /** Something worn on the head, sitting on top of it. */
 /** Put something on someone's head, sized and fitted to them (see Actor.wear). */
@@ -965,7 +965,7 @@ function floridaScene(): Scene {
         kit.floor.add(l);
         lights.push(l);
       }
-      cop = await kit.guest({ ...GUEST, hairStyle: "buzz", facialHair: "mustache", body: "knight", legs: "knight", skin: "#9f6d50", hair: "#2b211c", outfit: "#1f2d4d" }, "Officer");
+      cop = await kit.guest({ ...GUEST, hairStyle: "buzz", facialHair: "mustache", top: "buttonup", bottom: "chinos", shoes: "boots", shoeColor: "#2e3236", skin: "#9f6d50", hair: "#2b211c", outfit: "#2f3f5a", pants: "#2f3f5a" }, "Officer");
       wear(cop, policeCap(), { hat: 0.28 });
       cop.root.position.set(lapAt(-1).x, 0, lapAt(-1).z);
       cop.root.visible = false;
@@ -1101,7 +1101,7 @@ function tennesseeScene(): Scene {
     async build(kit) {
       kit.place(P.countryStage(), -0.75, -1.25, { yaw: 0.45 });
       kit.place(P.micStand(), -0.55, -0.95, { y: 0.32 });
-      singer = await kit.guest({ ...GUEST, gender: "female", hairStyle: "long", extra: "hoops", body: "rogue", skin: "#f0d4c1", hair: "#d2b47e", outfit: "#b8607a", pants: "#b8607a" }, "Singer");
+      singer = await kit.guest({ ...GUEST, gender: "female", hairStyle: "long", extra: "hoops", top: "dress", shoes: "boots", shoeColor: "#ebe8e1", skin: "#f0d4c1", hair: "#d2b47e", outfit: "#b8607a", pants: "#b8607a" }, "Singer");
       singer.root.position.set(-0.85, 0.32, -1.15);
       singer.face(0.5);
       // Big, big hair.

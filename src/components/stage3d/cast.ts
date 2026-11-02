@@ -5,6 +5,7 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
 import { BUILD_WIDTH, SIZE_SCALE, tone } from "@/lib/look";
 import { gear, glasses, headwear } from "@/components/stage3d/accessories";
+import { dress, torsoOf } from "@/components/stage3d/wardrobe";
 import { HAT_BAND, HEAD_FORMS, faceMarks, fitHat, fitHead, pointsOf, jawOf, shapeHead, skullFor, type FaceMarks, type HeadFit } from "@/components/stage3d/fit";
 import { SCULPTED, builtFacialHair, builtHair, extraPieces, fullSkull, lashes, skull, skullColor, splitHead, transplant, type HeadShape } from "@/components/stage3d/hair";
 
@@ -29,7 +30,6 @@ const CELLS: Record<Body, { skin: Cell[]; hair: Cell[]; outfit: Cell[]; pants: C
   mage: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [1, 1]], pants: [[3, 2]] },
 };
 
-const HATS = /_(Hat|Helmet)$/;
 /** A character's height (feet to the top of the head) per unit of neck height, in the shared skeleton's rest pose. */
 const MODEL_PER_NECK = 1.8;
 
@@ -483,42 +483,6 @@ export class Actor {
 }
 
 /**
- * Thin, normal or thick: widen or slim one body part around its own center line
- * (the long axis of its rest pose: up for the torso and legs, sideways for the
- * T-posed arms). Works on this actor's own copy, so the shared model stays as is;
- * the skeleton is untouched, so every animation still bends right.
- */
-function reshape(mesh: THREE.Mesh, k: number) {
-  if (k === 1) return;
-  const src = mesh.geometry;
-  const geo = src.clone();
-  const pos = src.getAttribute("position");
-  // Quantized positions can't hold a wider shape; unpack them to floats first.
-  const out = new Float32Array(pos.count * 3);
-  for (let i = 0; i < pos.count; i++) {
-    out[i * 3] = pos.getX(i);
-    out[i * 3 + 1] = pos.getY(i);
-    out[i * 3 + 2] = pos.getZ(i);
-  }
-  const box = new THREE.Box3().setFromArray(out);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const long = size.x > size.y && size.x > size.z ? 0 : size.z > size.y ? 2 : 1;
-  const c = [center.x, center.y, center.z];
-  for (let i = 0; i < pos.count; i++) {
-    for (let a = 0; a < 3; a++) {
-      if (a === long) continue;
-      out[i * 3 + a] = c[a] + (out[i * 3 + a] - c[a]) * k;
-    }
-  }
-  geo.setAttribute("position", new THREE.BufferAttribute(out, 3));
-  geo.computeBoundingBox();
-  geo.computeBoundingSphere();
-  mesh.geometry = geo;
-  mesh.userData.reshaped = true;
-}
-
-/**
  * Where the head is and how big, in the head bone's space and stage units: from
  * the bald head's rest-pose box, carried into the bone's frame by its inverse
  * bind matrix. Built hair and the skull are placed from this.
@@ -627,63 +591,31 @@ function paletteFor(gltf: GLTF, body: Body, look: Look) {
 
 /** Build one person's character. */
 export async function makeActor(member: Member, look: Look): Promise<Actor> {
-  // Everyone wears one clean face (the explorer's for women, the knight's for men);
-  // sculpted hair, the woodsman's beard and a different style's legs come from
-  // whichever body has them. All four share one skeleton, so any part fits any body.
+  // Everyone wears one clean face (the explorer's for women, the knight's for men),
+  // with sculpted hair or the woodsman's beard from whichever body has them, on
+  // a body dressed from the wardrobe. All the bodies share one skeleton, so any
+  // part fits; the explorer's model supplies it.
   const faceFrom: Body = look.gender === "female" ? "rogue" : "knight";
   const hairFrom = SCULPTED[look.hairStyle];
-  const [body, moves, faceSrc, hairSrc, beardSrc, legsSrc] = await Promise.all([
-    loadBody(look.body),
+  const [body, moves, faceSrc, hairSrc, beardSrc] = await Promise.all([
+    loadBody("rogue"),
     loadMoves(),
     loadBody(faceFrom),
     hairFrom ? loadBody(hairFrom) : null,
     look.facialHair === "beard" ? loadBody("barbarian") : null,
-    look.legs !== look.body ? loadBody(look.legs) : null,
   ]);
   const model = SkeletonUtils.clone(body.scene);
-  const material = paletteFor(body, look.body, look);
-  const faceMaterial = faceFrom === look.body ? material : paletteFor(faceSrc, faceFrom, look);
+  const faceMaterial = paletteFor(faceSrc, faceFrom, look);
   let ownHead: THREE.SkinnedMesh | null = null;
-  const ownLegs: THREE.SkinnedMesh[] = [];
+  let ownBody: THREE.SkinnedMesh | null = null;
   model.traverse((o) => {
     const mesh = o as THREE.SkinnedMesh;
     if (!mesh.isMesh) return;
-    if (HATS.test(mesh.name) || HATS.test(mesh.parent?.name ?? "")) {
-      mesh.visible = look.hat;
-      mesh.userData.headwear = true;
-    }
-    if (/Mug/.test(mesh.name) || /Mug/.test(mesh.parent?.name ?? "")) mesh.visible = false;
-    if (/_Cape$/.test(mesh.name) || /_Cape$/.test(mesh.parent?.name ?? "")) mesh.visible = look.cape;
-    if (/_Head$/.test(mesh.name)) {
-      // Kept for its skeleton binding; the shared face replaces it.
-      mesh.visible = false;
-      ownHead = mesh;
-    }
-    if (/_Leg(Left|Right)$/.test(mesh.name) && legsSrc) {
-      mesh.visible = false;
-      ownLegs.push(mesh);
-    }
-    const part = /_(Body)$/.test(mesh.name) ? "torso" : /_(ArmLeft|ArmRight|LegLeft|LegRight)$/.test(mesh.name) ? "limbs" : null;
-    if (part) reshape(mesh, BUILD_WIDTH[look.build][part]);
-    mesh.castShadow = true;
-    mesh.frustumCulled = false;
-    mesh.material = material;
+    // The costume itself isn't worn; its meshes stay only for their skeleton binding.
+    mesh.visible = false;
+    if (/_Head$/.test(mesh.name)) ownHead = mesh;
+    if (/_Body$/.test(mesh.name)) ownBody = mesh;
   });
-
-  // Mix and match: another style's legs, in that style's own (recolored) palette.
-  if (legsSrc) {
-    const legMaterial = paletteFor(legsSrc, look.legs, look);
-    for (const own of ownLegs) {
-      const side = /Left$/.test(own.name) ? "Left" : "Right";
-      const src = meshIn(legsSrc, new RegExp(`_Leg${side}$`));
-      if (!src || !own.parent) continue;
-      const leg = transplant(src.geometry, src, own);
-      leg.material = legMaterial;
-      leg.name = `Mixed_Leg${side}`;
-      reshape(leg, BUILD_WIDTH[look.build].limbs);
-      own.parent.add(leg);
-    }
-  }
 
   // The face, then hair and beard on it.
   let head: THREE.SkinnedMesh | null = null;
@@ -716,6 +648,9 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
       hairMeshes.push(m);
     }
   }
+  // The body, dressed: skin to match the face.
+  const torso = ownBody as THREE.SkinnedMesh | null;
+  if (torso?.parent) torso.parent.add(dress(torso, look, faceSkin(head, skullFrom) ?? look.skin));
   const actor = new Actor(model, moves.animations, member, look);
   // The head's overall proportions: the head bone carries the face, hair and
   // everything worn on it (the clips never animate scale, so this stays).
@@ -786,7 +721,10 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
   onBone("head", extras.head);
   onBone("chest", extras.chest);
   onBone("lowerarml", extras.arm);
-  const kit = gear(look.gear, look.outfit, width);
+  // Gear goes against the dressed torso, measured in the chest bone's space.
+  const t = torsoOf(look);
+  const chestY = model.getObjectByName("chest")?.getWorldPosition(new THREE.Vector3()).y ?? 0.97;
+  const kit = gear(look.gear, look.outfit, { front: t.front / k, back: t.back / k, side: t.side / k, hip: t.hip / k, shoulder: (t.shoulderY - chestY) / k });
   if (kit) onBone(kit.bone, kit.object);
   // Hats, gear, jewelry and built hair in the same calm palette as the clothes.
   model.traverse((o) => {

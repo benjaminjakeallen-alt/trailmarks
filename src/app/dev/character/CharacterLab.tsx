@@ -6,7 +6,7 @@ import type { Look } from "@/lib/look";
 
 const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPreview"), { ssr: false });
 
-const BASE: Look = { gender: "female", hairStyle: "long", facialHair: "none", extra: "none", body: "rogue", legs: "rogue", cape: true, hat: false, skin: "#e0b597", hair: "#7c5236", outfit: "#46658a", pants: "#3d4a63", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
+const BASE: Look = { gender: "female", hairStyle: "long", facialHair: "none", extra: "none", top: "tee", bottom: "jeans", shoes: "sneakers", shoeColor: "#ebe8e1", body: "rogue", legs: "rogue", cape: false, hat: false, skin: "#e0b597", hair: "#7c5236", outfit: "#46658a", pants: "#3d4a63", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
 const M: Partial<Look> = { gender: "male", body: "knight", outfit: "#3f6a52" };
 const SETS: Record<string, Look[]> = {
   f1: [
@@ -56,6 +56,33 @@ const SETS: Record<string, Look[]> = {
     { ...BASE, skin, hairStyle: "bald" as Look["hairStyle"], headShape: (["oval", "round", "heart"] as const)[i] },
     { ...BASE, ...M, skin, hairStyle: "bald" as Look["hairStyle"], headShape: (["oval", "square", "long"] as const)[i] },
   ]),
+  kit: [
+    { ...BASE, gear: "backpack", build: "thin" as Look["build"] },
+    { ...BASE, ...M, gear: "backpack", build: "thick" as Look["build"], top: "hoodie", hairStyle: "buzz" },
+    { ...BASE, gear: "scarf", top: "sweater", outfit: "#2f6b6e" },
+    { ...BASE, ...M, gear: "camera", top: "polo", hairStyle: "neat", extra: "chain" },
+    { ...BASE, ...M, gear: "binoculars", build: "thick" as Look["build"], top: "buttonup", extra: "bowtie", hairStyle: "bald" },
+    { ...BASE, gear: "canteen", extra: "pearls", top: "dress", outfit: "#46658a" },
+    { ...BASE, extra: "watch", top: "tank", bottom: "shorts", build: "thin" as Look["build"] },
+    { ...BASE, ...M, top: "jacket", build: "thick" as Look["build"], size: "teen" as Look["size"], hairStyle: "spiky" },
+  ],
+  wear2: [
+    { ...BASE, top: "dress", outfit: "#a5483c", shoes: "sandals", shoeColor: "#6b4b33", hairStyle: "ponytail" },
+    { ...BASE, top: "tank", outfit: "#c2a052", bottom: "shorts", pants: "#3d4a63", shoes: "sandals", shoeColor: "#a5483c", hairStyle: "bun" },
+    { ...BASE, ...M, top: "tee", outfit: "#a5483c", bottom: "shorts", pants: "#b09a72", shoes: "sneakers", hairStyle: "tousled" },
+    { ...BASE, top: "longsleeve", outfit: "#d6cdb8", bottom: "skirt", pants: "#46658a", shoes: "boots", shoeColor: "#6b4b33", hairStyle: "long" },
+  ],
+  wear: [
+    { ...BASE, top: "tee", bottom: "jeans", shoes: "sneakers" },
+    { ...BASE, ...M, top: "hoodie", bottom: "cargo", shoes: "hikers", shoeColor: "#6b4b33", hairStyle: "tousled" },
+    { ...BASE, top: "dress", outfit: "#a5483c", shoes: "sandals", shoeColor: "#6b4b33", hairStyle: "ponytail" },
+    { ...BASE, ...M, top: "buttonup", outfit: "#46658a", bottom: "chinos", pants: "#b09a72", shoes: "boots", shoeColor: "#6b4b33", hairStyle: "neat" },
+    { ...BASE, top: "striped", outfit: "#2f3f5a", bottom: "skirt", pants: "#454c52", shoes: "slipons", shoeColor: "#2e3236", hairStyle: "bob" },
+    { ...BASE, ...M, top: "jacket", outfit: "#6d7b48", bottom: "jeans", shoes: "sneakers", hairStyle: "buzz" },
+    { ...BASE, top: "tank", outfit: "#c2a052", bottom: "shorts", pants: "#3d4a63", shoes: "sandals", shoeColor: "#a5483c", hairStyle: "bun" },
+    { ...BASE, ...M, top: "sweater", outfit: "#8b4a5c", bottom: "leggings", pants: "#2e3236", shoes: "rainboots", shoeColor: "#c2a052", hairStyle: "bald", build: "thick" as Look["build"] },
+    { ...BASE, ...M, top: "polo", outfit: "#2f6b6e", bottom: "shorts", pants: "#b09a72", shoes: "sneakers", hairStyle: "spiky", size: "kid" as Look["size"] },
+  ],
   afro: [
     { ...BASE, ...M, hairStyle: "afro", hair: "#231a17", skin: "#4c3226" },
     { ...BASE, ...M, hairStyle: "afro", headwear: "safari" },

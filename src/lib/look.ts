@@ -99,19 +99,59 @@ export type Headwear = (typeof HEADWEAR)[number];
 export const GEAR = ["none", "backpack", "binoculars", "camera", "scarf", "canteen"] as const;
 export type Gear = (typeof GEAR)[number];
 
+// The wardrobe: tops, bottoms and shoes, built onto the body (stage3d/wardrobe.ts).
+export const TOPS = ["tee", "longsleeve", "tank", "hoodie", "sweater", "striped", "buttonup", "polo", "jacket", "dress"] as const;
+export type Top = (typeof TOPS)[number];
+export const TOP_LABELS: Record<Top, string> = {
+  tee: "T-shirt",
+  longsleeve: "Long sleeve",
+  tank: "Tank top",
+  hoodie: "Hoodie",
+  sweater: "Sweater",
+  striped: "Striped tee",
+  buttonup: "Button-up",
+  polo: "Polo",
+  jacket: "Jacket",
+  dress: "Dress",
+};
+
+export const BOTTOMS = ["jeans", "chinos", "shorts", "skirt", "leggings", "cargo"] as const;
+export type Bottom = (typeof BOTTOMS)[number];
+export const BOTTOM_LABELS: Record<Bottom, string> = {
+  jeans: "Jeans",
+  chinos: "Chinos",
+  shorts: "Shorts",
+  skirt: "Skirt",
+  leggings: "Leggings",
+  cargo: "Cargo pants",
+};
+
+export const SHOES = ["sneakers", "boots", "hikers", "sandals", "rainboots", "slipons"] as const;
+export type Shoe = (typeof SHOES)[number];
+export const SHOE_LABELS: Record<Shoe, string> = {
+  sneakers: "Sneakers",
+  boots: "Boots",
+  hikers: "Hiking boots",
+  sandals: "Sandals",
+  rainboots: "Rain boots",
+  slipons: "Slip-ons",
+};
+
 export interface Look {
   gender: Gender;
   hairStyle: HairStyle;
   facialHair: FacialHair;
   /** Jewelry and finishing touches. */
   extra: Extra;
-  /** The top half of the outfit (torso and arms) and its hat. */
+  /** What they wear: a top, bottoms and shoes (colored by outfit, pants and shoeColor). */
+  top: Top;
+  bottom: Bottom;
+  shoes: Shoe;
+  shoeColor: string;
+  /** Older looks wore a whole costume; kept so old saves read, no longer drawn. */
   body: Body;
-  /** The bottom half (legs): the same style for a full costume, or mix and match. */
   legs: Body;
-  /** Wear the outfit's cape. */
   cape: boolean;
-  /** The body's own hat (bear hat, helmet, wizard hat); the explorer has none. */
   hat: boolean;
   skin: string;
   hair: string;
@@ -174,6 +214,14 @@ export const GEAR_LABELS: Record<Gear, string> = {
   canteen: "Canteen",
 };
 // Natural, outdoor-gear colors (the app's own calm palette), not toy-box primaries.
+export const SHOE_COLORS = ["#ebe8e1", "#2e3236", "#6b4b33", "#9a6a3f", "#46658a", "#a5483c", "#b09a72", "#6d7b48"];
+/** What each old costume becomes in the wardrobe, so saved characters dress the same way. */
+const COSTUME_CLOTHES: Record<Body, { top: Top; bottom: Bottom; shoes: Shoe }> = {
+  rogue: { top: "longsleeve", bottom: "chinos", shoes: "boots" },
+  barbarian: { top: "buttonup", bottom: "jeans", shoes: "hikers" },
+  knight: { top: "jacket", bottom: "jeans", shoes: "boots" },
+  mage: { top: "hoodie", bottom: "jeans", shoes: "sneakers" },
+};
 export const PANTS_COLORS = ["#3d4a63", "#2e3236", "#6b4b33", "#b09a72", "#56613d", "#858d91", "#7a3f30", "#d6cebc"];
 /** The knight's legs are armor; there are no pants to color. */
 export const HAS_PANTS: Record<Body, boolean> = { rogue: true, barbarian: true, knight: false, mage: true };
@@ -235,9 +283,11 @@ export function defaultLook(member: Pick<Member, "userId" | "color">): Look {
     hairStyle: BODY_HAIR[body].hair,
     facialHair: BODY_HAIR[body].facial,
     extra: "none",
+    ...COSTUME_CLOTHES[body],
+    shoeColor: SHOE_COLORS[(h >>> 15) % 4],
     body,
     legs: body,
-    cape: true,
+    cape: false,
     hat: false,
     skin: SKIN_TONES[(h >>> 3) % SKIN_TONES.length],
     hair: HAIR_COLORS[(h >>> 7) % 6],
@@ -262,11 +312,14 @@ export function randomLook(): Look {
     hairStyle: any(HAIR_FOR[gender]),
     facialHair: gender === "male" && Math.random() < 0.5 ? any(FACIAL_HAIR) : "none",
     extra: Math.random() < 0.5 ? "none" : any(EXTRAS_FOR[gender]),
-    ...(() => {
-      const body = any(BODIES);
-      return { body, legs: Math.random() < 0.6 ? body : any(BODIES), cape: Math.random() < 0.6 };
-    })(),
-    hat: headwear === "none" && Math.random() < 0.3,
+    top: any(TOPS),
+    bottom: gender === "female" ? any(BOTTOMS) : any(BOTTOMS.filter((b) => b !== "skirt")),
+    shoes: any(SHOES),
+    shoeColor: any(SHOE_COLORS),
+    body: "rogue",
+    legs: "rogue",
+    cape: false,
+    hat: false,
     skin: any(SKIN_TONES),
     hair: any(HAIR_COLORS),
     outfit: any(OUTFIT_COLORS),
@@ -295,15 +348,21 @@ export function parseLook(value: unknown, fallback: Look): Look {
   const gender = legacy ? legacy.gender : one(GENDERS, v.gender, fallback.gender);
   const hairStyle = legacy ? legacy.hair : one(HAIR_STYLES, v.hairStyle, fallback.hairStyle);
   const facialHair = legacy ? legacy.facial : one(FACIAL_HAIR, v.facialHair, fallback.facialHair);
+  // Looks saved before the wardrobe wear what their costume becomes.
+  const clothes = v.top === undefined && v.body !== undefined ? COSTUME_CLOTHES[body] : null;
   return {
     gender,
     hairStyle,
     facialHair: gender === "male" ? facialHair : "none",
+    top: clothes ? clothes.top : one(TOPS, v.top, fallback.top),
+    bottom: clothes ? clothes.bottom : one(BOTTOMS, v.bottom, fallback.bottom),
+    shoes: clothes ? clothes.shoes : one(SHOES, v.shoes, fallback.shoes),
+    shoeColor: hex(v.shoeColor, fallback.shoeColor),
     extra: one(EXTRAS, v.extra, fallback.extra),
     body,
     legs: one(BODIES, v.legs, body),
-    cape: typeof v.cape === "boolean" ? v.cape : true,
-    hat: headwear === "none" && (typeof v.hat === "boolean" ? v.hat : fallback.hat),
+    cape: false,
+    hat: false,
     skin: hex(v.skin, fallback.skin),
     hair: hex(v.hair, fallback.hair),
     outfit: hex(v.outfit, fallback.outfit),
