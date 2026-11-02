@@ -5,7 +5,7 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
 import { BUILD_WIDTH, SIZE_SCALE, tone } from "@/lib/look";
 import { gear, glasses, headwear } from "@/components/stage3d/accessories";
-import { HAT_BAND, HEAD_FORMS, faceMarks, fitHat, fitHead, pointsOf, shapeHead, type HeadFit } from "@/components/stage3d/fit";
+import { HAT_BAND, HEAD_FORMS, faceMarks, fitHat, fitHead, pointsOf, jawOf, shapeHead, skullFor, type FaceMarks, type HeadFit } from "@/components/stage3d/fit";
 import { SCULPTED, builtFacialHair, builtHair, extraPieces, fullSkull, lashes, skull, skullColor, splitHead, transplant, type HeadShape } from "@/components/stage3d/hair";
 
 /**
@@ -689,6 +689,8 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
   let head: THREE.SkinnedMesh | null = null;
   const hairMeshes: THREE.SkinnedMesh[] = [];
   let skullFrom: THREE.BufferGeometry | null = null;
+  let faceSource: THREE.SkinnedMesh | null = null;
+  let faceMarksOf: FaceMarks | null = null;
   const own = ownHead as THREE.SkinnedMesh | null;
   const faceMesh = meshIn(faceSrc, /_Head$/);
   if (own?.parent && faceMesh) {
@@ -697,6 +699,8 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
     const marks = faceMarks(bald, faceMesh);
     head = transplant(shapeHead(bald, faceMesh, marks, look.headShape, !hairFrom), faceMesh, own);
     skullFrom = bald;
+    faceSource = faceMesh;
+    faceMarksOf = marks;
     head.material = faceMaterial;
     head.name = "Face";
     own.parent.add(head);
@@ -736,9 +740,20 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
   const shape = headShape(head, k, skullFrom);
   const cover: THREE.Object3D[] = [...hairMeshes];
   if (shape) {
-    // The scalp in the face's own painted skin tone, so the two meet without a seam.
-    const painted = faceSkin(head, skullFrom) ?? look.skin;
-    cover.push(onBone("head", fullSkull(shape, painted))!);
+    // The back and top of the head, fitted to the face's openings and painted
+    // with the face's own skin, so the two meet in size and color.
+    const fill = head && faceSource && faceMarksOf ? skullFor(head.geometry, faceSource, k, faceMarksOf) : null;
+    if (fill && head) {
+      // Everything built on the skull (a buzz cut, spikes, an afro) uses this one.
+      const e = faceMarksOf!.skull;
+      Object.assign(shape, { cy: e.y / k, rx: e.rx / k, ry: e.ry / k, rz: e.rz / k, sz: e.z / k, fill });
+      const back = new THREE.Mesh(fill, head.material);
+      back.name = "Skull";
+      back.userData.exact = true;
+      cover.push(onBone("head", back)!);
+    } else {
+      cover.push(onBone("head", fullSkull(shape, faceSkin(head, skullFrom) ?? look.skin))!);
+    }
     if (look.hairStyle !== "bald" && look.hairStyle !== "mohawk" && look.hairStyle !== "rugged") cover.push(onBone("head", skull(shape, skullColor(look.hairStyle, look.hair, look.skin), !hairFrom))!);
     const hair = onBone("head", builtHair(look.hairStyle, look.hair, shape), "hair");
     if (hair) cover.push(hair);
@@ -750,7 +765,17 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
     actor.fit = fit;
   }
   if (fit) {
-    onBone("head", builtFacialHair(look.facialHair, look.hair, look.skin, fit, shape!));
+    // Stubble is the face's own jaw in a shadowy shade, so it follows the face exactly.
+    const jaw = look.facialHair === "stubble" && head && faceSource && faceMarksOf ? jawOf(head.geometry, faceSource, faceMarksOf) : null;
+    if (jaw && head?.parent && own) {
+      const shade = new THREE.Color(faceSkin(head, skullFrom) ?? look.skin).lerp(new THREE.Color(look.hair), 0.45).multiplyScalar(0.85);
+      const stubble = transplant(jaw, faceSource!, own);
+      stubble.material = new THREE.MeshStandardMaterial({ color: shade, roughness: 1, metalness: 0 });
+      stubble.userData.reshaped = true;
+      head.parent.add(stubble);
+    } else {
+      onBone("head", builtFacialHair(look.facialHair, look.hair, look.skin, fit, shape!));
+    }
     if (look.gender === "female") onBone("head", lashes(fit));
     onBone("head", glasses(look.glasses, fit));
     const hat = onBone("head", fitHat(headwear(look.headwear, look.outfit), fit), "headwear");

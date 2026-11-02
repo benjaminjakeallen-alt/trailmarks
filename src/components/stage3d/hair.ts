@@ -107,6 +107,41 @@ export interface HeadShape {
   rx: number;
   ry: number;
   rz: number;
+  /** The skull's center depth, when fitted to the face (else z - rz × 0.12). */
+  sz?: number;
+  /** The skull behind the face (skullFor), when there is one: hair that hugs the head is built from it. */
+  fill?: THREE.BufferGeometry;
+}
+
+/**
+ * A copy of the skull pushed out a little, kept where `keep` says (by direction
+ * from the skull's center): hair that hugs the head exactly where the hair was,
+ * tucked under the face everywhere the face is.
+ */
+function shellOf(head: HeadShape, scale: number, keep: (d: THREE.Vector3) => boolean = () => true): THREE.BufferGeometry | null {
+  if (!head.fill) return null;
+  const g = head.fill.clone();
+  const pos = g.getAttribute("position");
+  const c = new THREE.Vector3(head.x, head.cy, head.sz ?? head.z - head.rz * 0.12);
+  const v = new THREE.Vector3();
+  const kept: boolean[] = [];
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).sub(c);
+    kept.push(keep(new THREE.Vector3(v.x / head.rx, v.y / head.ry, v.z / head.rz).normalize()));
+    v.multiplyScalar(scale).add(c);
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  const index = g.getIndex();
+  if (index) {
+    const ids: number[] = [];
+    for (let t = 0; t < index.count; t += 3) {
+      const [a, b, d] = [index.getX(t), index.getX(t + 1), index.getX(t + 2)];
+      if (kept[a] && kept[b] && kept[d]) ids.push(a, b, d);
+    }
+    g.setIndex(ids);
+  }
+  g.computeVertexNormals();
+  return g;
 }
 
 /**
@@ -119,7 +154,7 @@ export function fullSkull(head: HeadShape, skin: string) {
   ball.scale.set(head.rx, head.ry, head.rz);
   // Its color is the face's own: leave it exactly as is.
   ball.userData.exact = true;
-  ball.position.set(head.x, head.cy, head.z - head.rz * 0.12);
+  ball.position.set(head.x, head.cy, (head.sz ?? head.z - head.rz * 0.12));
   ball.castShadow = true;
   return ball;
 }
@@ -130,12 +165,21 @@ export function fullSkull(head: HeadShape, skin: string) {
  */
 export function skull(head: HeadShape, color: string, whole = false) {
   const material = new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0 });
+  const shell = whole ? shellOf(head, 1.025) : null;
+  if (shell) {
+    // No sculpted hair on top: short hair over the skull, just where the hair was.
+    const cap = new THREE.Mesh(shell, material);
+    cap.castShadow = true;
+    // Its own geometry: freed with the actor.
+    cap.userData.reshaped = true;
+    return cap;
+  }
   if (whole) {
     // No sculpted hair on top: the hair is a cap over the whole skull, down to the brows.
     const rim = THREE.MathUtils.clamp((head.y - head.cy) / head.ry, -0.9, 0.9);
     const cap = new THREE.Mesh(new THREE.SphereGeometry(1, 30, 16, 0, Math.PI * 2, 0, Math.acos(rim)), material);
     cap.scale.set(head.rx * 1.03, head.ry * 1.03, head.rz * 1.03);
-    cap.position.set(head.x, head.cy, head.z - head.rz * 0.12);
+    cap.position.set(head.x, head.cy, (head.sz ?? head.z - head.rz * 0.12));
     cap.castShadow = true;
     return cap;
   }
@@ -188,7 +232,7 @@ export function builtHair(style: HairStyle, color: string, head: HeadShape): THR
   const { x, y, z, r } = head;
   const top = y + r;
   // The smooth skull (as fullSkull draws it), for styles built all over it.
-  const sz = z - head.rz * 0.12;
+  const sz = head.sz ?? z - head.rz * 0.12;
   const onSkull = (n: THREE.Vector3, k: number) =>
     new THREE.Vector3(head.x + n.x * head.rx * k, head.cy + n.y * head.ry * k, sz + n.z * head.rz * k);
   const back = z - r;
@@ -299,6 +343,15 @@ export function builtHair(style: HairStyle, color: string, head: HeadShape): THR
     }
     case "rugged": {
       // Receding: bare on top, a horseshoe of short hair round the sides and back.
+      const horseshoe = shellOf(head, 1.03, (d) => d.y < 0.58 && d.y > -0.3 && d.z < 0.5);
+      if (horseshoe) {
+        // Smooth-shaded, like the skull it hugs.
+        const band = new THREE.Mesh(horseshoe, new THREE.MeshStandardMaterial({ color, roughness: 0.95, metalness: 0 }));
+        band.castShadow = true;
+        band.userData.reshaped = true;
+        g.add(band);
+        break;
+      }
       const band = new THREE.Mesh(
         new THREE.SphereGeometry(1, 30, 10, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9, 0.95, 0.85),
         hairMat(color),
@@ -312,8 +365,9 @@ export function builtHair(style: HairStyle, color: string, head: HeadShape): THR
     case "afro": {
       // A big round puff sitting back from the hairline, wider than the head.
       const puff = ball(1, color, { detail: 2 });
-      puff.scale.set(head.rx * 1.35, head.ry * 1.12, head.rz * 1.22);
-      puff.position.set(head.x, head.cy + head.ry * 0.38, sz - head.rz * 0.32);
+      // Its front stops at the hairline, so it frames the face rather than hiding it.
+      puff.scale.set(head.rx * 1.32, head.ry * 1.1, head.rz * 1.12);
+      puff.position.set(head.x, head.cy + head.ry * 0.45, sz + head.rz * 0.5 - head.rz * 1.12);
       g.add(puff);
       break;
     }
@@ -353,7 +407,7 @@ export function builtFacialHair(kind: FacialHair, color: string, skin: string, f
       mat(`#${shade.getHexString()}`, { rough: 1 }),
     );
     jaw.scale.set(head.rx * 1.02, head.ry * 1.04, head.rz * 1.04);
-    jaw.position.set(head.x, head.cy, head.z - head.rz * 0.12);
+    jaw.position.set(head.x, head.cy, (head.sz ?? head.z - head.rz * 0.12));
     g.add(jaw);
     return g;
   }

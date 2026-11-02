@@ -240,8 +240,7 @@ export function faceMarks(face: THREE.BufferGeometry, from: THREE.SkinnedMesh): 
     chinY: fit.chinY,
     top: max(ys),
     zc,
-    // Matches headShape and fullSkull (in cast.ts and hair.ts).
-    skull: { x: (min(xs) + max(xs)) / 2, y: (min(ys) + max(ys)) / 2, z: zc - d * 0.03 - d * 0.42 * 0.12, rx: w * 0.4, ry: h * 0.47, rz: d * 0.42 },
+    skull: skullOf(face, from, fit.eyeY, fit.chinY) ?? { x: (min(xs) + max(xs)) / 2, y: (min(ys) + max(ys)) / 2, z: zc - d * 0.03 - d * 0.42 * 0.12, rx: w * 0.4, ry: h * 0.47, rz: d * 0.42 },
   };
   marked.set(face, marks);
   return marks;
@@ -275,16 +274,13 @@ export function shapeHead(geo: THREE.BufferGeometry, from: THREE.SkinnedMesh, ma
       const t = THREE.MathUtils.clamp((eyeY - v.y) / (eyeY - chinY), 0, 1);
       v.x *= 1 + jaw(t);
     } else if (roundCrown && v.y > crown && top > crown) {
-      // No sculpted hair over it: tuck the crown inside the smooth skull, so a
-      // bald head or a buzz cut is round on top rather than a flat-topped block.
+      // No sculpted hair over it: round the crown onto the skull, so a bald
+      // head or a buzz cut is a smooth dome rather than a flat-topped block.
       const t = THREE.MathUtils.smoothstep(v.y, crown, crown + (top - crown) * 0.6);
       const e = marks.skull;
-      const dx = (v.x - e.x) / e.rx;
-      const dy = (v.y - e.y) / e.ry;
-      const dz = (v.z - e.z) / e.rz;
-      const out = Math.hypot(dx, dy, dz);
-      if (out > 0.97) {
-        const k = 1 - t + (t * 0.97) / out;
+      const out = Math.hypot((v.x - e.x) / e.rx, (v.y - e.y) / e.ry, (v.z - e.z) / e.rz);
+      if (out > 1e-6) {
+        const k = 1 - t + t / out;
         v.set(e.x + (v.x - e.x) * k, e.y + (v.y - e.y) * k, e.z + (v.z - e.z) * k);
       }
     }
@@ -295,8 +291,260 @@ export function shapeHead(geo: THREE.BufferGeometry, from: THREE.SkinnedMesh, ma
   }
   const g = geo.clone();
   g.setAttribute("position", new THREE.BufferAttribute(out, 3));
+  // Moved vertices need their shading redone, or the crown and jaw light up wrong.
+  if (g.getAttribute("normal")) g.computeVertexNormals();
   g.computeBoundingBox();
   g.computeBoundingSphere();
   shaped.set(key, g);
+  return g;
+}
+
+// ---------------------------------------------------------------------------
+// The skull behind the face
+
+export interface Ellipsoid {
+  x: number;
+  y: number;
+  z: number;
+  rx: number;
+  ry: number;
+  rz: number;
+}
+
+/** Solve a small linear system (Gaussian elimination with pivoting). */
+function solve(a: number[][], b: number[]): number[] | null {
+  const n = b.length;
+  const m = a.map((row, i) => [...row, b[i]]);
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let r = c + 1; r < n; r++) if (Math.abs(m[r][c]) > Math.abs(m[p][c])) p = r;
+    if (Math.abs(m[p][c]) < 1e-12) return null;
+    [m[c], m[p]] = [m[p], m[c]];
+    for (let r = 0; r < n; r++) {
+      if (r === c) continue;
+      const f = m[r][c] / m[c][c];
+      for (let k = c; k <= n; k++) m[r][k] -= f * m[c][k];
+    }
+  }
+  return m.map((row, i) => row[n] / row[i]);
+}
+
+/**
+ * A face's vertices in head-bone space (divided by k) and the edge of its
+ * openings: where the hair was taken off, not the neck.
+ */
+function openings(face: THREE.BufferGeometry, from: THREE.SkinnedMesh, k: number, eyeY: number, chinY: number) {
+  const i = from.skeleton.bones.findIndex((b) => b.name === "head");
+  const index = face.getIndex();
+  if (i < 0 || !index) return null;
+  const toBone = from.bindMatrix.clone().premultiply(from.skeleton.boneInverses[i]);
+  const pos = face.getAttribute("position");
+  const verts = new Map<number, THREE.Vector3>();
+  for (let t = 0; t < index.count; t++) {
+    const n = index.getX(t);
+    if (!verts.has(n)) verts.set(n, new THREE.Vector3().fromBufferAttribute(pos, n).applyMatrix4(toBone).divideScalar(k));
+  }
+  // Open edges, welded by position: texture seams split vertices but aren't holes.
+  const weld = (n: number) => {
+    const v = verts.get(n)!;
+    return `${Math.round(v.x * 2000)},${Math.round(v.y * 2000)},${Math.round(v.z * 2000)}`;
+  };
+  const edges = new Map<string, { n: number; a: number; b: number }>();
+  for (let t = 0; t < index.count; t += 3) {
+    const tri = [index.getX(t), index.getX(t + 1), index.getX(t + 2)];
+    for (let e = 0; e < 3; e++) {
+      const [a, b] = [tri[e], tri[(e + 1) % 3]];
+      const [ka, kb] = [weld(a), weld(b)];
+      const key = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
+      const edge = edges.get(key);
+      if (edge) edge.n++;
+      else edges.set(key, { n: 1, a, b });
+    }
+  }
+  const rim: THREE.Vector3[] = [];
+  const onRim = new Set<string>();
+  for (const e of edges.values()) {
+    if (e.n !== 1) continue;
+    for (const n of [e.a, e.b]) {
+      const v = verts.get(n)!;
+      // Not the neck: that's the opening low down at the front and sides.
+      const neck = v.y < chinY + (eyeY - chinY) * 0.45 && (v.z > 0 || v.y < chinY + (eyeY - chinY) * 0.12);
+      if (!neck && !onRim.has(weld(n))) {
+        onRim.add(weld(n));
+        rim.push(v);
+      }
+    }
+  }
+  return { verts, rim, onRim, weld };
+}
+
+/**
+ * The skull a face belongs to: the ellipsoid through the edge of its openings
+ * that carries on the curve of the forehead and temples. The rounded crown
+ * and the skull behind the face are both this one shape, so they meet.
+ */
+function skullOf(face: THREE.BufferGeometry, from: THREE.SkinnedMesh, eyeY: number, chinY: number): Ellipsoid | null {
+  const o = openings(face, from, 1, eyeY, chinY);
+  if (!o || o.rim.length < 8) return null;
+  // The edge alone is one loop, which doesn't pin an ellipsoid down; the face above the eyes does.
+  // (Above the ears: they stick out, and would make the skull too wide.)
+  const upper = [...o.verts.values()].filter((v) => v.y > eyeY + (eyeY - chinY) * 0.08);
+  // Nor does a face that stops at the hairline say how tall the skull is: a
+  // head is about as tall above the eyes as it is below them, and about as
+  // deep behind the ears as in front of them.
+  const zs = upper.map((v) => v.z);
+  const mid = (max(zs) + min(zs)) / 2;
+  const crown = new THREE.Vector3(0, eyeY + (eyeY - chinY) * 1.02, mid);
+  const back = new THREE.Vector3(0, eyeY + (eyeY - chinY) * 0.2, mid - (max(zs) - mid));
+  const anchors = Array.from({ length: Math.max(8, o.rim.length) }, (_, i) => (i % 2 ? crown : back));
+  // Leave out the middle of the face (brows, nose): it isn't skull-shaped.
+  const xs = upper.map((v) => Math.abs(v.x));
+  const sides = upper.filter((v) => !(v.z > mid + (max(zs) - mid) * 0.4 && Math.abs(v.x) < max(xs) * 0.6));
+  return fitAround([...o.rim, ...o.rim, ...o.rim, ...sides, ...anchors], eyeY, eyeY - chinY, mid);
+}
+
+/**
+ * The best ellipsoid through these points with its center on the head's
+ * middle line: search the center's height and depth, fitting the radii at each.
+ */
+function fitAround(pts: THREE.Vector3[], eyeY: number, h: number, mid: number): Ellipsoid | null {
+  let best: Ellipsoid | null = null;
+  let bestErr = Infinity;
+  for (let i = 0; i <= 16; i++) {
+    const y = eyeY - h * 0.2 + (h * 0.6 * i) / 16;
+    for (let j = 0; j <= 12; j++) {
+      const z = mid - h * 0.25 + (h * 0.5 * j) / 12;
+      // A x² + B (y - cy)² + C (z - cz)² = 1, least squares in A, B, C.
+      const ata = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+      const atb = [0, 0, 0];
+      for (const p of pts) {
+        const row = [p.x * p.x, (p.y - y) ** 2, (p.z - z) ** 2];
+        for (let a = 0; a < 3; a++) {
+          atb[a] += row[a];
+          for (let b = 0; b < 3; b++) ata[a][b] += row[a] * row[b];
+        }
+      }
+      const s = solve(ata, atb);
+      if (!s || s.some((c) => c <= 0)) continue;
+      let err = 0;
+      for (const p of pts) {
+        // Distance-like error: how far off the surface, in radii.
+        const r = Math.sqrt(s[0] * p.x * p.x + s[1] * (p.y - y) ** 2 + s[2] * (p.z - z) ** 2);
+        err += (r - 1) ** 2;
+      }
+      if (err < bestErr) {
+        bestErr = err;
+        best = { x: 0, y, z, rx: 1 / Math.sqrt(s[0]), ry: 1 / Math.sqrt(s[1]), rz: 1 / Math.sqrt(s[2]) };
+      }
+    }
+  }
+  return best;
+}
+
+const skulls = new Map<string, THREE.BufferGeometry>();
+
+/**
+ * The back and top of a head whose hair was taken off: the skull (in accessory
+ * units) where the face has openings, tucked just behind the face everywhere
+ * else, each point textured from the nearest bit of the face's skin so color
+ * and shading carry straight on. Drawn with the face's own material.
+ */
+export function skullFor(face: THREE.BufferGeometry, from: THREE.SkinnedMesh, k: number, marks: FaceMarks): THREE.BufferGeometry | null {
+  const key = `${face.uuid}|${from.uuid}|${k.toFixed(4)}`;
+  const hit = skulls.get(key);
+  if (hit) return hit;
+  const o = openings(face, from, k, marks.eyeY / k, marks.chinY / k);
+  if (!o) return null;
+  const e = marks.skull;
+  const shape = { x: e.x / k, y: e.y / k, z: e.z / k, rx: e.rx / k, ry: e.ry / k, rz: e.rz / k };
+  const uv = face.getAttribute("uv");
+  // The face in these units, to cast rays at.
+  const pos = face.getAttribute("position");
+  const flat = new Float32Array(pos.count * 3);
+  for (const [n, v] of o.verts) flat.set([v.x, v.y, v.z], n * 3);
+  const probe = new THREE.BufferGeometry();
+  probe.setAttribute("position", new THREE.BufferAttribute(flat, 3));
+  probe.setIndex(face.getIndex());
+  const target = new THREE.Mesh(probe, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+  target.updateMatrixWorld(true);
+  const ray = new THREE.Raycaster();
+  // Its skin vertices, by direction from the skull's center, for texturing.
+  const center = new THREE.Vector3(shape.x, shape.y, shape.z);
+  const skin: { d: THREE.Vector3; u: number; v: number }[] = [];
+  for (const [n, v] of o.verts) {
+    const [u, w] = [uv.getX(n), uv.getY(n)];
+    if (Math.floor(u * 8) !== 0 || Math.floor(w * 4) !== 0) continue;
+    const q = new THREE.Vector3((v.x - shape.x) / shape.rx, (v.y - shape.y) / shape.ry, (v.z - shape.z) / shape.rz);
+    if (q.lengthSq() > 1e-9) skin.push({ d: q.normalize(), u, v: w });
+  }
+  const sphere = new THREE.SphereGeometry(1, 40, 24);
+  const sp = sphere.getAttribute("position");
+  const suv = sphere.getAttribute("uv");
+  const d = new THREE.Vector3();
+  const p = new THREE.Vector3();
+  for (let n = 0; n < sp.count; n++) {
+    d.fromBufferAttribute(sp, n).normalize();
+    p.set(shape.x + d.x * shape.rx, shape.y + d.y * shape.ry, shape.z + d.z * shape.rz);
+    const dist = p.distanceTo(center);
+    ray.set(center, p.clone().sub(center).normalize());
+    ray.far = dist * 1.6;
+    const hit = ray.intersectObject(target, false)[0];
+    // The face is in front of this point: tuck the skull just behind it.
+    let r = 1;
+    if (hit && hit.distance < dist * 1.04) r = (hit.distance * 0.95) / dist;
+    // Down the front into the neck there's no face to meet: keep it inside.
+    else if (!hit && d.y < -0.35 && d.z > -0.2) r = 0.8;
+    p.sub(center).multiplyScalar(r).add(center);
+    sp.setXYZ(n, p.x, p.y, p.z);
+    // Its color: the nearest skin of the face.
+    let best = -2;
+    for (const t of skin) {
+      const c = t.d.dot(d);
+      if (c > best) {
+        best = c;
+        suv.setXY(n, t.u, t.v);
+      }
+    }
+  }
+  probe.dispose();
+  sphere.computeVertexNormals();
+  skulls.set(key, sphere);
+  return sphere;
+}
+
+/**
+ * Stubble: the face's own lower jaw and chin (below the nose, the front half),
+ * lifted a hair off the skin, to be drawn in a shadowy shade. Model units, the
+ * face's own bind, so it's skinned exactly like the face.
+ */
+export function jawOf(face: THREE.BufferGeometry, from: THREE.SkinnedMesh, marks: FaceMarks): THREE.BufferGeometry | null {
+  const i = from.skeleton.bones.findIndex((b) => b.name === "head");
+  const index = face.getIndex();
+  const normal = face.getAttribute("normal");
+  if (i < 0 || !index || !normal) return null;
+  const toBone = from.bindMatrix.clone().premultiply(from.skeleton.boneInverses[i]);
+  const pos = face.getAttribute("position");
+  const below = marks.eyeY - (marks.eyeY - marks.chinY) * 0.5;
+  const v = new THREE.Vector3();
+  const ids: number[] = [];
+  for (let t = 0; t < index.count; t += 3) {
+    let y = 0;
+    let z = 0;
+    for (let c = 0; c < 3; c++) {
+      v.fromBufferAttribute(pos, index.getX(t + c)).applyMatrix4(toBone);
+      y += v.y / 3;
+      z += v.z / 3;
+    }
+    if (y < below && z > marks.zc) ids.push(index.getX(t), index.getX(t + 1), index.getX(t + 2));
+  }
+  if (!ids.length) return null;
+  const g = face.clone();
+  const out = g.getAttribute("position") as THREE.BufferAttribute;
+  // Lift along the surface normal, a fraction of the face's size.
+  const lift = (marks.eyeY - marks.chinY) * 0.03;
+  for (let n = 0; n < out.count; n++) {
+    out.setXYZ(n, out.getX(n) + normal.getX(n) * lift, out.getY(n) + normal.getY(n) * lift, out.getZ(n) + normal.getZ(n) * lift);
+  }
+  g.setIndex(ids);
   return g;
 }

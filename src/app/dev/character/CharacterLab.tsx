@@ -52,6 +52,16 @@ const SETS: Record<string, Look[]> = {
       })),
     ),
   ),
+  bald2: (["#f0d4c1", "#c79474", "#4c3226"] as const).flatMap((skin, i) => [
+    { ...BASE, skin, hairStyle: "bald" as Look["hairStyle"], headShape: (["oval", "round", "heart"] as const)[i] },
+    { ...BASE, ...M, skin, hairStyle: "bald" as Look["hairStyle"], headShape: (["oval", "square", "long"] as const)[i] },
+  ]),
+  afro: [
+    { ...BASE, ...M, hairStyle: "afro", hair: "#231a17", skin: "#4c3226" },
+    { ...BASE, ...M, hairStyle: "afro", headwear: "safari" },
+    { ...BASE, hairStyle: "afro", hair: "#8c4128" },
+    { ...BASE, ...M, hairStyle: "afro", headwear: "pirate", headShape: "long" },
+  ],
   shapes: (["oval", "round", "square", "long", "heart"] as const).flatMap((headShape) => [
     { ...BASE, headShape, hairStyle: "bob" as Look["hairStyle"], glasses: "round" as Look["glasses"] },
     { ...BASE, ...M, headShape, hairStyle: "buzz" as Look["hairStyle"], facialHair: "goatee" as Look["facialHair"], headwear: (headShape === "long" ? "cowboy" : "none") as Look["headwear"] },
