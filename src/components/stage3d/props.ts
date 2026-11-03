@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { tone } from "@/lib/look";
 
 /**
  * Props KayKit doesn't ship, built to match its look: chunky, slightly rounded,
@@ -6,16 +7,20 @@ import * as THREE from "three";
  */
 
 const mats = new Map<string, THREE.MeshStandardMaterial>();
+
+/** A prop's color, calmed: no candy brights, blacks and whites kept. */
+export const calmProp = (color: string) => tone(color, { maxS: 0.3, minL: 0.06, maxL: 0.9 });
 export function mat(color: string, { emissive, rough = 0.78 }: { emissive?: string; rough?: number } = {}) {
   const key = `${color}|${emissive ?? ""}|${rough}`;
   let m = mats.get(key);
   if (!m) {
     m = new THREE.MeshStandardMaterial({
-      color,
+      // The same calm, natural palette as the characters and the app.
+      color: calmProp(color),
       roughness: rough,
       metalness: 0,
       flatShading: true,
-      emissive: emissive ?? "#000000",
+      emissive: emissive ? tone(emissive, { maxS: 0.7, minL: 0.3, maxL: 0.95 }) : "#000000",
       emissiveIntensity: emissive ? 1.2 : 0,
     });
     mats.set(key, m);
@@ -164,7 +169,7 @@ export function waves(w = 5.2, d = 2.4) {
   const base = geo.attributes.position.array.slice();
   const sea = new THREE.Mesh(
     geo,
-    new THREE.MeshStandardMaterial({ color: "#2bb6d6", roughness: 0.35, flatShading: true, transparent: true, opacity: 0.94 }),
+    new THREE.MeshStandardMaterial({ color: calmProp("#2bb6d6"), roughness: 0.35, flatShading: true, transparent: true, opacity: 0.94 }),
   );
   sea.receiveShadow = true;
   return {
@@ -646,13 +651,18 @@ export function delicateArch() {
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  // The rock's bands, calmed like every other color on stage.
+  for (let i = 0; i < col.length; i += 3) {
+    const l = 0.299 * col[i] + 0.587 * col[i + 1] + 0.114 * col[i + 2];
+    for (let c = 0; c < 3; c++) col[i + c] = l + (col[i + c] - l) * 0.62;
+  }
   geo.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
   geo.setIndex(idx);
   geo.computeVertexNormals();
   // A little warm glow, so the shaded side still reads as sunlit orange rock.
   const rock = new THREE.Mesh(
     geo,
-    new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true, emissive: "#6a2e12", emissiveIntensity: 0.45 }),
+    new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true, emissive: "#5a3420", emissiveIntensity: 0.4 }),
   );
   rock.castShadow = true;
   rock.receiveShadow = true;

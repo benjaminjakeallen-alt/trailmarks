@@ -121,6 +121,15 @@ export class Stage {
   private queue: Actor[] = [];
   private master: ClockImpl;
   private intro = { t: 0, from: new THREE.Vector3(), fromScale: 1 };
+  private slabColors: { top: THREE.MeshStandardMaterial; side: THREE.MeshStandardMaterial; from: THREE.Color[]; to: THREE.Color[] } | null = null;
+
+  /** Blend the slab between the map's color (0) and the stage's (1). */
+  private tintSlab(k: number) {
+    const c = this.slabColors;
+    if (!c) return;
+    c.top.color.lerpColors(c.from[0], c.to[0], k);
+    c.side.color.lerpColors(c.from[1], c.to[1], k);
+  }
   private goal = new THREE.Vector3();
   private disposed = false;
   private last = 0;
@@ -194,8 +203,16 @@ export class Stage {
     // (three.js flips the face winding for mirrored objects, so the slab stays solid).
     geo.translate(-pole.x, -pole.y, 0);
 
+    // It lifts off the map in the map's own claim color, and settles into a
+    // calmer stage color that suits the characters and props on it.
     const top = new THREE.MeshStandardMaterial({ color: gold ? "#f0b52a" : "#1aa898", roughness: 0.82 });
     const side = new THREE.MeshStandardMaterial({ color: gold ? "#b07a0a" : "#0c6168", roughness: 0.9 });
+    this.slabColors = {
+      top,
+      side,
+      from: [top.color.clone(), side.color.clone()],
+      to: [new THREE.Color(gold ? "#cfae63" : "#86aca5"), new THREE.Color(gold ? "#8c6f33" : "#456f6c")],
+    };
     const mesh = new THREE.Mesh(geo, [top, side]);
     mesh.receiveShadow = true;
     mesh.castShadow = true;
@@ -400,6 +417,7 @@ export class Stage {
       this.slab.position.lerpVectors(goal, this.intro.from, k);
       this.slab.scale.setScalar(THREE.MathUtils.lerp(1, this.intro.fromScale, k));
       this.slab.rotation.x = -TILT * (1 - k);
+      this.tintSlab(1 - k);
       if (this.outro.t >= 1) {
         const done = this.outro.done;
         this.outro = null;
@@ -412,6 +430,7 @@ export class Stage {
       this.slab.position.lerpVectors(this.intro.from, goal, kp);
       this.slab.scale.setScalar(THREE.MathUtils.lerp(this.intro.fromScale, 1, kp));
       this.slab.rotation.x = -TILT * Math.min(1.08, k);
+      this.tintSlab(kp);
     }
 
     // Keep the sun up and to the left of the slab, wherever it is.

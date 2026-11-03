@@ -61,9 +61,57 @@ export function warmCast(bodies: Body[] = ["rogue", "barbarian"]) {
   for (const b of bodies) void loadBody(b).catch(() => {});
 }
 
+/**
+ * Tone props.glb's own colors down once (it's shared): its texture sheets lose
+ * some saturation, plain colors are calmed like the procedural props.
+ */
+function calmProps(gltf: GLTF) {
+  if (gltf.userData.calmed) return;
+  gltf.userData.calmed = true;
+  const sheets = new Map<THREE.Texture, THREE.Texture>();
+  gltf.scene.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    for (const m of (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) as THREE.MeshStandardMaterial[]) {
+      if (!m.isMeshStandardMaterial || m.userData.calmed) continue;
+      m.userData.calmed = true;
+      m.color.set(tone(`#${m.color.getHexString()}`, { maxS: 0.4, minL: 0.06, maxL: 0.95 }));
+      const img = m.map?.image as (CanvasImageSource & { width: number; height: number }) | undefined;
+      if (!m.map || !img?.width) continue;
+      let calm = sheets.get(m.map);
+      if (!calm) {
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.min(512, img.width);
+        canvas.height = Math.min(512, img.height);
+        const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const px = data.data;
+        for (let i = 0; i < px.length; i += 4) {
+          const l = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+          for (let c = 0; c < 3; c++) px[i + c] = l + (px[i + c] - l) * PROP_SATURATION;
+        }
+        ctx.putImageData(data, 0, 0);
+        calm = new THREE.CanvasTexture(canvas);
+        calm.flipY = m.map.flipY;
+        calm.colorSpace = m.map.colorSpace;
+        calm.wrapS = m.map.wrapS;
+        calm.wrapT = m.map.wrapT;
+        sheets.set(m.map, calm);
+      }
+      m.map = calm;
+      m.needsUpdate = true;
+    }
+  });
+}
+
+/** How much of props.glb's texture saturation stays. */
+const PROP_SATURATION = 0.55;
+
 /** A copy of a prop from props.glb, ready to place. */
 export async function prop(name: string): Promise<THREE.Object3D> {
   const gltf = await loadProps();
+  calmProps(gltf);
   const src = gltf.scene.getObjectByName(name);
   if (!src) throw new Error(`No prop ${name}`);
   const copy = src.clone(true);

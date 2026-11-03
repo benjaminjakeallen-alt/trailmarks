@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { tone } from "@/lib/look";
 
 /**
  * Soft round particles for fireworks, smoke, steam, sparkles and confetti —
@@ -119,7 +120,8 @@ export class Effects {
     q.drag = p.drag ?? 0;
     q.size0 = p.size;
     q.size1 = p.endSize ?? p.size;
-    q.color.set(p.color);
+    // Bright but not neon, like everything else on stage.
+    q.color.set(tone(`#${new THREE.Color(p.color).getHexString()}`, { maxS: 0.62, minL: 0.2, maxL: 0.95 }));
     q.solid = p.solid ? 1 : 0;
     q.wobble = p.wobble ?? 0;
   }
