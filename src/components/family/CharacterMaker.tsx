@@ -51,7 +51,7 @@ import { HAPTICS, haptic } from "@/lib/motion";
 // three.js only loads when someone opens this.
 const CharacterPreview = dynamic(() => import("@/components/stage3d/CharacterPreview"), {
   ssr: false,
-  loading: () => <Skeleton className="h-[260px] w-[260px] rounded-full" />,
+  loading: () => <Skeleton className="h-[190px] w-[190px] rounded-full" />,
 });
 
 const TABS = ["Body", "Face", "Hair", "Outfit", "Hat", "Extras"] as const;
@@ -135,6 +135,8 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
   const me = members.find((m) => m.userId === viewer?.userId) ?? viewer;
   const [look, setLook] = useState<Look | null>(me ? lookOf(me) : null);
   const [tab, setTab] = useState<Tab>("Body");
+  // Shorter phones get a smaller preview, so it can stay pinned and leave room for the choices.
+  const [previewSize] = useState(() => (typeof window !== "undefined" && window.innerHeight < 900 ? 190 : 250));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -185,11 +187,13 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
         </button>
       </div>
 
-      <div className="mt-2 flex justify-center">
-        <CharacterPreview member={me} look={look} size={260} />
-      </div>
+      {/* The character and the tabs stay in view while the choices scroll under them. */}
+      <div className="sticky -top-3 z-10 -mx-5 bg-surface px-5 pb-2 pt-1 sm:-top-7 sm:-mx-7 sm:px-7">
+        <div className="flex justify-center">
+          <CharacterPreview member={me} look={look} size={previewSize} />
+        </div>
 
-      <div role="tablist" aria-label="Customize" className="mt-3 flex gap-1 overflow-x-auto rounded-full bg-surface-sunken p-1">
+      <div role="tablist" aria-label="Customize" className="mt-2 flex gap-1 overflow-x-auto rounded-full bg-surface-sunken p-1">
         {TABS.map((t) => (
           <button
             key={t}
@@ -205,8 +209,9 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
           </button>
         ))}
       </div>
+      </div>
 
-      <div role="tabpanel" className="mt-4 min-h-[260px] space-y-5">
+      <div role="tabpanel" className="mt-3 min-h-[260px] space-y-5">
         {tab === "Body" && (
           <>
             <Choices
@@ -302,9 +307,12 @@ export default function CharacterMaker({ open, onClose }: { open: boolean; onClo
       </div>
 
       {error && <p className="mt-4 rounded-2xl bg-danger-soft px-4 py-3 text-[14px] text-danger-fg">{error}</p>}
-      <Button className="mt-6 w-full" onClick={save} disabled={saving}>
-        {saving ? "Saving…" : "Save character"}
-      </Button>
+      {/* Save is always in reach, however far down the choices go. */}
+      <div className="sticky -bottom-[calc(env(safe-area-inset-bottom)+1.5rem)] z-10 -mx-5 -mb-[calc(env(safe-area-inset-bottom)+1.5rem)] mt-4 bg-surface px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-3 shadow-[0_-12px_16px_-12px_rgb(14_27_31/0.12)] sm:-bottom-7 sm:-mx-7 sm:-mb-7 sm:px-7 sm:pb-7">
+        <Button className="w-full" onClick={save} disabled={saving}>
+          {saving ? "Saving…" : "Save character"}
+        </Button>
+      </div>
     </Sheet>
   );
 }

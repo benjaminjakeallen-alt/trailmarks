@@ -2,12 +2,13 @@
 
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 import { XIcon } from "@phosphor-icons/react";
 
 /**
- * A modal sheet: slides up from the bottom (and drags down to dismiss) on
- * phones, a centered card on bigger screens. Escape and the scrim close it.
+ * A modal sheet: slides up from the bottom on phones (drag its handle down to
+ * dismiss), a centered card on bigger screens. Escape and the scrim close it.
+ * Only the handle drags: anywhere else a swipe scrolls what's in it.
  */
 export default function Sheet({
   open,
@@ -20,6 +21,7 @@ export default function Sheet({
   label: string;
   children: ReactNode;
 }) {
+  const drag = useDragControls();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -54,14 +56,25 @@ export default function Sheet({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 380, damping: 38 }}
+            // Framer turns off native vertical panning on anything draggable; the handle
+            // does the dragging, so give touch scrolling back to the rest.
+            style={{ touchAction: "pan-y" }}
             drag="y"
+            dragListener={false}
+            dragControls={drag}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0.04, bottom: 0.6 }}
             onDragEnd={(_, info) => {
               if (info.offset.y > 100 || info.velocity.y > 600) onClose();
             }}
           >
-            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-fg/15 sm:hidden" />
+            <div
+              className="-mx-5 -mt-3 mb-1 flex h-7 cursor-grab touch-none items-center justify-center active:cursor-grabbing sm:hidden"
+              onPointerDown={(e) => drag.start(e)}
+              aria-hidden
+            >
+              <div className="h-1 w-10 rounded-full bg-fg/15" />
+            </div>
             <button
               type="button"
               onClick={onClose}
