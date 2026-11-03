@@ -503,19 +503,37 @@ export class Actor {
       this.model.position.y = 0;
     }
 
-    // Head turns toward whatever they're watching, after the clip has set its pose.
+    // Head turns toward whatever they're watching, on top of the clip's pose.
+    // Some clips (Idle) never move the head, so the mixer doesn't reset it:
+    // without this, each frame's turn would add to the last and the head would
+    // spin. When the head is still exactly as we left it, start from the pose
+    // it had before our turn.
+    if (this.head) {
+      if (this.turned && this.head.quaternion.equals(this.turned)) this.head.quaternion.copy(this.unturned);
+      this.unturned.copy(this.head.quaternion);
+      this.turned = null;
+    }
     this.lookWeight = THREE.MathUtils.damp(this.lookWeight, this.lookTarget ? 1 : 0, 5, dt);
-    if (this.head && this.lookTarget && this.lookWeight > 0.01) {
+    if (this.lookTarget) this.lastLook = this.lookTarget;
+    const target = this.lookTarget ?? this.lastLook;
+    if (this.head && target && this.lookWeight > 0.01) {
       const headPos = this.head.getWorldPosition(new THREE.Vector3());
-      const local = this.root.worldToLocal(this.lookTarget.clone());
+      const local = this.root.worldToLocal(target.clone());
       const localHead = this.root.worldToLocal(headPos);
       const dir = local.sub(localHead);
       const yaw = THREE.MathUtils.clamp(Math.atan2(dir.x, dir.z), -1.1, 1.1);
       const pitch = THREE.MathUtils.clamp(Math.atan2(dir.y, Math.hypot(dir.x, dir.z)), -0.5, 0.7);
       this.head.rotation.y += yaw * this.lookWeight * 0.8;
       this.head.rotation.x -= pitch * this.lookWeight * 0.6;
+      this.turned = this.head.quaternion.clone();
     }
   }
+
+  /** The head's pose before this frame's turn, and after it (to tell if the clip has reset it since). */
+  private unturned = new THREE.Quaternion();
+  /** What they last watched, so the head eases back from it instead of snapping. */
+  private lastLook: THREE.Vector3 | null = null;
+  private turned: THREE.Quaternion | null = null;
 
   dispose() {
     // Reshaped bodies own their geometry copies.

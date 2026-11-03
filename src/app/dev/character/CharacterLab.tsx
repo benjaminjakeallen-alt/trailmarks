@@ -200,7 +200,33 @@ function Measure() {
   return <pre data-measure>{out}</pre>;
 }
 
+/** ?look: an idling character glancing up and to the side; the head's turn over time. */
+function Look() {
+  const [out, setOut] = useState("");
+  useEffect(() => {
+    void import("@/components/stage3d/cast").then(async ({ makeActor }) => {
+      const THREE = await import("three");
+      const rows: string[] = [];
+      for (const clip of ["Idle", "Cheer", "Sit_Chair_Idle"] as const) {
+        const a = await makeActor({ userId: "look", displayName: "L", color: "#46658a", avatarUrl: null }, LOOKS[0]);
+        a.play(clip, { fade: 0 });
+        a.lookAt(new THREE.Vector3(2, 3, 1));
+        const ys: number[] = [];
+        for (let f = 0; f < 240; f++) {
+          a.update(1 / 60);
+          if (f % 30 === 29) ys.push(Math.round(new THREE.Euler().setFromQuaternion(a.head!.quaternion).y * 100) / 100);
+        }
+        rows.push(`${clip}: ${ys.join(" ")}`);
+        a.dispose();
+      }
+      setOut(rows.join("\n"));
+    });
+  }, []);
+  return <pre data-measure>{out}</pre>;
+}
+
 export default function CharacterLab() {
+  if (typeof window !== "undefined" && window.location.search.includes("look")) return <Look />;
   if (typeof window !== "undefined" && window.location.search.includes("measure")) return <Measure />;
   return (
     <>
