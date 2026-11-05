@@ -5,7 +5,7 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { Member } from "@/lib/types";
 import { BUILD_WIDTH, SIZE_SCALE, tone } from "@/lib/look";
 import { gear, glasses, headwear } from "@/components/stage3d/accessories";
-import { dress, torsoOf } from "@/components/stage3d/wardrobe";
+import { LEG_LIFT, dress, stretchClips, stretchSkeleton, torsoOf } from "@/components/stage3d/wardrobe";
 import { HAT_BAND, HEAD_FORMS, faceMarks, fitHat, fitHead, pointsOf, jawOf, shapeHead, skullFor, type FaceMarks, type HeadFit } from "@/components/stage3d/fit";
 import { SCULPTED, builtFacialHair, builtHair, extraPieces, fullSkull, lashes, skull, skullColor, splitHead, transplant, type HeadShape } from "@/components/stage3d/hair";
 
@@ -30,8 +30,8 @@ const CELLS: Record<Body, { skin: Cell[]; hair: Cell[]; outfit: Cell[]; pants: C
   mage: { skin: [[0, 0]], hair: [[1, 0]], outfit: [[0, 1], [1, 1]], pants: [[3, 2]] },
 };
 
-/** A character's height (feet to the top of the head) per unit of neck height, in the shared skeleton's rest pose. */
-const MODEL_PER_NECK = 1.8;
+/** How far the top of the head is above the neck (model units, the shared skeleton's rest pose). */
+const HEAD_ABOVE_NECK = 0.993;
 
 // ---------------------------------------------------------------------------
 // Loading
@@ -275,7 +275,7 @@ export class Actor {
     model.updateMatrixWorld(true);
     const neck = this.head?.getWorldPosition(new THREE.Vector3()).y ?? 0;
     if (neck > 0.1) {
-      this.height = neck * MODEL_PER_NECK;
+      this.height = neck + HEAD_ABOVE_NECK;
     } else {
       const box = new THREE.Box3().setFromObject(model);
       this.height = Math.max(1, box.max.y - Math.max(0, box.min.y));
@@ -719,8 +719,15 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
   }
   // The body, dressed: skin to match the face.
   const torso = ownBody as THREE.SkinnedMesh | null;
-  if (torso?.parent) torso.parent.add(dress(torso, look, faceSkin(head, skullFrom) ?? look.skin));
-  const actor = new Actor(model, moves.animations, member, look);
+  // Longer legs: remember the joints as they were (the body is laid out from them), then stretch.
+  const joints = new Map<string, THREE.Vector3>();
+  model.updateMatrixWorld(true);
+  model.traverse((o) => {
+    if ((o as THREE.Bone).isBone) joints.set(o.name, o.getWorldPosition(new THREE.Vector3()));
+  });
+  stretchSkeleton(model);
+  if (torso?.parent) torso.parent.add(dress(torso, look, faceSkin(head, skullFrom) ?? look.skin, joints));
+  const actor = new Actor(model, stretchClips(moves.animations), member, look);
   // The head's overall proportions: the head bone carries the face, hair and
   // everything worn on it (the clips never animate scale, so this stays).
   actor.head?.scale.set(...HEAD_FORMS[look.headShape].scale);
@@ -793,7 +800,7 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
   // Gear goes against the dressed torso, measured in the chest bone's space.
   const t = torsoOf(look);
   const chestY = model.getObjectByName("chest")?.getWorldPosition(new THREE.Vector3()).y ?? 0.97;
-  const kit = gear(look.gear, look.outfit, { front: t.front / k, back: t.back / k, side: t.side / k, hip: t.hip / k, shoulder: (t.shoulderY - chestY) / k });
+  const kit = gear(look.gear, look.outfit, { front: t.front / k, back: t.back / k, side: t.side / k, hip: t.hip / k, shoulder: (t.shoulderY + LEG_LIFT - chestY) / k });
   if (kit) onBone(kit.bone, kit.object);
   // Hats, gear, jewelry and built hair in the same calm palette as the clothes.
   model.traverse((o) => {

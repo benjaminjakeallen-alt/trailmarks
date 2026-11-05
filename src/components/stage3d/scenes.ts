@@ -260,9 +260,7 @@ function fireworksScene(): Scene {
       return { ...s, yaw: -s.x * 0.2 };
     },
     async role(actor, slot, kit, clock) {
-      const ears = P.mouseEars(slot % 2 ? "#1d1d22" : "#e2364a");
-      ears.scale.setScalar(1.35);
-      wear(actor, ears, { top: -0.06 });
+      wear(actor, sceneHat("mouse", HAT_BAND, { bow: slot % 2 === 0 }), { fitted: true });
       actor.lookAt(kit.toWorld(sky.x, sky.y, sky.z));
       for (;;) {
         await beat(clock, 1.5, 3.5);
@@ -910,7 +908,6 @@ function floridaScene(): Scene {
   const C = new THREE.Vector3(0, 0, -0.1);
   const R = 1.15;
   const lapAt = (phase: number) => ({ x: C.x + Math.sin(phase) * R * 1.25, z: C.z + Math.cos(phase) * R * 0.8 });
-  let t0 = 0;
   return {
     slots: 4,
     async build(kit) {
@@ -940,20 +937,27 @@ function floridaScene(): Scene {
       return { x: p.x, z: p.z, yaw: 0 };
     },
     async role(actor, slot, _kit, clock) {
+      // Each runner keeps their own place on the track, so a dodge never makes them jump ahead.
+      let ph = (slot / 4) * Math.PI * 2 * 0.6;
       await beat(clock, 0.3, 0.6);
       actor.play("Running_A", { speed: 1.05 });
       for (;;) {
         await clock.wait(1 / 30);
-        const ph = t0 * 1.05 + slot * 0.75;
+        ph += (1 / 30) * 1.05;
         const p = lapAt(ph);
         const ahead = lapAt(ph + 0.1);
         actor.root.position.set(p.x, 0, p.z);
         actor.faceToward(ahead.x, ahead.z);
-        // Every so often someone looks back and nearly gets caught.
+        // Every so often someone looks back and nearly gets caught: a sidestep, still moving.
         if (chance(0.004)) {
           actor.bounce(0.8);
           actor.play("Dodge_Left", { fade: 0.1 });
-          await clock.wait(0.5);
+          for (let i = 0; i < 15; i++) {
+            await clock.wait(1 / 30);
+            ph += (1 / 30) * 0.8;
+            const q = lapAt(ph);
+            actor.root.position.set(q.x, 0, q.z);
+          }
           actor.play("Running_A", { fade: 0.15 });
         }
       }
@@ -964,9 +968,11 @@ function floridaScene(): Scene {
       cop.root.visible = true;
       cop.play("Running_B");
       kit.fx.dust(cop.root.position);
+      // His own place on the track: when he stops for breath he falls behind, then picks up again from there.
+      let ph = -1;
       for (;;) {
         await clock.wait(1 / 30);
-        const ph = t0 * 1.05 - 0.9;
+        ph += (1 / 30) * 1.0;
         const p = lapAt(ph);
         const ahead = lapAt(ph + 0.1);
         cop.root.position.set(p.x, 0, p.z);
@@ -976,12 +982,14 @@ function floridaScene(): Scene {
           cop.play("Idle", { fade: 0.2 });
           cop.bounce(0.3);
           await clock.wait(1.0);
+          // Turned back to the way he's going before setting off.
+          const q = lapAt(ph + 0.1);
+          cop.faceToward(q.x, q.z);
           cop.play("Running_B", { fade: 0.2 });
         }
       }
     },
-    tick(dt, t) {
-      t0 += dt;
+    tick(_dt, t) {
       lights.forEach((l, i) => (l.intensity = Math.floor(t * 6 + i) % 2 ? 3 : 0));
     },
   };
@@ -1453,9 +1461,7 @@ function labScene(): Scene {
     async role(actor, slot, _kit, clock) {
       actor.hold(P.bigCup(), slot === 4 ? "left" : "right");
       if (slot === 0) {
-        const ears = P.mouseEars();
-        ears.scale.setScalar(1.35);
-        wear(actor, ears, { top: -0.06 });
+        wear(actor, sceneHat("mouse", HAT_BAND, { bow: true }), { fitted: true });
       }
       for (;;) {
         actor.play(clips[slot % clips.length], { fade: 0.2 });

@@ -234,10 +234,40 @@ function peakedCap(g: THREE.Group, top: string, bandColor: string, metal: string
 }
 
 /** Hats only the scenes use (not in the wardrobe): a police cap, a cheesehead. */
-export function sceneHat(kind: "police" | "cheese", band: number): THREE.Object3D {
+export function sceneHat(kind: "police" | "cheese" | "mouse", band: number, opts: { bow?: boolean } = {}): THREE.Object3D {
   const body = new THREE.Group();
   let fit: Fit;
-  if (kind === "police") {
+  if (kind === "mouse") {
+    // Theme-park mouse ears: a black headband with two big round ears, and maybe a polka-dot bow.
+    const black = mat("#1d1d22", 0.55);
+    body.add(headband(black, 0.03));
+    for (const s of [-1, 1]) {
+      const ear = mesh(new THREE.SphereGeometry(0.17, 40, 24), black);
+      ear.scale.set(1, 1, 0.26);
+      ear.position.copy(onBand(Math.PI / 2 + s * 0.62, 0.13));
+      ear.rotation.z = -s * 0.25;
+      body.add(ear);
+    }
+    if (opts.bow) {
+      const red = mat("#b33a45", 0.5, { map: dots() });
+      const bow = new THREE.Group();
+      for (const s of [-1, 1]) {
+        const loop = mesh(new THREE.SphereGeometry(0.1, 24, 16), red);
+        loop.scale.set(1.2, 0.8, 0.45);
+        loop.position.x = s * 0.1;
+        loop.rotation.z = s * 0.3;
+        bow.add(loop);
+      }
+      const knot = ball(0.05, red, 16);
+      knot.scale.z = 0.7;
+      bow.add(knot);
+      bow.position.copy(onBand(Math.PI / 2, 0.06));
+      bow.position.z += 0.05;
+      bow.rotation.x = -0.2;
+      body.add(bow);
+    }
+    fit = { r: R, crown: 0.3 };
+  } else if (kind === "police") {
     fit = peakedCap(body, "#2f3f5a", "#1d2333", "#c9a24a");
   } else {
     // A foam cheese wedge, tall at the front and sloping to the back, soft-edged, with holes pressed in.

@@ -12,6 +12,63 @@ import { BUILD_WIDTH, tone, type Look, type Shoe } from "@/lib/look";
  * at 0.41, neck at 1.24) and skinned to its bones, so every animation just works.
  */
 
+// ---------------------------------------------------------------- longer legs
+
+/**
+ * The adventurers' skeleton has short chibi legs. Ours are longer: the thigh
+ * and shin bones are stretched, in the rest pose and in every animation, and
+ * the hips raised to match, so feet still land on the ground. Heights below
+ * are the original rest pose (model units).
+ */
+export const LEGS = { ankle: 0.145, knee: 0.292, hipJoint: 0.519, hips: 0.406, thigh: 2.1, shin: 2.1 } as const;
+/** How much higher the body sits on the longer legs. */
+export const LEG_LIFT = (LEGS.knee - LEGS.ankle) * (LEGS.shin - 1) + (LEGS.hipJoint - LEGS.knee) * (LEGS.thigh - 1);
+
+/** Where a height in the original rest pose ends up on the longer legs. */
+export function legY(y: number) {
+  const { ankle, knee, hipJoint, thigh, shin } = LEGS;
+  if (y <= ankle) return y;
+  if (y <= knee) return ankle + (y - ankle) * shin;
+  const knee2 = ankle + (knee - ankle) * shin;
+  if (y <= hipJoint) return knee2 + (y - knee) * thigh;
+  return y + LEG_LIFT;
+}
+
+const BONE_SCALE: Record<string, number> = { lowerlegl: LEGS.thigh, lowerlegr: LEGS.thigh, footl: LEGS.shin, footr: LEGS.shin };
+const HIPS_SCALE = (LEGS.hips + LEG_LIFT) / LEGS.hips;
+
+/** Stretch a model's legs in its rest pose (bone names as GLTFLoader gives them: dots stripped). */
+export function stretchSkeleton(model: THREE.Object3D) {
+  model.traverse((o) => {
+    if (!(o as THREE.Bone).isBone) return;
+    const k = BONE_SCALE[o.name];
+    if (k) o.position.multiplyScalar(k);
+    if (o.name === "hips") o.position.y *= HIPS_SCALE;
+  });
+  model.updateMatrixWorld(true);
+}
+
+const stretched = new WeakMap<THREE.AnimationClip[], THREE.AnimationClip[]>();
+
+/** The same clips on the longer legs (cached; every actor shares them). */
+export function stretchClips(clips: THREE.AnimationClip[]): THREE.AnimationClip[] {
+  const hit = stretched.get(clips);
+  if (hit) return hit;
+  const out = clips.map((c) => {
+    const clip = c.clone();
+    for (const t of clip.tracks) {
+      const [bone, prop] = t.name.split(".");
+      if (prop !== "position") continue;
+      const k = BONE_SCALE[bone];
+      if (k) for (let i = 0; i < t.values.length; i++) t.values[i] *= k;
+      if (bone === "hips") for (let i = 1; i < t.values.length; i += 3) t.values[i] *= HIPS_SCALE;
+    }
+    return clip;
+  });
+  stretched.set(clips, out);
+  return out;
+}
+
 type W = [string, number][];
 type Paint = THREE.Color | ((p: THREE.Vector3, around: number) => THREE.Color);
 
@@ -37,7 +94,9 @@ class Builder {
     private rest: THREE.Matrix4[],
   ) {}
 
-  vert(world: THREE.Vector3, c: THREE.Color, w: W) {
+  vert(original: THREE.Vector3, c: THREE.Color, w: W) {
+    // Built in the original proportions; placed on the longer legs.
+    const world = new THREE.Vector3(original.x, legY(original.y), original.z);
     const list = w.filter(([name, x]) => x > 0 && this.bones.has(name)).sort((a, b) => b[1] - a[1]).slice(0, 4);
     const sum = list.reduce((a, [, x]) => a + x, 0) || 1;
     // skinned = bind⁻¹ · Σ wᵢ (boneᵢ · inverseᵢ) · bind · raw, then the mesh's own world matrix.
@@ -74,7 +133,8 @@ class Builder {
 
   /** The middle of a triangle, minus a point: which way is out from that point. */
   away(a: number, b: number, c: number, from: THREE.Vector3) {
-    return this.world[a].clone().add(this.world[b]).add(this.world[c]).divideScalar(3).sub(from);
+    // `from` is in the original proportions, like everything the body is laid out from.
+    return this.world[a].clone().add(this.world[b]).add(this.world[c]).divideScalar(3).sub(new THREE.Vector3(from.x, legY(from.y), from.z));
   }
 
   geometry() {
@@ -210,17 +270,15 @@ const lerpW = (a: string, b: string, t: number): W => {
  * Dress a character: the body (skin where it shows, clothes where they're
  * worn) as one skinned mesh on `on`'s skeleton, in its rest pose.
  */
-export function dress(on: THREE.SkinnedMesh, look: Look, skinHex: string): THREE.SkinnedMesh {
+export function dress(on: THREE.SkinnedMesh, look: Look, skinHex: string, original: Map<string, THREE.Vector3>): THREE.SkinnedMesh {
   const bones = new Map(on.skeleton.bones.map((b, i) => [b.name, i] as const));
   let root: THREE.Object3D = on;
   while (root.parent) root = root.parent;
   root.updateMatrixWorld(true);
   const rest = on.skeleton.bones.map((b, i) => new THREE.Matrix4().multiplyMatrices(b.matrixWorld, on.skeleton.boneInverses[i]));
   const B = new Builder(bones, on, rest);
-  const at = (name: string) => {
-    const bone = on.skeleton.bones[bones.get(name) ?? 0];
-    return bone.getWorldPosition(new THREE.Vector3());
-  };
+  // Where each joint was before the legs were stretched: the body is laid out in those proportions.
+  const at = (name: string) => original.get(name)?.clone() ?? new THREE.Vector3();
   const build = BUILD_WIDTH[look.build];
   const T = build.torso;
   const L = build.limbs;
