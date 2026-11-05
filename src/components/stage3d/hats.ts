@@ -234,10 +234,36 @@ function peakedCap(g: THREE.Group, top: string, bandColor: string, metal: string
 }
 
 /** Hats only the scenes use (not in the wardrobe): a police cap, a cheesehead. */
-export function sceneHat(kind: "police" | "cheese" | "mouse", band: number, opts: { bow?: boolean } = {}): THREE.Object3D {
+export function sceneHat(kind: "police" | "cheese" | "mouse" | "derby", band: number, opts: { bow?: boolean; color?: string } = {}): THREE.Object3D {
   const body = new THREE.Group();
   let fit: Fit;
-  if (kind === "mouse") {
+  if (kind === "derby") {
+    // A Kentucky Derby hat: a wide sweeping brim, a ribbon, and a spray of flowers and a feather.
+    const color = opts.color ?? "#d98a9e";
+    const felt = mat(color, 0.7);
+    const crown = mesh(lathe([[0.405, 0], [0.4, 0.14], [0.36, 0.2], [0, 0.22]]), felt);
+    const rim = mesh(
+      bend(brim(0.39, 0.66, 0.02), (v, a, d) => {
+        const out = Math.max(0, d - 0.4) / 0.26;
+        v.y += out * out * (0.12 * Math.sin(a + 0.6) - 0.04);
+      }),
+      felt,
+    );
+    const ribbon = mesh(lathe([[0.41, 0.01], [0.405, 0.07]]), mat("#f3eee5", 0.5));
+    body.add(crown, rim, ribbon);
+    const petals = ["#f3eee5", "#e7c46a", "#c48aa5"];
+    for (let i = 0; i < 5; i++) {
+      const a = 0.9 + i * 0.22;
+      const f = ball(0.06, mat(petals[i % 3], 0.6), 12);
+      f.position.set(Math.sin(a) * 0.42, 0.08 + (i % 2) * 0.04, Math.cos(a) * 0.42);
+      f.scale.set(1, 0.7, 1);
+      body.add(f);
+    }
+    const feather = tube([new THREE.Vector3(0.38, 0.06, -0.2), new THREE.Vector3(0.45, 0.3, -0.3), new THREE.Vector3(0.38, 0.55, -0.45)], 0.035, 0.005, mat("#f3eee5", 0.8));
+    feather.scale.z = 0.4;
+    body.add(feather);
+    fit = { r: R, crown: 0.24 };
+  } else if (kind === "mouse") {
     // Theme-park mouse ears: a black headband with two big round ears, and maybe a polka-dot bow.
     const black = mat("#1d1d22", 0.55);
     body.add(headband(black, 0.03));

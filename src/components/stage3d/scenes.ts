@@ -6,6 +6,7 @@ import type { Actor, Clip, Clock } from "@/components/stage3d/cast";
 import type { Look } from "@/lib/look";
 import * as P from "@/components/stage3d/props";
 import type { Scene, Spot, StageKit } from "@/components/stage3d/stage";
+import { MORE_SCENES } from "@/components/stage3d/scenes-more";
 
 /**
  * What the family does on each state. Every scene places its props, says where
@@ -15,15 +16,15 @@ import type { Scene, Spot, StageKit } from "@/components/stage3d/stage";
  * the middle, +z comes toward the viewer and yaw 0 faces them.
  */
 
-const rand = (a: number, b: number) => a + Math.random() * (b - a);
-const pick = <T,>(xs: readonly T[]) => xs[Math.floor(Math.random() * xs.length)];
-const chance = (p: number) => Math.random() < p;
+export const rand = (a: number, b: number) => a + Math.random() * (b - a);
+export const pick = <T,>(xs: readonly T[]) => xs[Math.floor(Math.random() * xs.length)];
+export const chance = (p: number) => Math.random() < p;
 
 /** Side by side, facing the viewer. */
-const row = (i: number, n: number, gap = 0.95, z = 0.5): Spot => ({ x: (i - (n - 1) / 2) * gap, z, yaw: 0 });
+export const row = (i: number, n: number, gap = 0.95, z = 0.5): Spot => ({ x: (i - (n - 1) / 2) * gap, z, yaw: 0 });
 
 /** Around a point, everyone facing it, the front left open so you can see in. */
-function ring(i: number, n: number, r: number, cx = 0, cz = 0): Spot {
+export function ring(i: number, n: number, r: number, cx = 0, cz = 0): Spot {
   const span = n <= 2 ? Math.PI * 0.6 : Math.PI * 1.25;
   const a = Math.PI + (n === 1 ? 0 : -span / 2 + (span * i) / (n - 1));
   const x = cx + Math.sin(a) * r;
@@ -35,7 +36,7 @@ function ring(i: number, n: number, r: number, cx = 0, cz = 0): Spot {
  * Seats around a table, everyone facing in. `angles` in radians: 0 is the side
  * nearest the viewer, π the far side.
  */
-function around(cx: number, cz: number, r: number, angles: number[]): Spot[] {
+export function around(cx: number, cz: number, r: number, angles: number[]): Spot[] {
   return angles.map((a) => {
     const x = cx + Math.sin(a) * r;
     const z = cz + Math.cos(a) * r;
@@ -44,15 +45,15 @@ function around(cx: number, cz: number, r: number, angles: number[]): Spot[] {
 }
 
 /** Real sizes for the KayKit props (the packs each use their own scale). */
-const TABLE = { w: 1.25, h: 0.6 };
-const CHAIR = { h: 0.78 };
+export const TABLE = { w: 1.25, h: 0.6 };
+export const CHAIR = { h: 0.78 };
 const STOOL = { h: 0.36 };
 
 /**
  * Walk to a spot, stepping around anything in the way (tables, crates, trees)
  * instead of through it.
  */
-async function walkAround(actor: Actor, kit: StageKit, clock: Clock, x: number, z: number, opts?: { run?: boolean; then?: Clip }) {
+export async function walkAround(actor: Actor, kit: StageKit, clock: Clock, x: number, z: number, opts?: { run?: boolean; then?: Clip }) {
   const path: [number, number][] = [];
   let from = new THREE.Vector2(actor.root.position.x, actor.root.position.z);
   const to = new THREE.Vector2(x, z);
@@ -87,22 +88,22 @@ async function walkAround(actor: Actor, kit: StageKit, clock: Clock, x: number, 
 const middleOut = (i: number, n: number) => [2, 1, 3, 0, 4].filter((s) => s < Math.max(n, 5))[i % 5];
 
 /** The parts of a guest's look every guest shares. */
-const GUEST: Look = { gender: "male", hairStyle: "tousled", facialHair: "none", extra: "none", top: "tee", bottom: "jeans", shoes: "sneakers", shoeColor: "#ebe8e1", body: "rogue", legs: "rogue", cape: false, hat: false, skin: "#e0b597", hair: "#4a3326", outfit: "#46658a", pants: "#2e3236", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
+export const GUEST: Look = { gender: "male", hairStyle: "tousled", facialHair: "none", extra: "none", top: "tee", bottom: "jeans", shoes: "sneakers", shoeColor: "#ebe8e1", body: "rogue", legs: "rogue", cape: false, hat: false, skin: "#e0b597", hair: "#4a3326", outfit: "#46658a", pants: "#2e3236", size: "adult", build: "normal", headShape: "oval", glasses: "none", headwear: "none", gear: "none" };
 
 /** Something worn on the head, sitting on top of it. */
 /** Put something on someone's head, sized and fitted to them (see Actor.wear). */
-function wear(actor: Actor, object: THREE.Object3D, how: Parameters<Actor["wear"]>[1]) {
+export function wear(actor: Actor, object: THREE.Object3D, how: Parameters<Actor["wear"]>[1]) {
   return actor.wear(object, how);
 }
 
 /** A local helper: wait, but only if the clock is still running. */
-const beat = (clock: Clock, a: number, b = a) => clock.wait(rand(a, b));
+export const beat = (clock: Clock, a: number, b = a) => clock.wait(rand(a, b));
 
 /** Everyone currently on stage. */
-const onStage = (kit: StageKit) => kit.cast.filter((a): a is Actor => Boolean(a));
+export const onStage = (kit: StageKit) => kit.cast.filter((a): a is Actor => Boolean(a));
 
 /** A cheer that ripples down the line, everyone a beat apart. */
-async function waveOfJoy(kit: StageKit, clock: Clock, clip: Clip = "Cheer") {
+export async function waveOfJoy(kit: StageKit, clock: Clock, clip: Clip = "Cheer") {
   for (const a of onStage(kit)) {
     a.bounce(0.7);
     void a.gesture(clock, clip, "arms", { hold: 0.4 }).catch(() => {});
@@ -1487,6 +1488,7 @@ const SCENES: Record<string, (() => Scene)[]> = {
   MI: [michiganScene],
   LA: [louisianaScene],
   GA: [georgiaScene],
+  ...MORE_SCENES,
   LAB: [labScene],
 };
 
