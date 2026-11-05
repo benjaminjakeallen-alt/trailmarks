@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { headwear } from "@/components/stage3d/accessories";
+import { HAT_BAND } from "@/components/stage3d/fit";
+import { sceneHat } from "@/components/stage3d/hats";
 import type { Actor, Clip, Clock } from "@/components/stage3d/cast";
 import type { Look } from "@/lib/look";
 import * as P from "@/components/stage3d/props";
@@ -91,44 +93,6 @@ const GUEST: Look = { gender: "male", hairStyle: "tousled", facialHair: "none", 
 /** Put something on someone's head, sized and fitted to them (see Actor.wear). */
 function wear(actor: Actor, object: THREE.Object3D, how: Parameters<Actor["wear"]>[1]) {
   return actor.wear(object, how);
-}
-
-function cowboyHat(color = "#8a5a33") {
-  const brim = P.cyl(0.36, 0.36, 0.03, color, 16);
-  const crown = P.cyl(0.22, 0.25, 0.26, color, 12);
-  crown.position.y = 0.15;
-  const band = P.cyl(0.255, 0.255, 0.05, "#3a2416", 12);
-  band.position.y = 0.06;
-  const g = new THREE.Group();
-  g.add(brim, crown, band);
-  return g;
-}
-
-function cheeseHat() {
-  const wedge = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.26, 3), P.mat("#ffc72c"));
-  wedge.rotation.y = Math.PI / 6;
-  wedge.scale.set(1, 1, 0.75);
-  wedge.position.y = 0.13;
-  wedge.castShadow = true;
-  const g = new THREE.Group();
-  g.add(wedge);
-  for (const [x, z] of [[0.1, 0.08], [-0.12, -0.02], [0.02, -0.15]]) {
-    const hole = P.ball(0.05, "#e0a91c");
-    hole.position.set(x, 0.27, z);
-    g.add(hole);
-  }
-  return g;
-}
-
-function policeCap() {
-  const g = new THREE.Group();
-  const top = P.cyl(0.3, 0.26, 0.16, "#1f2d4d", 12);
-  const visor = P.box(0.34, 0.02, 0.18, "#111");
-  visor.position.set(0, 0.0, 0.24);
-  const badge = P.box(0.08, 0.08, 0.02, "#f5c542");
-  badge.position.set(0, 0.08, 0.27);
-  g.add(top, visor, badge);
-  return g;
 }
 
 /** A local helper: wait, but only if the clock is still running. */
@@ -967,7 +931,7 @@ function floridaScene(): Scene {
         lights.push(l);
       }
       cop = await kit.guest({ ...GUEST, hairStyle: "buzz", facialHair: "mustache", top: "buttonup", bottom: "chinos", shoes: "boots", shoeColor: "#2e3236", skin: "#9f6d50", hair: "#2b211c", outfit: "#2f3f5a", pants: "#2f3f5a" }, "Officer");
-      wear(cop, policeCap(), { hat: 0.28 });
+      wear(cop, sceneHat("police", HAT_BAND), { fitted: true });
       cop.root.position.set(lapAt(-1).x, 0, lapAt(-1).z);
       cop.root.visible = false;
     },
@@ -1113,7 +1077,11 @@ function tennesseeScene(): Scene {
         hair.add(puff);
       }
       wear(singer, hair, { y: 0.05 });
-      wear(singer, cowboyHat("#fbf7f0"), { y: 0.98 });
+      // Perched on top of the big hair.
+      const hat = headwear("cowboy", "#f2ece0")!;
+      hat.position.y = 0;
+      hat.scale.setScalar(0.85);
+      wear(singer, hat, { y: 0.9 });
       const g = P.guitar("#e9b52a");
       g.rotation.set(0, 0, -0.9);
       singer.hold(g, "left");
@@ -1205,9 +1173,7 @@ function wisconsinScene(): Scene {
     },
     spot: (i, n) => ring(i, n, 1.2, 0, 0),
     async role(actor, slot, kit, clock) {
-      const hat = cheeseHat();
-      hat.scale.setScalar(1.1);
-      wear(actor, hat, { top: -0.1 });
+      wear(actor, sceneHat("cheese", HAT_BAND), { fitted: true });
       // Green and gold scarf.
       const scarf = new THREE.Group();
       scarf.add(P.box(0.5, 0.08, 0.1, slot % 2 ? "#1f5135" : "#ffb81c"));

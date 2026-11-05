@@ -105,6 +105,16 @@ const SETS: Record<string, Look[]> = {
     { ...BASE, ...M, hairStyle: "neat", facialHair: "stubble", headwear: "ranger" },
     { ...BASE, ...M, hairStyle: "spiky", headwear: "party", glasses: "square", hair: "#e6c77f" },
   ],
+  acc: [
+    { ...BASE, glasses: "round" as Look["glasses"], extra: "hoops", gear: "backpack" as Look["gear"] },
+    { ...BASE, ...M, glasses: "square" as Look["glasses"], extra: "bowtie", gear: "camera" as Look["gear"], hairStyle: "neat" },
+    { ...BASE, glasses: "sun" as Look["glasses"], extra: "pearls", gear: "scarf" as Look["gear"], outfit: "#d6cdb8" },
+    { ...BASE, ...M, extra: "chain", gear: "binoculars" as Look["gear"], hairStyle: "buzz" },
+    { ...BASE, extra: "flower", gear: "canteen" as Look["gear"], hairStyle: "bob" },
+    { ...BASE, extra: "headband", outfit: "#a5483c", hairStyle: "ponytail" },
+    { ...BASE, extra: "studs", glasses: "round" as Look["glasses"], hairStyle: "bun" },
+    { ...BASE, extra: "watch", top: "tank" as Look["top"], gear: "backpack" as Look["gear"], build: "thick" as Look["build"] },
+  ],
   hats2: (["pirate", "bunny", "unicorn", "party", "santa", "viking", "chef", "crown"] as const).map((headwear, i) => ({
     ...BASE,
     ...(i % 2 || i === 4 ? M : {}),

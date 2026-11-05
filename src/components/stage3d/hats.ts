@@ -17,7 +17,7 @@ const R = 0.4;
 // ---------------------------------------------------------------- materials and shapes
 
 const mats = new Map<string, THREE.MeshStandardMaterial>();
-function mat(color: string, rough = 0.8, opts: { metal?: number; emissive?: string; map?: THREE.Texture } = {}) {
+export function mat(color: string, rough = 0.8, opts: { metal?: number; emissive?: string; map?: THREE.Texture } = {}) {
   const key = `${color}|${rough}|${opts.metal ?? 0}|${opts.emissive ?? ""}|${opts.map?.uuid ?? ""}`;
   let m = mats.get(key);
   if (!m) {
@@ -36,14 +36,14 @@ function mat(color: string, rough = 0.8, opts: { metal?: number; emissive?: stri
   return m;
 }
 
-function mesh(geo: THREE.BufferGeometry, m: THREE.Material) {
+export function mesh(geo: THREE.BufferGeometry, m: THREE.Material) {
   const x = new THREE.Mesh(geo, m);
   x.castShadow = true;
   return x;
 }
 
 /** A surface of revolution round y: points are [radius, height]. */
-function lathe(pts: [number, number][], segs = 48) {
+export function lathe(pts: [number, number][], segs = 48) {
   return new THREE.LatheGeometry(
     pts.map(([r, y]) => new THREE.Vector2(r, y)),
     segs,
@@ -51,7 +51,7 @@ function lathe(pts: [number, number][], segs = 48) {
 }
 
 /** Move every vertex: f gets the position and its angle round y (0 at +z) and distance from the axis. */
-function bend(geo: THREE.BufferGeometry, f: (v: THREE.Vector3, a: number, d: number) => void) {
+export function bend(geo: THREE.BufferGeometry, f: (v: THREE.Vector3, a: number, d: number) => void) {
   const pos = geo.getAttribute("position");
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
@@ -75,8 +75,9 @@ function brim(r0: number, r1: number, t = 0.022) {
 }
 
 /** A tube along points, tapering from r0 to r1 (horns, cords, tails). */
-function tube(points: THREE.Vector3[], r0: number, r1: number, m: THREE.Material, closed = false) {
-  const curve = new THREE.CatmullRomCurve3(points, closed);
+export function tube(points: THREE.Vector3[], r0: number, r1: number, m: THREE.Material, closed = false) {
+  // Centripetal: the curve stays between its points instead of overshooting at tight bends.
+  const curve = new THREE.CatmullRomCurve3(points, closed, "centripetal");
   const segs = 32;
   const radial = 12;
   const geo = new THREE.TubeGeometry(curve, segs, 1, radial, closed);
@@ -95,7 +96,7 @@ function tube(points: THREE.Vector3[], r0: number, r1: number, m: THREE.Material
   return mesh(geo, m);
 }
 
-function ball(r: number, m: THREE.Material, seg = 20) {
+export function ball(r: number, m: THREE.Material, seg = 20) {
   return mesh(new THREE.SphereGeometry(r, seg, Math.round(seg * 0.75)), m);
 }
 
@@ -116,7 +117,7 @@ function bill(width: number, reach: number, m: THREE.Material, droop = 0.1) {
 // ---------------------------------------------------------------- textures
 
 const textures = new Map<string, THREE.CanvasTexture>();
-function canvasTexture(key: string, w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, repeat: [number, number] = [1, 1]) {
+export function canvasTexture(key: string, w: number, h: number, draw: (g: CanvasRenderingContext2D) => void, repeat: [number, number] = [1, 1]) {
   let t = textures.get(key);
   if (!t) {
     const c = document.createElement("canvas");
@@ -133,7 +134,7 @@ function canvasTexture(key: string, w: number, h: number, draw: (g: CanvasRender
 }
 
 /** Knit ribs: soft vertical stripes (grayscale; the material's color tints them). */
-const knit = (count: number) =>
+export const knit = (count: number) =>
   canvasTexture(`knit${count}`, 256, 16, (g) => {
     for (let x = 0; x < 256; x++) {
       const k = 0.78 + 0.22 * Math.cos((x / 256) * Math.PI * 2 * count) ** 2;
@@ -197,6 +198,82 @@ function headband(m: THREE.Material, thick = 0.028) {
 function onBand(t: number, lift = 0) {
   const p = new THREE.Vector3(Math.cos(t) * (R + 0.015 + lift), -0.08 + Math.sin(t) * (0.38 + lift), 0);
   return p.applyAxisAngle(new THREE.Vector3(1, 0, 0), -0.18);
+}
+
+/** A peaked cap (a ship's captain's, a police officer's): flat-topped crown, band, glossy visor, cord and badge. */
+function peakedCap(g: THREE.Group, top: string, bandColor: string, metal: string): Fit {
+  const crown = mesh(lathe([[0.395, 0.08], [0.43, 0.17], [0.47, 0.23], [0.465, 0.255], [0.4, 0.265], [0, 0.265]]), mat(top, 0.6));
+  const band = mesh(lathe([[0.405, -0.005], [0.41, 0.095]]), mat(bandColor, 0.7));
+  const visor = bill(0.28, 0.24, mat("#15171a", 0.25), 0.0);
+  visor.position.set(0, 0.03, 0.3);
+  visor.rotation.x = -0.32;
+  const shine = mat(metal, 0.35, { metal: 0.6 });
+  const cord = tube(
+    Array.from({ length: 9 }, (_, i) => {
+      const a = -0.9 + (i / 8) * 1.8;
+      return new THREE.Vector3(Math.sin(a) * 0.418, 0.035, Math.cos(a) * 0.418);
+    }),
+    0.01,
+    0.01,
+    shine,
+  );
+  const badge = new THREE.Group();
+  const disc = ball(0.04, shine);
+  disc.scale.z = 0.4;
+  badge.add(disc);
+  for (const s of [-1, 1]) {
+    const leaf = ball(0.035, shine);
+    leaf.scale.set(1.6, 0.6, 0.3);
+    leaf.position.set(s * 0.055, -0.01, 0);
+    leaf.rotation.z = s * 0.4;
+    badge.add(leaf);
+  }
+  badge.position.set(0, 0.1, 0.43);
+  g.add(crown, band, visor, cord, badge);
+  return { r: R, crown: 0.27 };
+}
+
+/** Hats only the scenes use (not in the wardrobe): a police cap, a cheesehead. */
+export function sceneHat(kind: "police" | "cheese", band: number): THREE.Object3D {
+  const body = new THREE.Group();
+  let fit: Fit;
+  if (kind === "police") {
+    fit = peakedCap(body, "#2f3f5a", "#1d2333", "#c9a24a");
+  } else {
+    // A foam cheese wedge, tall at the front and sloping to the back, soft-edged, with holes pressed in.
+    const side = new THREE.Shape();
+    side.moveTo(-0.3, 0);
+    side.lineTo(-0.3, 0.36);
+    side.lineTo(0.5, 0.02);
+    side.lineTo(0.5, 0);
+    side.closePath();
+    const geo = new THREE.ExtrudeGeometry(side, { depth: 0.9, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 4 });
+    geo.translate(0, 0, -0.45);
+    geo.rotateY(Math.PI / 2);
+    const wedge = mesh(geo, mat("#e3b64a", 0.75));
+    body.add(wedge);
+    const hole = mat("#b8892c", 0.85);
+    const topY = (z: number) => 0.02 + (0.34 * (z + 0.5)) / 0.8 + 0.035;
+    for (const [x, z, r] of [[0.15, 0.1, 0.06], [-0.2, -0.05, 0.05], [0.02, -0.25, 0.045], [0.3, -0.2, 0.04], [-0.32, 0.18, 0.04]] as const) {
+      const h = ball(r, hole, 16);
+      h.scale.y = 0.3;
+      h.position.set(x, topY(z), z);
+      h.rotation.x = 0.4;
+      body.add(h);
+    }
+    for (const [x, y, r] of [[0.2, 0.2, 0.05], [-0.22, 0.12, 0.045], [-0.02, 0.27, 0.035]] as const) {
+      const h = ball(r, hole, 16);
+      h.scale.z = 0.3;
+      h.position.set(x, y, 0.34);
+      body.add(h);
+    }
+    fit = { r: R, crown: 0.24 };
+  }
+  const g = new THREE.Group();
+  g.add(body);
+  g.position.y = band;
+  g.userData.fit = { cover: true, ...fit };
+  return g;
 }
 
 const BUILDERS: Record<Exclude<Headwear, "none">, (g: THREE.Group, color: string) => Fit> = {
@@ -373,36 +450,7 @@ const BUILDERS: Record<Exclude<Headwear, "none">, (g: THREE.Group, color: string
 
   captain(g) {
     // A white flat-topped crown, navy band, glossy black visor, gold cord and badge.
-    const white = mat("#f3f0ea", 0.6);
-    const crown = mesh(lathe([[0.395, 0.08], [0.43, 0.17], [0.47, 0.23], [0.465, 0.255], [0.4, 0.265], [0, 0.265]]), white);
-    const band = mesh(lathe([[0.405, -0.005], [0.41, 0.095]]), mat("#232c44", 0.7));
-    const visor = bill(0.28, 0.24, mat("#15171a", 0.25), 0.0);
-    visor.position.set(0, 0.03, 0.3);
-    visor.rotation.x = -0.32;
-    const gold = mat("#c9a24a", 0.35, { metal: 0.6 });
-    const cord = tube(
-      Array.from({ length: 9 }, (_, i) => {
-        const a = -0.9 + (i / 8) * 1.8;
-        return new THREE.Vector3(Math.sin(a) * 0.418, 0.035, Math.cos(a) * 0.418);
-      }),
-      0.01,
-      0.01,
-      gold,
-    );
-    const badge = new THREE.Group();
-    const disc = ball(0.04, gold);
-    disc.scale.z = 0.4;
-    badge.add(disc);
-    for (const s of [-1, 1]) {
-      const leaf = ball(0.035, gold);
-      leaf.scale.set(1.6, 0.6, 0.3);
-      leaf.position.set(s * 0.055, -0.01, 0);
-      leaf.rotation.z = s * 0.4;
-      badge.add(leaf);
-    }
-    badge.position.set(0, 0.1, 0.43);
-    g.add(crown, band, visor, cord, badge);
-    return { r: R, crown: 0.27 };
+    return peakedCap(g, "#f3f0ea", "#232c44", "#c9a24a");
   },
 
   cowboy(g, color) {

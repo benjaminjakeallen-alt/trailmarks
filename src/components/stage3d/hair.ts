@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { ball, box, cyl, mat } from "@/components/stage3d/props";
+import { ball, box, mat } from "@/components/stage3d/props";
 import type { HeadFit } from "@/components/stage3d/fit";
+import { ball as hball, mat as hm, mesh as hmesh, tube as htube } from "@/components/stage3d/hats";
 import type { Body, Extra, FacialHair, Gender, HairStyle } from "@/lib/look";
 
 /**
@@ -444,88 +445,146 @@ export function lashes(fit: HeadFit): THREE.Object3D {
 
 /** Jewelry and finishing touches: head-bone pieces and chest-bone pieces. */
 export function extraPieces(kind: Extra, color: string, width = 1, fit: HeadFit | null = null): { head?: THREE.Object3D; chest?: THREE.Object3D; arm?: THREE.Object3D } {
-  const gold = "#e9b52a";
+  const gold = hm("#d4a93f", 0.25, { metal: 0.9 });
+  const silver = hm("#d7dbde", 0.2, { metal: 0.9 });
   switch (kind) {
     case "studs":
     case "hoops": {
       const g = new THREE.Group();
       for (const side of [-1, 1]) {
-        const piece =
-          kind === "studs"
-            ? ball(0.035, "#dfe7ea", { emissive: "#9ab" })
-            : new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 6, 16), mat(gold));
-        piece.position.set(side * ((fit?.earX ?? 0.4) + 0.01), (fit?.earY ?? 0.2) - (kind === "hoops" ? 0.05 : 0), fit?.earZ ?? 0);
-        if (kind === "hoops") piece.rotation.y = Math.PI / 2;
-        g.add(piece);
+        const at = new THREE.Vector3(side * ((fit?.earX ?? 0.4) + 0.012), (fit?.earY ?? 0.2) - 0.01, fit?.earZ ?? 0);
+        if (kind === "studs") {
+          // A faceted gem in a little silver setting.
+          const set = hmesh(new THREE.CylinderGeometry(0.03, 0.026, 0.012, 16), silver);
+          set.rotation.z = Math.PI / 2;
+          const gem = hmesh(new THREE.OctahedronGeometry(0.026, 0), hm("#e8f3f6", 0.05, { metal: 0.2, emissive: "#6f8a96" }));
+          gem.position.x = side * 0.012;
+          gem.scale.x = 0.6;
+          const stud = new THREE.Group();
+          stud.add(set, gem);
+          stud.position.copy(at);
+          g.add(stud);
+        } else {
+          const hoop = hmesh(new THREE.TorusGeometry(0.055, 0.009, 12, 48), gold);
+          hoop.rotation.y = Math.PI / 2;
+          hoop.position.copy(at).add(new THREE.Vector3(0, -0.05, 0));
+          g.add(hoop);
+        }
       }
       return { head: g };
     }
     case "flower": {
+      // A hibiscus-style blossom tucked over the left ear: teardrop petals, a golden center, two leaves.
       const g = new THREE.Group();
+      const petal = hm("#d98a9e", 0.6);
       for (let i = 0; i < 5; i++) {
         const a = (i / 5) * Math.PI * 2;
-        const petal = ball(0.05, "#ff8fb1");
-        petal.position.set(Math.cos(a) * 0.05, Math.sin(a) * 0.05, 0);
-        petal.scale.z = 0.5;
-        g.add(petal);
+        const p = hball(0.045, petal, 20);
+        p.scale.set(1.35, 0.8, 0.35);
+        p.position.set(Math.cos(a) * 0.05, Math.sin(a) * 0.05, -Math.abs(Math.cos(a)) * 0.004);
+        p.rotation.z = a;
+        g.add(p);
       }
-      g.add(ball(0.035, "#ffd34a"));
-      // Tucked over the left ear, on the hair.
+      const middle = hball(0.024, hm("#e3b64a", 0.6), 16);
+      middle.position.z = 0.012;
+      g.add(middle);
+      for (const s of [-1, 1]) {
+        const leaf = hball(0.04, hm("#5d7a4a", 0.7), 16);
+        leaf.scale.set(1.6, 0.6, 0.25);
+        leaf.position.set(s * 0.075, -0.05, -0.012);
+        leaf.rotation.z = s * -0.5;
+        g.add(leaf);
+      }
       const f = fit;
       g.position.set(-(f ? f.rx * 0.92 : 0.3), f ? f.bandY + 0.03 : 0.44, f ? f.bandZ + f.rz * 0.35 : 0.16);
       g.rotation.y = -1.0;
       return { head: g };
     }
     case "headband": {
-      // An arc from ear to ear over the hair, just behind the hairline.
+      // A padded headband from ear to ear over the hair, just behind the hairline.
       const f = fit ?? { rx: 0.38, bandY: 0.36, bandZ: 0, top: 0.62, rz: 0.36 };
       const pts: THREE.Vector3[] = [];
-      for (let i = 0; i <= 16; i++) {
-        const a = (i / 16) * Math.PI;
-        pts.push(new THREE.Vector3(Math.cos(a) * (f.rx + 0.025), f.bandY - 0.04 + Math.sin(a) * (f.top - f.bandY + 0.07), 0));
+      for (let i = 0; i <= 24; i++) {
+        const a = (i / 24) * Math.PI;
+        pts.push(new THREE.Vector3(Math.cos(a) * (f.rx + 0.03), f.bandY - 0.04 + Math.sin(a) * (f.top - f.bandY + 0.08), 0));
       }
-      const band = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.028, 6), mat(color));
+      const band = htube(pts, 0.032, 0.032, hm(color, 0.55));
+      band.scale.z = 0.55;
       band.position.z = f.bandZ + f.rz * 0.15;
       band.rotation.x = -0.25;
       return { head: band };
     }
     case "pearls": {
+      // A strand of pearls draping round the neck and dipping at the front.
       const g = new THREE.Group();
-      for (let i = 0; i < 13; i++) {
-        const a = Math.PI * 0.15 + (i / 12) * Math.PI * 0.7;
-        const p = ball(0.028, "#f6f1e7");
-        p.position.set(Math.cos(a) * 0.16 * width, 0.15, Math.sin(a) * 0.15 * width);
+      const pearl = hm("#f4efe4", 0.18, { metal: 0.15 });
+      for (let i = 0; i < 25; i++) {
+        const a = Math.PI * 0.1 + (i / 24) * Math.PI * 0.8;
+        const dip = Math.sin(a) ** 3 * 0.06;
+        const p = hball(0.021, pearl, 14);
+        p.position.set(Math.cos(a) * 0.165 * width, 0.16 - dip, Math.sin(a) * 0.155 * width);
         g.add(p);
       }
       return { chest: g };
     }
     case "bowtie": {
+      // A real bow tie: two pinched wings with soft edges and a wrapped knot.
       const g = new THREE.Group();
+      const red = hm("#a5323c", 0.55);
       for (const side of [-1, 1]) {
-        const wing = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.1, 4), mat("#c0392b"));
-        wing.rotation.z = (side * Math.PI) / 2;
-        wing.position.x = side * 0.05;
+        const w = new THREE.Shape();
+        w.moveTo(0, 0.018);
+        w.bezierCurveTo(0.04, 0.03, 0.08, 0.06, 0.1, 0.045);
+        w.bezierCurveTo(0.115, 0.02, 0.115, -0.02, 0.1, -0.045);
+        w.bezierCurveTo(0.08, -0.06, 0.04, -0.03, 0, -0.018);
+        w.closePath();
+        const wing = hmesh(new THREE.ExtrudeGeometry(w, { depth: 0.02, bevelEnabled: true, bevelSize: 0.01, bevelThickness: 0.01, curveSegments: 16 }), red);
+        wing.scale.x = side;
+        wing.position.z = -0.01;
         g.add(wing);
       }
-      g.add(ball(0.025, "#a5281f"));
+      const knot = hball(0.024, hm("#8a2830", 0.55), 16);
+      knot.scale.set(0.9, 1.1, 0.8);
+      knot.position.z = 0.012;
+      g.add(knot);
       g.position.set(0, 0.15, 0.17 * width);
       return { chest: g };
     }
     case "chain": {
+      // A gold chain of interlocking links, alternating flat and edge-on.
       const g = new THREE.Group();
-      for (let i = 0; i < 11; i++) {
-        const a = Math.PI * 0.2 + (i / 10) * Math.PI * 0.6;
-        const link = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.007, 4, 8), mat(gold));
-        link.position.set(Math.cos(a) * 0.15 * width, 0.12 - Math.sin(a) * 0.03, Math.sin(a) * 0.16 * width);
+      const n = 27;
+      for (let i = 0; i < n; i++) {
+        const a = Math.PI * 0.18 + (i / (n - 1)) * Math.PI * 0.64;
+        const p = new THREE.Vector3(Math.cos(a) * 0.155 * width, 0.13 - Math.sin(a) ** 2 * 0.035, Math.sin(a) * 0.162 * width);
+        const link = hmesh(new THREE.TorusGeometry(0.014, 0.0045, 8, 16), gold);
+        link.scale.x = 1.4;
+        link.position.copy(p);
+        // Along the chain, each link turned a quarter from the last.
+        link.rotation.set(i % 2 ? Math.PI / 2 : 0, -a + Math.PI / 2, 0);
         g.add(link);
       }
       return { chest: g };
     }
     case "watch": {
+      // A leather strap with a buckle, a round face with a bezel and hands.
       const g = new THREE.Group();
-      const strap = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.022, 6, 12), mat("#2b2b30"));
-      const face = cyl(0.035, 0.035, 0.03, "#dfe7ea", 12);
-      face.rotation.z = Math.PI / 2;
+      const strap = hmesh(new THREE.TorusGeometry(0.06, 0.018, 10, 32), hm("#5b3a22", 0.7));
+      strap.scale.z = 1.6;
+      const face = new THREE.Group();
+      const bezel = hmesh(new THREE.CylinderGeometry(0.038, 0.038, 0.018, 32), silver);
+      bezel.rotation.z = Math.PI / 2;
+      const dial = hmesh(new THREE.CircleGeometry(0.031, 32), hm("#f3f0ea", 0.4));
+      dial.rotation.y = Math.PI / 2;
+      dial.position.x = 0.0095;
+      const hands = hm("#1d1d22", 0.4);
+      const hour = hmesh(new THREE.BoxGeometry(0.002, 0.018, 0.004), hands);
+      hour.position.set(0.0105, 0.008, 0.002);
+      hour.rotation.x = 0.5;
+      const minute = hmesh(new THREE.BoxGeometry(0.002, 0.026, 0.003), hands);
+      minute.position.set(0.0105, 0.004, -0.01);
+      minute.rotation.x = -1.2;
+      face.add(bezel, dial, hour, minute);
       face.position.x = 0.07;
       g.add(strap, face);
       return { arm: g };
