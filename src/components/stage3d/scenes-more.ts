@@ -500,7 +500,7 @@ export function coloradoScene(): Scene {
 // ---------------------------------------------------------------------------
 // Connecticut: sailing past a striped lighthouse on a rocky point.
 
-function sailboat() {
+function sailboat(sailColor = "#f6f3ee") {
   const g = new THREE.Group();
   const hullShape = new THREE.Shape();
   hullShape.moveTo(-0.45, 0.2);
@@ -522,7 +522,7 @@ function sailboat() {
   sailShape.lineTo(0, 1.6);
   sailShape.lineTo(-0.9, 0.05);
   sailShape.closePath();
-  const sail = new THREE.Mesh(new THREE.ShapeGeometry(sailShape), P.mat("#f6f3ee"));
+  const sail = new THREE.Mesh(new THREE.ShapeGeometry(sailShape), P.mat(sailColor));
   (sail.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
   sail.rotation.y = Math.PI / 2;
   sail.position.set(0, 0.35, 0.2);
@@ -2057,6 +2057,661 @@ export function newHampshireScene(): Scene {
   };
 }
 
+// ---------------------------------------------------------------------------
+// New Jersey: the boardwalk. Arcade booths, saltwater taffy, a Ferris wheel turning.
+
+function ferrisWheel() {
+  const g = new THREE.Group();
+  const wheel = new THREE.Group();
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.025, 6, 40), P.mat("#e9e6e0"));
+  wheel.add(rim);
+  const cars: THREE.Object3D[] = [];
+  const colors = ["#a5483c", "#46658a", "#c2a052", "#6d7b48", "#6a5076", "#2f6b6e"];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const spoke = P.box(0.02, 0.9, 0.02, "#e9e6e0");
+    spoke.position.y = 0;
+    const arm = new THREE.Group();
+    spoke.position.y = 0.45 - 0.45;
+    arm.add(spoke);
+    arm.rotation.z = a;
+    wheel.add(arm);
+    const car = P.box(0.18, 0.16, 0.16, colors[i % colors.length]);
+    car.position.set(Math.cos(a) * 0.9, Math.sin(a) * 0.9 - 0.12, 0);
+    wheel.add(car);
+    cars.push(car);
+  }
+  wheel.position.y = 1.15;
+  for (const s of [-1, 1]) {
+    const leg = P.box(0.05, 1.25, 0.05, "#c9cdd0");
+    leg.position.set(s * 0.35, 0, 0);
+    leg.rotation.z = s * 0.28;
+    g.add(leg);
+  }
+  g.add(wheel);
+  return { object: g, wheel, cars };
+}
+
+function booth(color: string) {
+  const g = new THREE.Group();
+  g.add(P.box(0.7, 0.75, 0.45, "#f3f0ea"));
+  const counter = P.box(0.72, 0.08, 0.5, color);
+  counter.position.y = 0.4;
+  const awning = P.box(0.78, 0.04, 0.55, color);
+  awning.position.set(0, 1.05, 0.05);
+  awning.rotation.x = 0.25;
+  for (const x of [-0.33, 0.33]) {
+    const post = P.box(0.03, 0.3, 0.03, color);
+    post.position.set(x, 0.75, 0.24);
+    g.add(post);
+  }
+  const lights: THREE.Mesh[] = [];
+  for (let i = 0; i < 6; i++) {
+    const b = P.ball(0.025, "#fff2b0", { emissive: "#ffe08a" });
+    b.position.set(-0.3 + i * 0.12, 1.0, 0.3);
+    g.add(b);
+    lights.push(b);
+  }
+  g.add(counter, awning);
+  return { object: g, lights };
+}
+
+function taffy(color: string) {
+  const g = new THREE.Group();
+  const candy = P.cyl(0.03, 0.03, 0.08, color, 8);
+  candy.rotation.z = Math.PI / 2;
+  candy.position.y = 0.03;
+  g.add(candy);
+  for (const s of [-1, 1]) {
+    const twist = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.04, 6), P.mat("#f3f0ea"));
+    twist.rotation.z = (s * Math.PI) / 2;
+    twist.position.set(s * 0.06, 0.03, 0);
+    g.add(twist);
+  }
+  return g;
+}
+
+export function newJerseyScene(): Scene {
+  let wheel: ReturnType<typeof ferrisWheel>;
+  const bulbs: THREE.Mesh[] = [];
+  return {
+    slots: 5,
+    build(kit) {
+      const boards = new THREE.Group();
+      for (let i = 0; i < 24; i++) {
+        const plank = P.box(0.18, 0.04, 2.6, i % 2 ? "#a88a64" : "#9a7c58");
+        plank.position.x = -2.2 + i * 0.19;
+        boards.add(plank);
+      }
+      kit.place(boards, 0, -0.1);
+      wheel = ferrisWheel();
+      kit.place(wheel.object, 1.4, -1.55);
+      ["#a5483c", "#46658a", "#c2a052"].forEach((c, i) => {
+        const b = booth(c);
+        kit.place(b.object, -1.75 + i * 0.8, -1.2);
+        kit.block(-1.75 + i * 0.8, -1.2, 0.35);
+        bulbs.push(...b.lights);
+      });
+    },
+    spot: (i, n) => row(i, n, 0.8, 0.35),
+    async role(actor, slot, kit, clock) {
+      actor.root.position.y = 0.04;
+      const t = taffy(pick(["#e09aa8", "#a8c8e0", "#e8d48a", "#b0d8a0"]));
+      actor.hold(t, "left");
+      for (;;) {
+        await beat(clock, 1.2, 2.5);
+        if (chance(0.35)) {
+          // Off to the booth to try their luck; win or lose, back again.
+          const home = actor.root.position.clone();
+          const bx = -1.75 + (slot % 3) * 0.8;
+          await actor.walkTo(clock, bx, -0.7);
+          actor.face(Math.PI);
+          await actor.once(clock, "Throw", "Idle");
+          if (chance(0.5)) {
+            actor.bounce(1);
+            kit.fx.confetti({ x: bx, y: 1.2, z: -0.8 }, ["#a5483c", "#e7c46a", "#46658a"], 18);
+            await actor.gesture(clock, "Cheer", "arms", { hold: 0.5 });
+          }
+          await actor.walkTo(clock, home.x, home.z);
+          actor.face(0);
+        } else {
+          await actor.gesture(clock, "Use_Item", "armL", { hold: 0.4 });
+          actor.bounce(0.4);
+        }
+      }
+    },
+    tick(dt, t) {
+      if (!wheel) return;
+      wheel.wheel.rotation.z += dt * 0.25;
+      wheel.cars.forEach((c) => (c.rotation.z = -wheel.wheel.rotation.z));
+      bulbs.forEach((b, i) => ((b.material as THREE.MeshStandardMaterial).emissiveIntensity = Math.floor(t * 4 + i) % 2 ? 1.2 : 0.2));
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// North Carolina: Kitty Hawk. The Wright Flyer hops over the dunes, everyone running after it.
+
+function flyer() {
+  const g = new THREE.Group();
+  const cloth = "#efe6d2";
+  const strut = "#8a6a4a";
+  for (const y of [0.25, 0.75]) {
+    const wing = P.box(2.0, 0.025, 0.4, cloth);
+    wing.position.y = y;
+    g.add(wing);
+  }
+  for (let i = 0; i < 6; i++) {
+    for (const z of [-0.18, 0.18]) {
+      const post = P.box(0.015, 0.5, 0.015, strut);
+      post.position.set(-0.95 + i * 0.38, 0.25, z);
+      g.add(post);
+    }
+  }
+  const elevator = P.box(0.7, 0.02, 0.22, cloth);
+  elevator.position.set(0, 0.55, 0.95);
+  const rudder = P.box(0.02, 0.4, 0.2, cloth);
+  rudder.position.set(0, 0.3, -0.95);
+  const boom = P.box(0.02, 0.02, 1.9, strut);
+  boom.position.set(0, 0.45, 0);
+  g.add(elevator, rudder, boom);
+  const props: THREE.Object3D[] = [];
+  for (const x of [-0.35, 0.35]) {
+    const prop = new THREE.Group();
+    const blade = P.box(0.03, 0.4, 0.01, strut);
+    blade.position.y = -0.2;
+    prop.add(blade);
+    prop.position.set(x, 0.5, -0.25);
+    g.add(prop);
+    props.push(prop);
+  }
+  return { object: g, props };
+}
+
+export function northCarolinaScene(): Scene {
+  let plane: ReturnType<typeof flyer>;
+  let pilot: Actor | null = null;
+  let hop = 0;
+  const path = (u: number) => ({ x: -1.9 + u * 3.8, y: Math.sin(u * Math.PI) * 0.9, z: -0.9 });
+  return {
+    slots: 5,
+    build(kit) {
+      ground(kit, "#e6d3a6", 2.3, 0.8, 0);
+      for (const [x, z, s] of [[-1.6, -1.4, 0.9], [0.4, -1.7, 1.2], [1.9, -1.1, 0.8], [-2.0, 0.7, 0.7], [1.8, 0.9, 0.6]] as const) {
+        const dune = P.ball(0.6 * s, "#d9c08f", { detail: 2 });
+        dune.scale.y = 0.35;
+        kit.place(dune, x, z);
+      }
+      kit.place(P.tufts(20, 2.2, ["#a8b25a", "#c9b36a"]), 0, 0.2);
+      plane = flyer();
+      plane.object.scale.setScalar(0.8);
+      kit.floor.add(plane.object);
+    },
+    spot: (i, n) => (i === 0 ? { x: 0, z: -0.9, yaw: Math.PI / 2 } : row(i - 1, Math.max(1, n - 1), 0.85, 0.55)),
+    async role(actor, slot, kit, clock) {
+      if (slot === 0) {
+        pilot = actor;
+        actor.play("Lie_Idle", { fade: 0 });
+        try {
+          for (;;) await clock.wait(1);
+        } finally {
+          pilot = null;
+        }
+      }
+      for (;;) {
+        await clock.wait(0.2);
+        const p = plane.object.position;
+        actor.lookAt(kit.toWorld(p.x, p.y + 0.6, p.z));
+        if (p.y > 0.4 && chance(0.15)) {
+          actor.bounce(0.9);
+          await actor.gesture(clock, "Cheer", "arms", { hold: 0.4 });
+        }
+      }
+    },
+    tick(dt, t) {
+      if (!plane) return;
+      hop = (hop + dt * 0.12) % 1.3;
+      const u = Math.min(1, hop);
+      const p = path(u);
+      plane.object.position.set(p.x, 0.05 + p.y, p.z);
+      plane.object.rotation.set(Math.cos(u * Math.PI) * 0.15, Math.PI / 2, Math.sin(t * 2) * 0.05);
+      plane.props.forEach((pr) => (pr.rotation.z += dt * 25));
+      if (pilot) {
+        plane.object.updateMatrix();
+        pilot.root.position.copy(new THREE.Vector3(0, 0.3, 0.1).applyMatrix4(plane.object.matrix));
+        pilot.root.rotation.y = Math.PI / 2;
+        pilot.yawTarget = null;
+      }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// North Dakota: bison grazing on the prairie. Binoculars up, quiet now.
+
+function bison() {
+  const g = new THREE.Group();
+  const brown = "#4a3426";
+  const dark = "#2e2018";
+  const body = P.ball(0.32, brown, { detail: 2 });
+  body.scale.set(0.8, 0.8, 1.4);
+  body.position.y = 0.55;
+  const hump = P.ball(0.3, dark, { detail: 2 });
+  hump.scale.set(0.85, 0.9, 0.8);
+  hump.position.set(0, 0.72, 0.22);
+  const head = P.ball(0.17, dark, { detail: 2 });
+  head.scale.set(0.9, 1, 1.1);
+  head.position.set(0, 0.5, 0.55);
+  const beard = P.ball(0.09, dark);
+  beard.scale.set(0.7, 1.2, 0.7);
+  beard.position.set(0, 0.36, 0.6);
+  g.add(body, hump, head, beard);
+  for (const s of [-1, 1]) {
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.12, 6), P.mat("#d9cdb8"));
+    horn.position.set(s * 0.15, 0.62, 0.55);
+    horn.rotation.z = -s * 0.8;
+    g.add(horn);
+  }
+  const legs: THREE.Object3D[] = [];
+  for (const [x, z] of [[-0.13, 0.28], [0.13, 0.28], [-0.13, -0.28], [0.13, -0.28]] as const) {
+    const leg = P.cyl(0.05, 0.04, 0.32, brown, 6);
+    leg.position.set(x, 0.16, z);
+    g.add(leg);
+    legs.push(leg);
+  }
+  return { object: g, legs };
+}
+
+export function northDakotaScene(): Scene {
+  const herd: { b: ReturnType<typeof bison>; x: number; z: number; dir: number; speed: number }[] = [];
+  return {
+    slots: 5,
+    build(kit) {
+      ground(kit, "#a8a86a", 2.3, 0.8, 0);
+      kit.place(P.tufts(40, 2.2, ["#9aa05a", "#b8b06a", "#8a9a52"]), 0, 0);
+      for (const [x, z, dir] of [[-1.5, -1.0, 1.2], [0.1, -1.5, -0.3], [1.6, -0.9, -1.9]] as const) {
+        const b = bison();
+        b.object.scale.setScalar(rand(1.4, 1.65));
+        kit.place(b.object, x, z, { yaw: dir });
+        herd.push({ b, x, z, dir, speed: rand(0.05, 0.1) });
+      }
+    },
+    spot: (i, n) => row(i, n, 0.8, 0.75),
+    async role(actor, slot, kit, clock) {
+      const lookAtHerd = () => {
+        const h = pick(herd);
+        actor.lookAt(kit.toWorld(h.b.object.position.x, 0.6, h.b.object.position.z));
+      };
+      actor.face(Math.PI);
+      lookAtHerd();
+      for (;;) {
+        await beat(clock, 1.5, 3);
+        if (slot % 2) {
+          const p = phone();
+          actor.hold(p);
+          await actor.gesture(clock, "Spellcast_Raise", "armR", { hold: 1.0 });
+          actor.drop(p);
+        } else {
+          await actor.gesture(clock, "Spellcast_Raise", "arms", { hold: 1.0 });
+        }
+        lookAtHerd();
+        if (chance(0.2)) actor.bounce(0.4);
+      }
+    },
+    tick(dt, t) {
+      for (const h of herd) {
+        // Graze along slowly, turning now and then; head bobbing to the grass.
+        h.dir += Math.sin(t * 0.2 + h.x) * dt * 0.2;
+        h.x += Math.sin(h.dir) * h.speed * dt;
+        h.z += Math.cos(h.dir) * h.speed * dt;
+        if (Math.abs(h.x) > 1.9 || h.z > -0.3 || h.z < -1.7) h.dir += Math.PI * dt;
+        h.b.object.position.set(h.x, 0, h.z);
+        h.b.object.rotation.y = h.dir;
+        h.b.legs.forEach((l, j) => (l.rotation.x = Math.sin(t * 3 + j * Math.PI) * 0.2));
+      }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Ohio: a roller coaster. Up the lift hill, over the top, arms up all the way down.
+
+export function ohioScene(): Scene {
+  let curve: THREE.CatmullRomCurve3;
+  const cars: THREE.Group[] = [];
+  const riders = new Map<Actor, number>();
+  let u = 0;
+  let gap = 0.03;
+  const level = new THREE.Quaternion();
+  const UP = new THREE.Vector3(0, 1, 0);
+  return {
+    slots: 4,
+    build(kit) {
+      const pts = [
+        [-1.9, 0.25, 0.5], [-1.9, 0.8, -0.5], [-1.3, 1.45, -1.3], [-0.4, 1.5, -1.5], [0.5, 0.35, -1.4], [1.4, 0.95, -1.1],
+        [2.0, 0.5, -0.2], [1.6, 0.3, 0.7], [0.4, 0.65, 0.9], [-0.9, 0.25, 1.0],
+      ].map(([x, y, z]) => new THREE.Vector3(x, y, z));
+      curve = new THREE.CatmullRomCurve3(pts, true, "centripetal");
+      const track = new THREE.Mesh(new THREE.TubeGeometry(curve, 200, 0.05, 4, true), P.mat("#c2573a"));
+      kit.floor.add(track);
+      // Supports down to the ground.
+      for (let i = 0; i < 28; i++) {
+        const p = curve.getPointAt(i / 28);
+        const post = P.box(0.03, p.y, 0.03, "#e9e6e0");
+        kit.place(stand(post), p.x, p.z);
+      }
+      gap = 0.62 / curve.getLength();
+      for (let i = 0; i < 4; i++) {
+        const car = new THREE.Group();
+        const color = i === 0 ? "#46658a" : "#c2a052";
+        car.add(P.box(0.5, 0.08, 0.56, color));
+        for (const s of [-1, 1]) {
+          const side = P.box(0.05, 0.2, 0.56, color);
+          side.position.set(s * 0.225, 0.1, 0);
+          car.add(side);
+        }
+        const front = P.box(0.5, 0.26, 0.06, color);
+        front.position.set(0, 0.13, 0.25);
+        const bar = P.box(0.44, 0.03, 0.03, "#2e2a26");
+        bar.position.set(0, 0.32, 0.12);
+        car.add(front, bar);
+        kit.floor.add(car);
+        cars.push(car);
+      }
+    },
+    spot: () => ({ x: 0, z: 0, yaw: 0 }),
+    async role(actor, slot, _kit, clock) {
+      riders.set(actor, slot);
+      // A touch smaller on the ride so the cars still read under them.
+      actor.root.scale.setScalar(actor.unitScale * 0.75);
+      actor.play("Sit_Floor_Idle", { fade: 0 });
+      try {
+        for (;;) {
+          await clock.wait(0.3);
+          const p = cars[slot % cars.length].position;
+          // Arms up on the way down.
+          if (p.y < 1.1 && chance(0.4)) await actor.gesture(clock, "Cheer", "arms", { hold: 0.6 });
+        }
+      } finally {
+        riders.delete(actor);
+        actor.root.scale.setScalar(actor.unitScale);
+      }
+    },
+    tick(dt) {
+      if (!curve) return;
+      // Slow up the lift hill, fast down the drops.
+      const here = curve.getPointAt(u);
+      const ahead = curve.getPointAt((u + 0.01) % 1);
+      const climbing = ahead.y > here.y;
+      u = (u + dt * (climbing ? 0.05 : 0.1)) % 1;
+      cars.forEach((c, i) => {
+        const v = (u - i * gap + 1) % 1;
+        const p = curve.getPointAt(v);
+        const q = curve.getPointAt((v + 0.005) % 1);
+        c.position.copy(p).y += 0.05;
+        c.lookAt(q.x, q.y + 0.05, q.z);
+        c.updateMatrix();
+      });
+      for (const [actor, i] of riders) {
+        const c = cars[i % cars.length];
+        actor.root.position.copy(new THREE.Vector3(0, 0.06, -0.1).applyMatrix4(c.matrix));
+        // Lean with the car, but only half as far, so nobody lies flat on the lift hill.
+        const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(c.quaternion);
+        level.setFromAxisAngle(UP, Math.atan2(fwd.x, fwd.z));
+        actor.root.quaternion.copy(level).slerp(c.quaternion, 0.5);
+        actor.yawTarget = null;
+      }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Oklahoma: storm chasers. A great dark thunderhead, lightning, and everyone pointing.
+
+export function oklahomaScene(): Scene {
+  let truck: ReturnType<typeof P.pickup>;
+  const cloud = new THREE.Group();
+  let bolt: THREE.Mesh | null = null;
+  let flash: THREE.PointLight | null = null;
+  const funnel = new THREE.Group();
+  return {
+    slots: 5,
+    build(kit) {
+      ground(kit, "#a89a6a", 2.3, 0.8, 0);
+      kit.place(P.tufts(30, 2.2, ["#9a9a5a", "#b8a86a"]), 0, 0.3);
+      for (let i = 0; i < 14; i++) {
+        const puff = P.ball(rand(0.35, 0.6), pick(["#5b6066", "#6f747a", "#4a4f55"]), { detail: 2 });
+        puff.position.set(rand(-1.8, 1.8), rand(0, 0.35), rand(-0.3, 0.3));
+        puff.scale.y = 0.6;
+        cloud.add(puff);
+      }
+      kit.place(cloud, 0, -1.9, { y: 2.0 });
+      const pts: THREE.Vector3[] = [];
+      let x = 0.4;
+      for (let y = 2.0; y >= 0; y -= 0.25) {
+        pts.push(new THREE.Vector3(x, y, -1.9));
+        x += rand(-0.18, 0.18);
+      }
+      bolt = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, "catmullrom", 0), 24, 0.025, 4), P.mat("#fff6c8", { emissive: "#fff2b0" }));
+      bolt.visible = false;
+      kit.floor.add(bolt);
+      flash = new THREE.PointLight("#e8f0ff", 0, 6, 1.2);
+      flash.position.set(0.3, 2.2, -1.5);
+      kit.floor.add(flash);
+      // A tornado dropping out of the cloud on the far side of the field.
+      const twist = new THREE.Mesh(
+        new THREE.LatheGeometry([[0.06, 0], [0.09, 0.4], [0.16, 0.9], [0.3, 1.4], [0.55, 1.85], [0.7, 2.0]].map(([r, y]) => new THREE.Vector2(r, y)), 20),
+        new THREE.MeshStandardMaterial({ color: "#7d8086", roughness: 0.9, side: THREE.DoubleSide, transparent: true, opacity: 0.85 }),
+      );
+      funnel.add(twist);
+      kit.place(funnel, 1.3, -2.0);
+      truck = P.pickup("#46658a");
+      kit.place(truck.object, -1.75, -0.5, { yaw: 1.1 });
+      kit.block(-1.75, -0.5, 0.6);
+    },
+    spot: (i, n) => {
+      const s = row(i, n, 0.7, 0.75);
+      return { ...s, x: s.x + 0.35, yaw: Math.PI };
+    },
+    async role(actor, slot, kit, clock) {
+      actor.lookAt(kit.toWorld(0.3, 1.8, -1.9));
+      const cam = slot === 1 ? phone() : null;
+      if (cam) actor.hold(cam);
+      for (;;) {
+        await beat(clock, 1, 2.5);
+        if (cam) await actor.gesture(clock, "Spellcast_Raise", "armR", { hold: 1.2 });
+        else if (chance(0.5)) await actor.gesture(clock, "Spellcast_Shoot", "armR", { hold: 0.6 });
+        else actor.bounce(0.3);
+      }
+    },
+    async ambient(kit, clock) {
+      for (;;) {
+        await beat(clock, 1.5, 3.5);
+        if (!bolt || !flash) continue;
+        bolt.position.x = rand(-1.2, 1.2);
+        bolt.visible = true;
+        flash.intensity = 6;
+        await clock.wait(0.12);
+        bolt.visible = false;
+        flash.intensity = 0;
+        await clock.wait(0.08);
+        bolt.visible = true;
+        flash.intensity = 4;
+        await clock.wait(0.08);
+        bolt.visible = false;
+        flash.intensity = 0;
+        for (const a of kit.cast) if (a && chance(0.6)) a.bounce(0.8);
+      }
+    },
+    tick(dt, t) {
+      cloud.rotation.y = Math.sin(t * 0.1) * 0.08;
+      cloud.position.x = Math.sin(t * 0.15) * 0.3;
+      funnel.rotation.y += dt * 4;
+      funnel.position.x = 1.3 + Math.sin(t * 0.25) * 0.3;
+      funnel.rotation.z = Math.sin(t * 0.7) * 0.06;
+      void truck;
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Pennsylvania: the Liberty Bell, then the sweetest town: giant chocolate kisses.
+
+function libertyBell() {
+  const g = new THREE.Group();
+  const bronze = new THREE.MeshStandardMaterial({ color: "#8a6a3a", metalness: 0.6, roughness: 0.35 });
+  const bell = new THREE.Mesh(
+    new THREE.LatheGeometry(
+      [[0, 0.62], [0.12, 0.6], [0.16, 0.5], [0.18, 0.3], [0.24, 0.12], [0.3, 0.03], [0.31, 0.0], [0.28, 0.0]].map(([r, y]) => new THREE.Vector2(r, y)),
+      32,
+    ),
+    bronze,
+  );
+  bronze.side = THREE.DoubleSide;
+  bell.castShadow = true;
+  const crack = P.box(0.012, 0.32, 0.01, "#2e2418");
+  crack.position.set(0.05, 0.05, 0.22);
+  crack.rotation.z = 0.15;
+  bell.add(crack);
+  bell.position.y = 0.55;
+  const yoke = P.box(0.6, 0.1, 0.12, "#5b4030");
+  yoke.position.y = 1.15;
+  g.add(bell, yoke);
+  for (const s of [-1, 1]) {
+    const post = P.box(0.08, 1.2, 0.12, "#5b4030");
+    post.position.x = s * 0.35;
+    g.add(post);
+  }
+  return g;
+}
+
+function kiss(scale = 1) {
+  const g = new THREE.Group();
+  const foil = new THREE.Mesh(
+    new THREE.LatheGeometry([[0, 0], [0.22, 0.02], [0.23, 0.08], [0.17, 0.2], [0.07, 0.34], [0.01, 0.42]].map(([r, y]) => new THREE.Vector2(r, y)), 24),
+    new THREE.MeshStandardMaterial({ color: "#c9cdd0", metalness: 0.7, roughness: 0.25 }),
+  );
+  foil.castShadow = true;
+  const plume = P.box(0.04, 0.14, 0.005, "#f3f0ea");
+  plume.position.y = 0.48;
+  g.add(foil, plume);
+  g.scale.setScalar(scale);
+  return g;
+}
+
+export function pennsylvaniaScene(): Scene {
+  return {
+    slots: 5,
+    build(kit) {
+      const plaza = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.03, 2.2), P.mat("#b8a48a"));
+      plaza.position.set(0, 0.015, -0.3);
+      kit.floor.add(plaza);
+      kit.place(libertyBell(), -0.6, -1.15, { scale: 1.15 });
+      kit.block(-0.6, -1.15, 0.5);
+      // Independence Hall's tower behind.
+      const hall = new THREE.Group();
+      hall.add(P.box(1.4, 0.8, 0.5, "#a5574a"));
+      const tower = P.box(0.4, 1.1, 0.4, "#a5574a");
+      tower.position.y = 1.35;
+      const steeple = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 8), P.mat("#e9e6e0"));
+      steeple.position.y = 2.2;
+      hall.add(tower, steeple);
+      kit.place(hall, -0.6, -2.0);
+      for (const [x, z, sc] of [[1.3, -1.2, 1.6], [1.9, -0.4, 1.2], [1.6, 0.6, 1.0]] as const) {
+        kit.place(kiss(sc), x, z, { yaw: rand(0, 6) });
+        kit.block(x, z, 0.35 * sc);
+      }
+    },
+    spot: (i, n) => {
+      const s = row(i, n, 0.7, 0.45);
+      return { ...s, x: s.x - 0.4 };
+    },
+    async role(actor, slot, kit, clock) {
+      for (;;) {
+        await beat(clock, 1.2, 2.6);
+        if (slot % 2 === 0) {
+          // A look at the crack, a respectful nod.
+          actor.faceToward(-0.6, -1.15);
+          actor.lookAt(kit.toWorld(-0.6, 1.1, -1.15));
+          await clock.wait(1.2);
+          actor.lookAt(null);
+          actor.face(0);
+        } else {
+          const k = kiss(0.3);
+          actor.hold(k);
+          await actor.gesture(clock, "Use_Item", "armR", { hold: 0.5 });
+          actor.drop(k);
+          actor.bounce(0.6);
+        }
+        if (chance(0.2)) await waveOfJoy(kit, clock);
+      }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Rhode Island: a sailboat regatta round the buoys.
+
+export function rhodeIslandScene(): Scene {
+  let sea: ReturnType<typeof P.waves>;
+  const boats: { b: ReturnType<typeof sailboat>; phase: number; speed: number }[] = [];
+  const crew = new Map<Actor, number>();
+  const course = (ph: number) => ({ x: Math.sin(ph) * 1.55, z: Math.cos(ph) * 0.95 - 0.2 });
+  return {
+    slots: 4,
+    build(kit) {
+      sea = P.waves(4.8, 3.2);
+      kit.place(sea.object, 0, 0, { y: 0.07 });
+      for (const [x, z] of [[-1.55, -0.2], [1.55, -0.2], [0, -1.15], [0, 0.75]] as const) {
+        const buoy = new THREE.Group();
+        const b = P.cyl(0.07, 0.09, 0.22, "#c2573a", 10);
+        const top = P.ball(0.05, "#f3f0ea");
+        top.position.y = 0.26;
+        buoy.add(b, top);
+        kit.place(buoy, x * 0.55, z * 0.5 - 0.1, { y: 0.05 });
+      }
+      ["#a5483c", "#46658a", "#c2a052"].forEach((c, i) => {
+        const b = sailboat(c);
+        b.object.scale.setScalar(0.85);
+        kit.floor.add(b.object);
+        boats.push({ b, phase: i * 2.1, speed: 0.3 + i * 0.02 });
+      });
+    },
+    spot: () => ({ x: 0, z: 0, yaw: 0 }),
+    async role(actor, slot, _kit, clock) {
+      crew.set(actor, slot);
+      actor.play("Sit_Floor_Idle", { fade: 0 });
+      try {
+        for (;;) {
+          await beat(clock, 1.5, 3);
+          if (chance(0.5)) await actor.gesture(clock, "Cheer", "armR", { hold: 0.5 });
+        }
+      } finally {
+        crew.delete(actor);
+      }
+    },
+    tick(dt, t) {
+      sea?.roll(t);
+      for (const r of boats) {
+        r.phase += dt * r.speed;
+        const p = course(r.phase);
+        const q = course(r.phase + 0.05);
+        r.b.object.position.set(p.x, 0.06 + Math.sin(t * 1.6 + r.phase) * 0.03, p.z);
+        r.b.object.rotation.set(0, Math.atan2(q.x - p.x, q.z - p.z), 0.12);
+        r.b.sail.rotation.y = Math.PI / 2 + 0.3;
+        r.b.object.updateMatrix();
+      }
+      for (const [actor, i] of crew) {
+        const b = boats[i % boats.length].b.object;
+        const seat = i < boats.length ? -0.3 : 0.15;
+        actor.root.position.copy(new THREE.Vector3(0, 0.2, seat).applyMatrix4(b.matrix));
+        actor.root.rotation.y = b.rotation.y + (i % 2 ? 1 : -1);
+        actor.yawTarget = null;
+      }
+    },
+  };
+}
+
 export const MORE_SCENES: Record<string, (() => Scene)[]> = {
   AL: [alabamaScene],
   AK: [alaskaScene],
@@ -2079,5 +2734,12 @@ export const MORE_SCENES: Record<string, (() => Scene)[]> = {
   MT: [montanaScene],
   NE: [nebraskaScene],
   NH: [newHampshireScene],
+  NJ: [newJerseyScene],
+  NC: [northCarolinaScene],
+  ND: [northDakotaScene],
+  OH: [ohioScene],
+  OK: [oklahomaScene],
+  PA: [pennsylvaniaScene],
+  RI: [rhodeIslandScene],
 };
 
