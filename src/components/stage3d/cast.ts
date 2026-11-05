@@ -415,13 +415,16 @@ export class Actor {
    * sized to them, kid or grown-up): `hat` fits it like a hat whose opening has
    * that radius, `top` sets it on top of the head or hair, `y` places it as is.
    */
-  wear(object: THREE.Object3D, how: { hat: number; lift?: number } | { top: number } | { y: number }) {
+  wear(object: THREE.Object3D, how: { hat: number; lift?: number } | { fitted: true } | { top: number } | { y: number }) {
     if (!this.head) return object;
     this.showHeadwear(false);
     const holder = new THREE.Group();
     holder.scale.setScalar(this.height / 1.55);
     const fit = this.fit;
-    if ("hat" in how && fit) {
+    if ("fitted" in how && fit) {
+      // One of the wardrobe's own hats (headwear()), fitted just like theirs.
+      holder.add(fitHat(object, fit)!);
+    } else if ("hat" in how && fit) {
       object.position.y += HAT_BAND + (how.lift ?? 0);
       object.userData.fit = { r: how.hat };
       holder.add(fitHat(object, fit)!);

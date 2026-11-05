@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { headwear } from "@/components/stage3d/accessories";
 import type { Actor, Clip, Clock } from "@/components/stage3d/cast";
 import type { Look } from "@/lib/look";
 import * as P from "@/components/stage3d/props";
@@ -895,7 +896,7 @@ function texasScene(): Scene {
       return seats[i - 1];
     },
     async role(actor, slot, kit, clock) {
-      wear(actor, cowboyHat(pick(["#8a5a33", "#d9b77e", "#3a2416", "#f2ece0"])), { hat: 0.25 });
+      wear(actor, headwear("cowboy", pick(["#8a5a33", "#d9b77e", "#3a2416", "#f2ece0"]))!, { fitted: true });
       if (slot === 0) {
         // The pitmaster: check the meat, big puff of smoke, proud nod.
         for (;;) {

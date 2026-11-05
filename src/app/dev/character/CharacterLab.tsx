@@ -105,7 +105,7 @@ const SETS: Record<string, Look[]> = {
     { ...BASE, ...M, hairStyle: "neat", facialHair: "stubble", headwear: "ranger" },
     { ...BASE, ...M, hairStyle: "spiky", headwear: "party", glasses: "square", hair: "#e6c77f" },
   ],
-  hats2: (["cap", "propeller", "safari", "beanie", "pirate", "tophat", "viking", "cowboy"] as const).map((headwear, i) => ({
+  hats2: (["pirate", "bunny", "unicorn", "party", "santa", "viking", "chef", "crown"] as const).map((headwear, i) => ({
     ...BASE,
     ...(i % 2 || i === 4 ? M : {}),
     hairStyle: (["long", "tousled", "ponytail", "bald", "afro", "afro", "long", "spiky"] as const)[i] as Look["hairStyle"],
