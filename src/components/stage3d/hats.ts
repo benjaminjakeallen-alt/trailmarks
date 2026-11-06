@@ -234,7 +234,7 @@ function peakedCap(g: THREE.Group, top: string, bandColor: string, metal: string
 }
 
 /** Hats only the scenes use (not in the wardrobe): a police cap, a cheesehead. */
-export function sceneHat(kind: "police" | "cheese" | "mouse" | "derby", band: number, opts: { bow?: boolean; color?: string } = {}): THREE.Object3D {
+export function sceneHat(kind: "police" | "cheese" | "mouse" | "derby" | "tricorn", band: number, opts: { bow?: boolean; color?: string } = {}): THREE.Object3D {
   const body = new THREE.Group();
   let fit: Fit;
   if (kind === "derby") {
@@ -295,6 +295,13 @@ export function sceneHat(kind: "police" | "cheese" | "mouse" | "derby", band: nu
     fit = { r: R, crown: 0.3 };
   } else if (kind === "police") {
     fit = peakedCap(body, "#2f3f5a", "#1d2333", "#c9a24a");
+  } else if (kind === "tricorn") {
+    // A colonial tricorn: the pirate's hat without the skull and crossbones.
+    fit = BUILDERS.pirate(body, "#22252b");
+    body.remove(body.children[body.children.length - 1]);
+    // A trimmer brim than the pirate's swashbuckler: the crown stays, the rim and its trim pull in.
+    for (const part of body.children.slice(1)) part.scale.setScalar(0.78);
+    body.position.y = fit.lift ?? 0;
   } else {
     // A foam cheese wedge, tall at the front and sloping to the back, soft-edged, with holes pressed in.
     const side = new THREE.Shape();

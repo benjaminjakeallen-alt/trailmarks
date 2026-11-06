@@ -4,7 +4,8 @@ import * as P from "@/components/stage3d/props";
 import type { Scene, StageKit } from "@/components/stage3d/stage";
 import { CHAIR, TABLE, around, beat, chance, pick, rand, ring, row, waveOfJoy, wear } from "@/components/stage3d/scenes";
 import { HAT_BAND } from "@/components/stage3d/fit";
-import { sceneHat } from "@/components/stage3d/hats";
+import { canvasTexture, sceneHat } from "@/components/stage3d/hats";
+import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 
 /**
  * More states' scenes (see scenes.ts for how a scene works). Floor units: a
@@ -2712,6 +2713,839 @@ export function rhodeIslandScene(): Scene {
   };
 }
 
+// ---------------------------------------------------------------------------
+// South Carolina: shag dancing on the beach. Partners step and twirl to the jukebox.
+
+function jukebox() {
+  const g = new THREE.Group();
+  g.add(P.box(0.5, 0.75, 0.32, "#7a4f36"));
+  const arch = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.32, 24), P.mat("#a5483c"));
+  arch.rotation.x = Math.PI / 2;
+  arch.position.y = 0.75;
+  g.add(arch);
+  const lights: THREE.Mesh[] = [];
+  ["#e7c46a", "#c2573a", "#7ab0c4"].forEach((c, i) => {
+    const strip = P.box(0.42, 0.035, 0.02, c, { emissive: c });
+    strip.position.set(0, 0.25 + i * 0.12, 0.165);
+    g.add(strip);
+    lights.push(strip);
+  });
+  const grille = P.box(0.3, 0.14, 0.02, "#3a2e26");
+  grille.position.set(0, 0.08, 0.165);
+  g.add(grille);
+  return { object: g, lights };
+}
+
+export function southCarolinaScene(): Scene {
+  let sea: ReturnType<typeof P.waves>;
+  let box: ReturnType<typeof jukebox>;
+  const notes: { o: THREE.Object3D; age: number; x: number }[] = [];
+  const pairs = (n: number) => Math.ceil(n / 2);
+  return {
+    slots: 6,
+    build(kit) {
+      sea = P.waves(4.8, 1.0);
+      kit.place(sea.object, 0, -1.75, { y: 0.02 });
+      ground(kit, "#ecd7a8", 2.2, 0.7, 0.1);
+      kit.place(P.palmTree(), -1.95, -0.6, { scale: 0.7 });
+      kit.place(P.palmTree(), 2.0, -0.9, { scale: 0.6, yaw: 2 });
+      box = jukebox();
+      kit.place(box.object, -1.55, -0.85, { yaw: 0.5 });
+      kit.block(-1.55, -0.85, 0.35);
+    },
+    spot: (i, n) => {
+      const pair = Math.floor(i / 2);
+      const x = (pair - (pairs(n) - 1) / 2) * 1.4;
+      // The odd one out dances solo, facing out.
+      if (i === n - 1 && n % 2) return { x, z: 0.3, yaw: 0 };
+      return { x: x + (i % 2 ? 0.36 : -0.36), z: 0.3, yaw: i % 2 ? -Math.PI / 2 : Math.PI / 2 };
+    },
+    async role(actor, slot, _kit, clock) {
+      const home = actor.root.position.clone();
+      const base = actor.yawTarget ?? actor.root.rotation.y;
+      const dir = new THREE.Vector3(Math.sin(base), 0, Math.cos(base));
+      for (;;) {
+        // The shag: a little rock-step toward and away from the partner, arms easy.
+        for (let k = 0; k < 6 && clock.alive; k++) {
+          const to = home.clone().addScaledVector(dir, k % 2 ? 0.07 : -0.05);
+          const from = actor.root.position.clone();
+          void actor.gesture(clock, "Spellcasting", k % 2 ? "armL" : "armR", { hold: 0.1, speed: 1.2, upTo: 0.35 }).catch(() => {});
+          for (let f = 1; f <= 9; f++) {
+            await clock.wait(1 / 30);
+            actor.root.position.lerpVectors(from, to, f / 9);
+          }
+          actor.bounce(0.25);
+        }
+        if (slot % 2 && chance(0.7)) {
+          // A twirl under the partner's arm.
+          actor.yawTarget = null;
+          const start = actor.root.rotation.y;
+          for (let f = 1; f <= 20 && clock.alive; f++) {
+            await clock.wait(1 / 30);
+            actor.root.rotation.y = start + (f / 20) * Math.PI * 2;
+          }
+          actor.face(base);
+        } else if (slot % 2 === 0) {
+          await actor.gesture(clock, "Spellcast_Raise", "armR", { hold: 0.6 });
+        }
+        if (chance(0.15)) actor.bounce(0.8);
+      }
+    },
+    async ambient(kit, clock) {
+      for (;;) {
+        await beat(clock, 0.5, 0.9);
+        const n = P.note(pick(["#3a2e26", "#a5483c", "#46658a"]));
+        n.scale.setScalar(0.9);
+        kit.floor.add(n);
+        notes.push({ o: n, age: 0, x: rand(-0.15, 0.15) });
+      }
+    },
+    tick(dt, t) {
+      sea?.roll(t);
+      if (!box) return;
+      box.lights.forEach((l, i) => ((l.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.5 + 0.5 * Math.sin(t * 5 + i * 2)));
+      for (let i = notes.length - 1; i >= 0; i--) {
+        const n = notes[i];
+        n.age += dt;
+        n.o.position.set(-1.55 + n.x + Math.sin(n.age * 3) * 0.1, 1.1 + n.age * 0.45, -0.85 + n.age * 0.1);
+        n.o.rotation.z = Math.sin(n.age * 4) * 0.3;
+        if (n.age > 2.4) {
+          n.o.removeFromParent();
+          notes.splice(i, 1);
+        }
+      }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// South Dakota: Mount Rushmore, with this family's own faces carved in the granite.
+
+const granite = (src: THREE.Material) => {
+  const map = (src as THREE.MeshStandardMaterial).map ?? null;
+  const m = new THREE.MeshStandardMaterial({ color: "#ffffff", map, roughness: 0.95 });
+  // Turn whatever they're wearing into stone: grey it out, keep the shading of the features.
+  m.onBeforeCompile = (s) => {
+    s.fragmentShader = s.fragmentShader.replace(
+      "#include <map_fragment>",
+      `#include <map_fragment>
+      float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+      diffuseColor.rgb = vec3(0.5 + lum * 0.28) * vec3(1.0, 0.97, 0.92);`,
+    );
+  };
+  m.customProgramCacheKey = () => "granite";
+  return m;
+};
+
+function carve(actor: Actor) {
+  const bust = SkeletonUtils.clone(actor.model);
+  bust.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh) {
+      m.material = Array.isArray(m.material) ? m.material.map(granite) : granite(m.material);
+      m.castShadow = true;
+    }
+  });
+  bust.scale.setScalar(1);
+  return bust;
+}
+
+export function southDakotaScene(): Scene {
+  return {
+    slots: 5,
+    build(kit) {
+      ground(kit, "#9aa47a", 2.3, 0.8, 0.1);
+      // The mountain behind, and the rubble ledge the faces rise out of.
+      const rock = ["#a8a397", "#9b968a", "#b3aea2"];
+      for (const [x, y, z, sx, sy] of [[-1.3, 0.5, -2.15, 1.3, 1.5], [0, 0.6, -2.25, 1.6, 1.7], [1.3, 0.45, -2.15, 1.3, 1.4], [2.0, 0.2, -1.8, 0.8, 0.9], [-2.0, 0.2, -1.8, 0.8, 0.9]] as const) {
+        const r = P.ball(0.8, pick(rock), { detail: 1 });
+        r.scale.set(sx, sy, 0.7);
+        kit.place(r, x, z, { y });
+      }
+      for (let i = 0; i < 7; i++) {
+        const r = P.ball(0.42, pick(rock), { detail: 1 });
+        r.scale.set(1.3, 0.75, 0.8);
+        kit.place(r, -1.8 + i * 0.6, -1.15 + rand(-0.05, 0.05), { y: 0.12, yaw: rand(0, 6) });
+      }
+      for (const [x, z, s] of [[-2.0, -0.6, 0.8], [2.05, -0.5, 0.9], [-1.8, 0.9, 0.6], [1.9, 0.8, 0.7]] as const) kit.place(P.tree("pine", "#2f6b4a"), x, z, { scale: s });
+    },
+    spot: (i, n) => row(i, n, 0.8, 0.55),
+    async role(actor, slot, kit, clock) {
+      // Let the sculptors get their likeness first.
+      await clock.wait(1.6);
+      const cam = slot % 2 ? phone() : null;
+      if (cam) actor.hold(cam);
+      for (;;) {
+        actor.lookAt(kit.toWorld(rand(-1.2, 1.2), 1.3, -1.6));
+        await beat(clock, 1.2, 2.4);
+        if (cam) await actor.gesture(clock, "Spellcast_Raise", "armR", { hold: 1.0 });
+        else if (chance(0.5)) await actor.gesture(clock, "Spellcast_Shoot", "armR", { hold: 0.6 });
+        else actor.bounce(0.4);
+        if (chance(0.15)) await waveOfJoy(kit, clock);
+      }
+    },
+    async ambient(kit, clock) {
+      // Once the family's here (standing at ease), carve up to four of them into the mountain.
+      for (let i = 0; i < 40; i++) {
+        await clock.wait(0.1);
+        const here = kit.cast.filter(Boolean).length;
+        if (here >= Math.min(4, kit.cast.length) && here > 0) break;
+      }
+      await clock.wait(0.5);
+      const faces = kit.cast.filter((a): a is Actor => Boolean(a)).slice(0, 4);
+      const v = new THREE.Vector3();
+      faces.forEach((a, i) => {
+        const bust = carve(a);
+        bust.scale.setScalar(a.unitScale * 1.35);
+        const x = (i - (faces.length - 1) / 2) * 0.82;
+        bust.position.set(x, 0, -1.6);
+        bust.rotation.y = 0.1 * (i - (faces.length - 1) / 2);
+        kit.floor.add(bust);
+        bust.updateMatrixWorld(true);
+        // Sink them so only the head rises above the ledge.
+        const head = bust.getObjectByName("head");
+        const neck = head ? kit.floor.worldToLocal(head.getWorldPosition(v)).y : 1.4;
+        bust.position.y = 0.4 - neck;
+        kit.fx.dust({ x, y: 0.8, z: -1.5 });
+      });
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Vermont: sugaring season. Buckets on the maples, steam from the sugar shack, pancakes flipping.
+
+function maple() {
+  const g = new THREE.Group();
+  const bark = "#6b5444";
+  g.add(P.cyl(0.07, 0.11, 1.5, bark, 8));
+  for (const [y, a, l] of [[1.1, 0.7, 0.6], [1.25, -0.8, 0.55], [1.4, 0.2, 0.5], [0.95, -2.4, 0.45]] as const) {
+    const b = P.cyl(0.02, 0.04, l, bark, 6);
+    b.position.set(Math.sin(a) * l * 0.35, y + l * 0.3, Math.cos(a) * 0.05);
+    b.rotation.z = -Math.sin(a) * 0.9;
+    g.add(b);
+  }
+  const bucket = new THREE.Group();
+  bucket.add(P.cyl(0.08, 0.065, 0.14, "#9aa4a8", 12));
+  const lid = P.cyl(0.095, 0.095, 0.015, "#7d878b", 12);
+  lid.position.y = 0.16;
+  lid.rotation.x = 0.4;
+  bucket.add(lid);
+  const spout = P.cyl(0.01, 0.01, 0.08, "#7d878b", 6);
+  spout.rotation.x = Math.PI / 2;
+  spout.position.set(0, 0.18, -0.05);
+  bucket.add(spout);
+  bucket.position.set(0, 0.55, 0.12);
+  g.add(bucket);
+  return g;
+}
+
+function sugarShack() {
+  const g = new THREE.Group();
+  g.add(P.box(1.1, 0.7, 0.7, "#8a5a3a"));
+  for (const s of [-1, 1]) {
+    const roof = P.box(1.25, 0.04, 0.48, "#5b4a40");
+    roof.position.set(0, 0.86, s * 0.19);
+    roof.rotation.x = s * 0.6;
+    g.add(roof);
+  }
+  const vent = P.box(0.4, 0.2, 0.26, "#8a5a3a");
+  vent.position.y = 1.08;
+  const ventRoof = P.box(0.5, 0.03, 0.34, "#5b4a40");
+  ventRoof.position.y = 1.2;
+  const door = P.box(0.26, 0.45, 0.02, "#5b3e2e");
+  door.position.set(0.2, 0.225, 0.36);
+  g.add(vent, ventRoof, door);
+  return g;
+}
+
+function pancake() {
+  const p = P.cyl(0.11, 0.11, 0.025, "#d9a35a", 16);
+  p.position.y = 0;
+  return p;
+}
+
+function pan() {
+  const g = new THREE.Group();
+  const dish = P.cyl(0.13, 0.11, 0.03, "#2e2a26", 16);
+  dish.position.y = 0;
+  const handle = P.box(0.03, 0.02, 0.22, "#2e2a26");
+  handle.position.set(0, 0, -0.22);
+  g.add(dish, handle);
+  return g;
+}
+
+export function vermontScene(): Scene {
+  const trees: THREE.Vector2[] = [];
+  return {
+    slots: 5,
+    async build(kit) {
+      ground(kit, "#eef0ee", 2.3, 0.8, 0);
+      for (const [x, z, s] of [[-1.9, -1.2, 1], [-1.0, -1.6, 1.1], [1.0, -1.5, 1.05], [1.9, -1.0, 0.95]] as const) {
+        kit.place(maple(), x, z, { scale: s, yaw: rand(-0.3, 0.3) });
+        kit.block(x, z, 0.25);
+        trees.push(new THREE.Vector2(x, z));
+      }
+      kit.place(sugarShack(), 0, -1.75);
+      kit.block(0, -1.75, 0.7);
+      // The breakfast table: a tall stack and a jug of syrup.
+      const table = await kit.prop("table_round_A", { w: 0.9, h: TABLE.h });
+      kit.place(table, 1.35, -0.35);
+      kit.block(1.35, -0.35, 0.5);
+      const stack = new THREE.Group();
+      for (let i = 0; i < 6; i++) {
+        const c = pancake();
+        c.position.y = i * 0.026;
+        c.rotation.y = rand(0, 6);
+        stack.add(c);
+      }
+      const pat = P.box(0.06, 0.03, 0.06, "#f3e2a0");
+      pat.position.y = 0.17;
+      stack.add(pat);
+      const jug = P.cyl(0.05, 0.06, 0.16, "#8a5a2a", 10);
+      jug.position.x = 0.22;
+      stack.add(jug);
+      kit.place(stack, 1.3, -0.35, { y: TABLE.h + 0.015 });
+    },
+    spot: (i, n) => row(i, n, 0.85, 0.35),
+    async role(actor, slot, kit, clock) {
+      if (slot === 0) {
+        // The pancake flipper.
+        const p = pan();
+        actor.hold(p);
+        const cake = pancake();
+        kit.floor.add(cake);
+        const v = new THREE.Vector3();
+        for (;;) {
+          await beat(clock, 0.8, 1.6);
+          const at = kit.floor.worldToLocal(actor.handR.getWorldPosition(v)).clone();
+          void actor.gesture(clock, "Spellcast_Raise", "armR", { hold: 0.2, speed: 1.4 }).catch(() => {});
+          for (let f = 0; f <= 24 && clock.alive; f++) {
+            await clock.wait(1 / 30);
+            const u = f / 24;
+            cake.position.set(at.x, at.y + 0.1 + Math.sin(u * Math.PI) * 0.7, at.z + 0.1);
+            cake.rotation.x = u * Math.PI * 2;
+          }
+          cake.position.y = -5;
+          actor.bounce(0.6);
+          if (chance(0.3)) kit.fx.sparkle({ x: at.x, y: at.y + 0.4, z: at.z }, "#e7c46a", 0.3);
+        }
+      }
+      if (slot % 2) {
+        // Off to check the sap buckets.
+        for (;;) {
+          await beat(clock, 1.5, 3);
+          const home = actor.root.position.clone();
+          const t = trees[(slot + Math.floor(rand(0, 4))) % trees.length];
+          await actor.walkTo(clock, t.x, t.y + 0.45);
+          actor.faceToward(t.x, t.y);
+          await actor.once(clock, "Interact", "Idle");
+          if (chance(0.5)) await actor.gesture(clock, "Cheer", "arms", { hold: 0.4 });
+          await actor.walkTo(clock, home.x, home.z);
+          actor.face(0);
+        }
+      }
+      // Everyone else tucks in.
+      const plate = await kit.prop("plate", { w: 0.24 });
+      actor.hold(plate, "left");
+      for (;;) {
+        await beat(clock, 1, 2.2);
+        await actor.gesture(clock, "Use_Item", "armR", { hold: 0.4 });
+        if (chance(0.3)) actor.bounce(0.6);
+      }
+    },
+    async ambient(kit, clock) {
+      for (;;) {
+        await clock.wait(0.15);
+        if (chance(0.5)) kit.fx.smoke({ x: rand(-0.12, 0.12), y: 1.25, z: -1.75 }, { size: 0.3, rise: 0.5, color: "#e8e6e2" });
+        if (chance(0.25)) {
+          const t = pick(trees);
+          kit.fx.emit({ at: { x: t.x, y: 0.72, z: t.y + 0.07 }, vel: { x: 0, y: -0.2, z: 0 }, life: 0.25, size: 0.04, color: "#c99a4a", gravity: -2 });
+        }
+      }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Virginia: a colonial fife and drum parade past the brick capitol.
+
+function capitol() {
+  const g = new THREE.Group();
+  g.add(P.box(2.0, 0.9, 0.55, "#a5574a"));
+  for (const s of [-1, 1]) {
+    const roof = P.box(2.1, 0.04, 0.38, "#4a4644");
+    roof.position.set(0, 1.0, s * 0.14);
+    roof.rotation.x = s * 0.7;
+    g.add(roof);
+  }
+  const cupola = P.cyl(0.13, 0.15, 0.35, "#f3f0ea", 8);
+  cupola.position.y = 1.32;
+  const dome = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.25, 8), P.mat("#4a4644"));
+  dome.position.y = 1.62;
+  g.add(cupola, dome);
+  for (let i = 0; i < 5; i++) {
+    const w = P.box(0.18, 0.3, 0.02, "#f3f0ea");
+    w.position.set(-0.8 + i * 0.4, 0.5, 0.28);
+    const pane = P.box(0.13, 0.24, 0.02, "#46586a");
+    pane.position.set(-0.8 + i * 0.4, 0.5, 0.29);
+    g.add(w, pane);
+  }
+  return g;
+}
+
+function colonialFlag() {
+  const g = new THREE.Group();
+  g.add(P.cyl(0.02, 0.025, 1.9, "#d9d4ca", 6));
+  const flag = new THREE.Group();
+  for (let i = 0; i < 7; i++) {
+    const s = P.box(0.6, 0.06, 0.01, i % 2 ? "#f3f0ea" : "#a5483c");
+    s.position.set(0.3, -i * 0.06, 0);
+    flag.add(s);
+  }
+  const canton = P.box(0.26, 0.24, 0.015, "#2f3f5a");
+  canton.position.set(0.13, -0.09, 0.002);
+  flag.add(canton);
+  flag.position.y = 1.85;
+  g.add(flag);
+  return { object: g, flag };
+}
+
+function drum() {
+  const g = new THREE.Group();
+  const shell = P.cyl(0.17, 0.17, 0.2, "#2f3f5a", 16);
+  shell.position.y = 0;
+  const head = P.cyl(0.175, 0.175, 0.02, "#efe6d2", 16);
+  head.position.y = 0.1;
+  const rim = P.cyl(0.18, 0.18, 0.025, "#a5483c", 16);
+  rim.position.y = -0.1;
+  g.add(shell, head, rim);
+  return g;
+}
+
+const stick = (len = 0.32, color = "#d9b98a") => {
+  const s = P.cyl(0.008, 0.008, len, color, 5);
+  s.position.y = 0;
+  return s;
+};
+
+export function virginiaScene(): Scene {
+  const loop = (ph: number) => ({ x: Math.sin(ph) * 1.55, z: Math.cos(ph) * 0.62 + 0.15 });
+  let flag: ReturnType<typeof colonialFlag>;
+  return {
+    slots: 5,
+    build(kit) {
+      const lawn = ground(kit, "#8fa070", 2.3, 0.8, 0);
+      void lawn;
+      const path = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.15, 48), P.mat("#b8ab98"));
+      path.rotation.x = -Math.PI / 2;
+      path.scale.set(1.55, 0.62, 1);
+      path.position.set(0, 0.045, 0.15);
+      path.receiveShadow = true;
+      kit.floor.add(path);
+      kit.place(capitol(), 0, -1.65);
+      flag = colonialFlag();
+      kit.place(flag.object, 1.6, -1.2);
+      kit.place(P.tree("round", "#5a7a4a"), -1.9, -1.2, { scale: 0.9 });
+    },
+    spot: (i) => {
+      const p = loop(-i * 0.5);
+      const q = loop(-i * 0.5 + 0.05);
+      return { x: p.x, z: p.z, yaw: Math.atan2(q.x - p.x, q.z - p.z) };
+    },
+    async role(actor, slot, _kit, clock) {
+      wear(actor, sceneHat("tricorn", HAT_BAND), { fitted: true });
+      let ph = -slot * 0.5;
+      if (slot === 0) {
+        onBone(actor, "chest", drum()).position.set(0, -0.32, 0.24);
+        actor.hold(stick());
+        actor.hold(stick(), "left");
+        void (async () => {
+          for (let k = 0; clock.alive; k++) await actor.gesture(clock, "Use_Item", k % 2 ? "armL" : "armR", { hold: 0.05, speed: 1.8, upTo: 0.3 });
+        })().catch(() => {});
+      } else if (slot === 1) {
+        const f = colonialFlag();
+        f.object.scale.setScalar(0.6);
+        actor.hold(f.object);
+      } else {
+        actor.hold(stick(0.3, "#5b4030"));
+        void (async () => {
+          for (;;) {
+            await actor.gesture(clock, "Use_Item", "armR", { hold: 1.4, speed: 0.8 });
+            await beat(clock, 0.2, 0.5);
+          }
+        })().catch(() => {});
+      }
+      actor.play("Walking_A", { speed: 0.8 });
+      for (;;) {
+        await clock.wait(1 / 30);
+        ph += (1 / 30) * 0.32;
+        const p = loop(ph);
+        const q = loop(ph + 0.05);
+        actor.root.position.x = p.x;
+        actor.root.position.z = p.z;
+        actor.face(Math.atan2(q.x - p.x, q.z - p.z));
+      }
+    },
+    tick(_dt, t) {
+      if (flag) flag.flag.rotation.y = Math.sin(t * 2) * 0.25;
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Washington: the fish toss at the market, the Space Needle overhead.
+
+function spaceNeedle() {
+  const g = new THREE.Group();
+  const white = "#e9e6e0";
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    const leg = P.cyl(0.03, 0.05, 2.2, white, 6);
+    leg.position.set(Math.sin(a) * 0.12, 1.1, Math.cos(a) * 0.12);
+    leg.rotation.set(Math.cos(a) * 0.08, 0, -Math.sin(a) * 0.08);
+    g.add(leg);
+  }
+  const waist = P.cyl(0.06, 0.06, 0.05, white, 8);
+  waist.position.y = 1.2;
+  const saucer = P.cyl(0.45, 0.22, 0.14, white, 24);
+  saucer.position.y = 2.26;
+  const halo = P.cyl(0.47, 0.47, 0.03, "#c2a052", 24);
+  halo.position.y = 2.18;
+  const cap = P.cyl(0.2, 0.38, 0.1, white, 20);
+  cap.position.y = 2.38;
+  const spire = P.cyl(0.01, 0.03, 0.5, white, 6);
+  spire.position.y = 2.68;
+  g.add(waist, saucer, halo, cap, spire);
+  return g;
+}
+
+function marketStall() {
+  const g = new THREE.Group();
+  const counter = P.box(1.5, 0.6, 0.5, "#6b5444");
+  const ice = P.box(1.45, 0.06, 0.46, "#e8eef0");
+  ice.position.y = 0.63;
+  g.add(counter, ice);
+  for (let i = 0; i < 6; i++) {
+    const f = fish(pick(["#8a9a7a", "#b07a6a", "#9aa4b0"]));
+    f.scale.setScalar(1.3);
+    f.position.set(-0.6 + i * 0.24, 0.7, rand(-0.1, 0.1));
+    f.rotation.y = Math.PI / 2 + rand(-0.3, 0.3);
+    g.add(f);
+  }
+  const tex = canvasTexture("pike-sign", 512, 96, (c) => {
+    c.fillStyle = "#a5483c";
+    c.fillRect(0, 0, 512, 96);
+    c.fillStyle = "#f3f0ea";
+    c.font = "bold 58px Georgia, serif";
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.fillText("PUBLIC MARKET", 256, 52);
+  });
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 0.04), [P.mat("#a5483c"), P.mat("#a5483c"), P.mat("#a5483c"), P.mat("#a5483c"), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 }), P.mat("#a5483c")]);
+  sign.position.set(0, 1.75, -0.2);
+  g.add(sign);
+  for (const s of [-1, 1]) {
+    const post = P.box(0.06, 1.62, 0.06, "#3a2e26");
+    post.position.set(s * 0.7, 0.81, -0.2);
+    g.add(post);
+  }
+  return g;
+}
+
+export function washingtonScene(): Scene {
+  let flying: THREE.Object3D;
+  return {
+    slots: 5,
+    build(kit) {
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.03, 2.6), P.mat("#a8a096"));
+      floor.position.set(0, 0.015, -0.2);
+      kit.floor.add(floor);
+      kit.place(spaceNeedle(), 1.75, -1.75, { scale: 0.9 });
+      kit.place(marketStall(), -0.5, -1.25);
+      kit.block(-0.5, -1.25, 0.8);
+      flying = fish("#b07a6a");
+      flying.scale.setScalar(1.6);
+      flying.visible = false;
+      kit.floor.add(flying);
+    },
+    spot: (i, n) => (i === 0 ? { x: -0.5, z: -1.75, yaw: 0 } : i === 1 ? { x: -0.5, z: 0.75, yaw: Math.PI } : row(i - 2, Math.max(1, n - 2), 0.8, 0.4, )),
+    async role(actor, slot, kit, clock) {
+      if (slot === 0) actor.root.position.y = 0;
+      if (slot === 1) {
+        // The tosser out front; slot 0 behind the ice catches, and throws it back.
+        for (;;) {
+          await beat(clock, 0.8, 1.6);
+          const other = kit.cast[0];
+          if (!other) continue;
+          for (const [from, to] of [[actor, other], [other, actor]] as const) {
+            const held = fish("#b07a6a");
+            held.scale.setScalar(1.6);
+            from.hold(held);
+            from.faceToward(to.root.position.x, to.root.position.z);
+            void from.once(clock, "Throw", "Idle", { speed: 1.2 }).catch(() => {});
+            await clock.wait(0.45);
+            from.drop(held);
+            const a = from.root.position.clone().setY(1.2);
+            const b = to.root.position.clone().setY(1.1);
+            flying.visible = true;
+            for (let f = 0; f <= 22 && clock.alive; f++) {
+              await clock.wait(1 / 30);
+              const u = f / 22;
+              flying.position.lerpVectors(a, b, u);
+              flying.position.y += Math.sin(u * Math.PI) * 0.9;
+              flying.rotation.set(u * 6, Math.atan2(b.x - a.x, b.z - a.z), 0);
+            }
+            flying.visible = false;
+            to.bounce(0.6);
+            void to.gesture(clock, "Cheer", "arms", { hold: 0.3 }).catch(() => {});
+            for (const c of kit.cast) if (c && c !== from && c !== to && chance(0.5)) void c.gesture(clock, "Cheer", "arms", { hold: 0.4 }).catch(() => {});
+            await beat(clock, 0.6, 1);
+          }
+          actor.face(Math.PI);
+        }
+      }
+      if (slot === 0) {
+        for (;;) await clock.wait(1);
+      }
+      for (;;) {
+        await beat(clock, 1.5, 3);
+        if (chance(0.4)) {
+          actor.lookAt(kit.toWorld(1.75, 2.3, -1.75));
+          await clock.wait(1.2);
+          actor.lookAt(null);
+        } else actor.bounce(0.3);
+      }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// West Virginia: whitewater rafting under the New River Gorge Bridge.
+
+function raft() {
+  const g = new THREE.Group();
+  const tube = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.13, 10, 28), P.mat("#c2573a"));
+  tube.rotation.x = Math.PI / 2;
+  tube.scale.set(1.25, 0.75, 1);
+  tube.position.y = 0.12;
+  const deck = P.cyl(0.5, 0.5, 0.04, "#3a3f46", 20);
+  deck.scale.set(1.2, 1, 0.72);
+  deck.position.y = 0.04;
+  g.add(tube, deck);
+  return g;
+}
+
+function paddle() {
+  const g = new THREE.Group();
+  const shaft = P.cyl(0.012, 0.012, 0.7, "#2e2a26", 5);
+  shaft.position.y = 0;
+  const blade = P.box(0.09, 0.18, 0.015, "#c2a052");
+  blade.position.y = -0.4;
+  g.add(shaft, blade);
+  return g;
+}
+
+function archBridge() {
+  const g = new THREE.Group();
+  const steel = P.mat("#8a5a3a");
+  const pts: THREE.Vector3[] = [];
+  for (let i = 0; i <= 24; i++) {
+    const u = i / 24;
+    pts.push(new THREE.Vector3(-2.3 + u * 4.6, Math.sin(u * Math.PI) * 1.55, 0));
+  }
+  for (const z of [-0.12, 0.12]) {
+    const arch = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.045, 6), steel);
+    arch.position.z = z;
+    g.add(arch);
+  }
+  const deck = P.box(4.8, 0.08, 0.36, "#6b6460");
+  deck.position.y = 1.7;
+  g.add(deck);
+  for (let i = 1; i < 12; i++) {
+    const x = -2.3 + (i / 12) * 4.6;
+    const y0 = Math.sin((i / 12) * Math.PI) * 1.55;
+    const h = 1.7 - y0;
+    if (h < 0.05) continue;
+    const post = P.box(0.03, h, 0.03, "#8a5a3a");
+    post.position.set(x, y0 + h / 2, 0);
+    g.add(post);
+  }
+  return g;
+}
+
+export function westVirginiaScene(): Scene {
+  let river: ReturnType<typeof P.waves>;
+  let boat: THREE.Group;
+  const crew = new Map<Actor, number>();
+  const seats = [[-0.32, -0.2], [-0.32, 0.2], [0.25, -0.22], [0.25, 0.22]] as const;
+  const rocks: THREE.Vector3[] = [];
+  return {
+    slots: 5,
+    build(kit) {
+      river = P.waves(4.8, 1.5);
+      (river.object.material as THREE.MeshStandardMaterial).color.set(P.calmProp("#3f8a8f"));
+      kit.place(river.object, 0, -0.25, { y: 0.02 });
+      const bank = (z: number, d: number) => {
+        const b = P.box(4.8, 0.16, d, "#7a8a5a");
+        kit.place(stand(b), 0, z);
+      };
+      bank(-1.55, 1.1);
+      bank(1.05, 0.6);
+      for (let i = 0; i < 7; i++) kit.place(P.tree("pine", pick(["#2f6b4a", "#3a7a52"])), -2.0 + i * 0.66 + rand(-0.1, 0.1), -1.5 + rand(-0.25, 0.2), { scale: rand(0.7, 1.0), y: 0.16 });
+      const bridge = archBridge();
+      kit.place(bridge, 0, -1.95, { y: 0.16 });
+      for (const [x, z] of [[-1.5, -0.6], [-0.9, 0.2], [1.1, -0.5], [1.7, 0.15]] as const) {
+        const r = P.ball(0.16, "#7a7670", { detail: 1 });
+        r.scale.set(1.3, 0.7, 1);
+        kit.place(r, x, z, { y: 0.08 });
+        rocks.push(new THREE.Vector3(x, 0.15, z));
+      }
+      boat = raft();
+      kit.floor.add(boat);
+    },
+    spot: (i) => (i < 4 ? { x: 0, z: 0, yaw: Math.PI / 2 } : { x: 1.2, z: 1.0, yaw: Math.PI }),
+    async role(actor, slot, kit, clock) {
+      if (slot >= 4) {
+        // The one on the bank with the camera.
+        actor.root.position.y = 0.16;
+        const cam = actor.hold(phone());
+        void cam;
+        for (;;) {
+          actor.lookAt(kit.toWorld(boat.position.x, 0.8, boat.position.z));
+          await actor.gesture(clock, "Spellcast_Raise", "armR", { hold: 1.2 });
+          await beat(clock, 0.6, 1.4);
+          if (chance(0.3)) actor.bounce(0.6);
+        }
+      }
+      crew.set(actor, slot);
+      actor.play("Sit_Floor_Idle", { fade: 0 });
+      actor.hold(paddle());
+      try {
+        for (;;) {
+          await actor.gesture(clock, "Spellcasting", "armR", { hold: 0.15, speed: 1.3 });
+          if (chance(0.15)) await actor.gesture(clock, "Cheer", "arms", { hold: 0.4 });
+        }
+      } finally {
+        crew.delete(actor);
+      }
+    },
+    async ambient(kit, clock) {
+      for (;;) {
+        await clock.wait(0.05);
+        const r = pick(rocks);
+        kit.fx.emit({ at: { x: r.x - 0.1, y: r.y, z: r.z + rand(-0.1, 0.1) }, vel: { x: rand(0.3, 0.7), y: rand(0.3, 0.7), z: rand(-0.1, 0.1) }, life: 0.5, size: 0.09, endSize: 0.02, color: "#f3f6f7", gravity: -2, solid: true });
+        if (boat && chance(0.6)) {
+          const s = chance(0.5) ? 1 : -1;
+          kit.fx.emit({ at: { x: boat.position.x + 0.65, y: 0.18, z: boat.position.z + s * 0.3 }, vel: { x: rand(0.2, 0.6), y: rand(0.5, 1.0), z: s * rand(0.2, 0.5) }, life: 0.6, size: 0.1, endSize: 0.02, color: "#f3f6f7", gravity: -2.5, solid: true });
+        }
+      }
+    },
+    tick(_dt, t) {
+      river?.roll(t * 1.6);
+      if (!boat) return;
+      boat.position.set(Math.sin(t * 0.35) * 0.9, 0.08 + Math.sin(t * 3.1) * 0.05, -0.25 + Math.sin(t * 0.7) * 0.15);
+      boat.rotation.set(Math.sin(t * 2.3) * 0.08, Math.sin(t * 0.5) * 0.35, Math.sin(t * 2.9) * 0.1);
+      boat.updateMatrix();
+      for (const [actor, i] of crew) {
+        const [sx, sz] = seats[i % seats.length];
+        actor.root.position.copy(new THREE.Vector3(sx, 0.16, sz).applyMatrix4(boat.matrix));
+        // Facing downstream, angled a little toward their own side to paddle.
+        actor.root.rotation.y = boat.rotation.y + Math.PI / 2 + (sz < 0 ? 0.35 : -0.35);
+        actor.yawTarget = null;
+      }
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Wyoming: waiting on Old Faithful from the boardwalk, then the eruption.
+
+export function wyomingScene(): Scene {
+  let erupting = false;
+  return {
+    slots: 5,
+    build(kit) {
+      ground(kit, "#d9cfb8", 2.3, 0.8, 0);
+      // A hot spring: teal in the middle, rings of yellow and orange.
+      ["#c2703a", "#d9b04a", "#5f9ea0"].forEach((c, i) => {
+        const r = 0.55 - i * 0.16;
+        const disc = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.02, 32), P.mat(c));
+        disc.scale.z = 0.6;
+        disc.position.set(-1.45, 0.045 + i * 0.004, -0.75);
+        kit.floor.add(disc);
+      });
+      const cone = new THREE.Mesh(
+        new THREE.LatheGeometry([[0.75, 0], [0.6, 0.12], [0.35, 0.25], [0.14, 0.3], [0.08, 0.24], [0, 0.24]].map(([r, y]) => new THREE.Vector2(r, y)), 28),
+        P.mat("#cfc6b3"),
+      );
+      cone.receiveShadow = true;
+      kit.place(cone, 0.5, -1.35);
+      for (const [x, z, s] of [[-2.0, -1.5, 1], [-1.4, -1.8, 0.9], [1.9, -1.5, 1.05], [2.1, -0.6, 0.8]] as const) kit.place(P.tree("pine", "#2f6b4a"), x, z, { scale: s });
+      const b = bison();
+      b.object.scale.setScalar(1.2);
+      kit.place(b.object, 1.7, 0.2, { yaw: -2.2 });
+      // The boardwalk, with a rail on the geyser side.
+      const walk = new THREE.Group();
+      for (let i = 0; i < 22; i++) {
+        const plank = P.box(0.18, 0.05, 0.8, i % 2 ? "#9a7c58" : "#8a6c4a");
+        plank.position.x = -2.0 + i * 0.19;
+        walk.add(plank);
+      }
+      for (let i = 0; i < 9; i++) {
+        const post = P.box(0.04, 0.4, 0.04, "#6b5444");
+        post.position.set(-2.0 + i * 0.5, 0.2, -0.38);
+        walk.add(post);
+      }
+      const rail = P.box(4.1, 0.04, 0.04, "#6b5444");
+      rail.position.set(0, 0.4, -0.38);
+      walk.add(rail);
+      kit.place(walk, 0, 0.6);
+    },
+    spot: (i, n) => row(i, n, 0.75, 0.65),
+    async role(actor, slot, kit, clock) {
+      actor.root.position.y = 0.05;
+      actor.face(Math.PI);
+      actor.lookAt(kit.toWorld(0.5, 0.8, -1.35));
+      const cam = slot % 2 ? phone() : null;
+      if (cam) actor.hold(cam);
+      let was = false;
+      for (;;) {
+        await clock.wait(0.2);
+        if (erupting && !was) {
+          actor.lookAt(kit.toWorld(0.5, 2.4, -1.35));
+          actor.bounce(1);
+          if (cam) await actor.gesture(clock, "Spellcast_Raise", "armR", { hold: 2.0 });
+          else await actor.gesture(clock, "Cheer", "arms", { hold: 1.2 });
+        } else if (!erupting && was) {
+          actor.lookAt(kit.toWorld(0.5, 0.8, -1.35));
+          if (chance(0.5)) await actor.gesture(clock, "Cheer", "armR", { hold: 0.4 });
+        }
+        was = erupting;
+      }
+    },
+    async ambient(kit, clock) {
+      const at = { x: 0.5, y: 0.3, z: -1.35 };
+      for (;;) {
+        // Simmering: a wisp of steam.
+        for (let i = 0; i < 40; i++) {
+          await clock.wait(0.1);
+          if (chance(0.4)) kit.fx.smoke(at, { size: 0.2, rise: 0.4, color: "#eceae6" });
+        }
+        erupting = true;
+        for (let i = 0; i < 130; i++) {
+          await clock.wait(1 / 30);
+          const k = Math.min(1, i / 15) * (i > 100 ? (130 - i) / 30 : 1);
+          for (let j = 0; j < 4; j++)
+            kit.fx.emit({ at: { x: at.x + rand(-0.05, 0.05), y: at.y, z: at.z + rand(-0.05, 0.05) }, vel: { x: rand(-0.25, 0.25), y: rand(3.2, 4.4) * k, z: rand(-0.25, 0.25) }, life: 1.2, size: 0.18, endSize: 0.4, color: pick(["#f3f6f7", "#e2eef2"]), gravity: -3.2, drag: 0.3, solid: true });
+          if (chance(0.5)) kit.fx.smoke({ x: at.x, y: at.y + 1.8 * k, z: at.z }, { size: 0.5, rise: 0.5, color: "#eceae6" });
+        }
+        erupting = false;
+      }
+    },
+  };
+}
+
 export const MORE_SCENES: Record<string, (() => Scene)[]> = {
   AL: [alabamaScene],
   AK: [alaskaScene],
@@ -2741,5 +3575,12 @@ export const MORE_SCENES: Record<string, (() => Scene)[]> = {
   OK: [oklahomaScene],
   PA: [pennsylvaniaScene],
   RI: [rhodeIslandScene],
+  SC: [southCarolinaScene],
+  SD: [southDakotaScene],
+  VT: [vermontScene],
+  VA: [virginiaScene],
+  WA: [washingtonScene],
+  WV: [westVirginiaScene],
+  WY: [wyomingScene],
 };
 

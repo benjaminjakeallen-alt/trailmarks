@@ -270,7 +270,10 @@ export class Stage {
       },
       prop: async (name, fit) => {
         const object = await prop(name);
-        const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+        const bounds = new THREE.Box3().setFromObject(object);
+        const size = bounds.getSize(new THREE.Vector3());
+        // Some models (the cars) have their origin at the axles: stand them on their base.
+        if (bounds.min.y < -1e-4) for (const c of object.children) c.position.y -= bounds.min.y;
         const even = fit.w ? fit.w / size.x : fit.d ? fit.d / size.z : fit.h ? fit.h / size.y : 1;
         const tall = fit.h && (fit.w || fit.d) ? fit.h / size.y : even;
         object.scale.set(even, tall, even);
