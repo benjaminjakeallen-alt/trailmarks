@@ -6,7 +6,7 @@ import type { Member } from "@/lib/types";
 import { BUILD_WIDTH, SIZE_SCALE, tone } from "@/lib/look";
 import { gear, glasses, headwear } from "@/components/stage3d/accessories";
 import { LEG_LIFT, dress, stretchClips, stretchSkeleton, torsoOf } from "@/components/stage3d/wardrobe";
-import { HAT_BAND, HEAD_FORMS, faceMarks, fitHat, fitHead, pointsOf, jawOf, shapeHead, skullFor, type FaceMarks, type HeadFit } from "@/components/stage3d/fit";
+import { HAT_BAND, HEAD_FORMS, faceMarks, fitHat, fitHead, pointsOf, jawOf, shapeHead, skullFor, smoothSurface, type FaceMarks, type HeadFit } from "@/components/stage3d/fit";
 import { SCULPTED, builtFacialHair, builtHair, extraPieces, fullSkull, lashes, skull, skullColor, splitHead, transplant, type HeadShape } from "@/components/stage3d/hair";
 
 /**
@@ -698,7 +698,7 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
     // Shaped for their head shape (and with the crown rounded off).
     const bald = splitHead(faceMesh.geometry).bald;
     const marks = faceMarks(bald, faceMesh);
-    head = transplant(shapeHead(bald, faceMesh, marks, look.headShape, !hairFrom), faceMesh, own);
+    head = transplant(smoothSurface(shapeHead(bald, faceMesh, marks, look.headShape, !hairFrom)), faceMesh, own);
     skullFrom = bald;
     faceSource = faceMesh;
     faceMarksOf = marks;
@@ -710,7 +710,7 @@ export async function makeActor(member: Member, look: Look): Promise<Actor> {
       const parts = splitHead(piece.geometry);
       const isBeard = piece === meshIn(beardSrc, /_Head$/);
       // A beard follows the jaw's shape.
-      const m = transplant(isBeard ? shapeHead(parts.beard, piece, marks, look.headShape) : parts.hair, piece, own);
+      const m = transplant(smoothSurface(isBeard ? shapeHead(parts.beard, piece, marks, look.headShape) : parts.hair, 1), piece, own);
       m.material = faceMaterial;
       m.userData.hair = true;
       own.parent.add(m);

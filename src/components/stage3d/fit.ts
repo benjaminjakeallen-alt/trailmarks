@@ -206,11 +206,16 @@ export function restPoints(geo: THREE.BufferGeometry, from: THREE.SkinnedMesh, k
  * from the eyes (t 0) down to the chin (t 1).
  */
 export const HEAD_FORMS: Record<HeadShapeName, { scale: [number, number, number]; jaw: (t: number) => number }> = {
-  oval: { scale: [1, 1, 1], jaw: () => 0 },
-  round: { scale: [1.1, 0.93, 1.06], jaw: (t) => 0.16 * Math.sin(Math.PI * Math.min(1, t * 0.95)) },
-  square: { scale: [1.08, 0.97, 1.02], jaw: (t) => 0.24 * Math.min(1, t * 1.4) },
-  long: { scale: [0.9, 1.15, 0.96], jaw: (t) => -0.1 * t },
-  heart: { scale: [1.08, 1.01, 1.0], jaw: (t) => -0.36 * t * t },
+  // An egg: a touch narrow, tapering gently to the chin.
+  oval: { scale: [0.97, 1.03, 1], jaw: (t) => -0.14 * t * t },
+  // Full cheeks all the way down, short and wide.
+  round: { scale: [1.12, 0.91, 1.06], jaw: (t) => 0.2 * Math.sin(Math.PI * Math.min(1, t * 0.85)) },
+  // A wide, straight jaw that keeps its width to the corners of the chin.
+  square: { scale: [1.08, 0.96, 1.02], jaw: (t) => 0.3 * Math.min(1, t * 1.8) - 0.08 * Math.max(0, t - 0.85) / 0.15 },
+  // Tall and narrow.
+  long: { scale: [0.88, 1.18, 0.96], jaw: (t) => -0.08 * t },
+  // Wide at the temples, coming to a neat pointed chin.
+  heart: { scale: [1.12, 1.0, 1.0], jaw: (t) => -0.5 * Math.pow(t, 1.4) },
 };
 
 /** Where a face's eyes, chin and top are (bone space, model units), to shape it from. */
@@ -547,4 +552,179 @@ export function jawOf(face: THREE.BufferGeometry, from: THREE.SkinnedMesh, marks
   }
   g.setIndex(ids);
   return g;
+}
+
+// ---------------------------------------------------------------------------
+// Smoothing: the source heads are low-poly, so round them off
+
+const smoothed = new WeakMap<THREE.BufferGeometry, THREE.BufferGeometry>();
+
+/** Position keys, so vertices split along UV seams count as one point. */
+function welds(pos: THREE.BufferAttribute | THREE.InterleavedBufferAttribute) {
+  const ids = new Int32Array(pos.count);
+  const seen = new Map<string, number>();
+  for (let i = 0; i < pos.count; i++) {
+    const k = `${Math.round(pos.getX(i) * 1e4)},${Math.round(pos.getY(i) * 1e4)},${Math.round(pos.getZ(i) * 1e4)}`;
+    const id = seen.get(k);
+    if (id === undefined) seen.set(k, (ids[i] = i));
+    else ids[i] = id;
+  }
+  return ids;
+}
+
+/**
+ * Normals shared across seams: each vertex averages the normals of every copy
+ * of its point that bends less than `crease` from its own (so ears and the
+ * neck rim keep their edge, while cheeks and the skull turn smooth).
+ */
+function seamlessNormals(geo: THREE.BufferGeometry, crease = 70) {
+  geo.computeVertexNormals();
+  const pos = geo.getAttribute("position");
+  const nor = geo.getAttribute("normal") as THREE.BufferAttribute;
+  const ids = welds(pos);
+  const groups = new Map<number, number[]>();
+  for (let i = 0; i < pos.count; i++) {
+    const g = groups.get(ids[i]);
+    if (g) g.push(i);
+    else groups.set(ids[i], [i]);
+  }
+  const cos = Math.cos((crease * Math.PI) / 180);
+  const out = new Float32Array(pos.count * 3);
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const sum = new THREE.Vector3();
+  for (const g of groups.values()) {
+    for (const i of g) {
+      a.fromBufferAttribute(nor, i);
+      sum.set(0, 0, 0);
+      for (const j of g) {
+        b.fromBufferAttribute(nor, j);
+        if (a.dot(b) >= cos) sum.add(b);
+      }
+      sum.normalize();
+      out.set([sum.x, sum.y, sum.z], i * 3);
+    }
+  }
+  geo.setAttribute("normal", new THREE.BufferAttribute(out, 3));
+  return { ids, groups };
+}
+
+/**
+ * Round off a low-poly skinned mesh: split every triangle into four, twice,
+ * placing each new point on the curve the corner normals describe (a
+ * point-normal triangle), so silhouettes bulge smoothly instead of showing
+ * flat facets. UVs and skin weights are carried over, so the face texture and
+ * the skinning still line up.
+ */
+export function smoothSurface(source: THREE.BufferGeometry, rounds = 2): THREE.BufferGeometry {
+  const hit = smoothed.get(source);
+  if (hit) return hit;
+  let geo = source.index ? source.clone() : source.clone();
+  if (!geo.index) {
+    const idx = new Uint32Array(geo.getAttribute("position").count);
+    for (let i = 0; i < idx.length; i++) idx[i] = i;
+    geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  }
+  const keep = ["position", "uv", "skinIndex", "skinWeight"].filter((n) => geo.getAttribute(n));
+  for (const name of Object.keys(geo.attributes)) if (!keep.includes(name)) geo.deleteAttribute(name);
+  geo.morphAttributes = {};
+  geo.clearGroups();
+
+  for (let r = 0; r < rounds; r++) {
+    // The normals that shape the surface are fully shared at each point (no
+    // creases), so both triangles along an edge put its midpoint in the same place.
+    const pos = geo.getAttribute("position");
+    geo.computeVertexNormals();
+    const raw = geo.getAttribute("normal");
+    const ids = welds(pos);
+    const shared = new Float32Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) {
+      const w = ids[i] * 3;
+      shared[w] += raw.getX(i);
+      shared[w + 1] += raw.getY(i);
+      shared[w + 2] += raw.getZ(i);
+    }
+    const normalAt = (i: number, v: THREE.Vector3) => v.fromArray(shared, ids[i] * 3).normalize();
+
+    const index = geo.index!;
+    const uv = geo.getAttribute("uv");
+    const si = geo.getAttribute("skinIndex");
+    const sw = geo.getAttribute("skinWeight");
+    const P: number[] = [];
+    const UV: number[] = [];
+    const SI: number[] = [];
+    const SW: number[] = [];
+    for (let i = 0; i < pos.count; i++) {
+      P.push(pos.getX(i), pos.getY(i), pos.getZ(i));
+      if (uv) UV.push(uv.getX(i), uv.getY(i));
+      if (si && sw) {
+        SI.push(si.getX(i), si.getY(i), si.getZ(i), si.getW(i));
+        SW.push(sw.getX(i), sw.getY(i), sw.getZ(i), sw.getW(i));
+      }
+    }
+    const mids = new Map<number, number>();
+    const p1 = new THREE.Vector3();
+    const p2 = new THREE.Vector3();
+    const n1 = new THREE.Vector3();
+    const n2 = new THREE.Vector3();
+    const d = new THREE.Vector3();
+    const mid = (a: number, b: number) => {
+      const key = a < b ? a * 1e7 + b : b * 1e7 + a;
+      const have = mids.get(key);
+      if (have !== undefined) return have;
+      p1.fromBufferAttribute(pos, a);
+      p2.fromBufferAttribute(pos, b);
+      normalAt(a, n1);
+      normalAt(b, n2);
+      // The cubic edge of a PN triangle, at its middle.
+      d.subVectors(p2, p1);
+      const m = p1.clone().add(p2).multiplyScalar(0.5);
+      m.addScaledVector(n1, -d.dot(n1) / 8).addScaledVector(n2, d.dot(n2) / 8);
+      const id = P.length / 3;
+      P.push(m.x, m.y, m.z);
+      if (uv) UV.push((uv.getX(a) + uv.getX(b)) / 2, (uv.getY(a) + uv.getY(b)) / 2);
+      if (si && sw) {
+        // Blend the two corners' bone weights, keep the strongest four.
+        const w = new Map<number, number>();
+        for (const v of [a, b])
+          for (let c = 0; c < 4; c++) {
+            const bone = si.getComponent(v, c);
+            const wt = sw.getComponent(v, c) / 2;
+            if (wt > 0) w.set(bone, (w.get(bone) ?? 0) + wt);
+          }
+        const top = [...w.entries()].sort((x, y) => y[1] - x[1]).slice(0, 4);
+        const total = top.reduce((s, [, x]) => s + x, 0) || 1;
+        for (let c = 0; c < 4; c++) {
+          SI.push(top[c]?.[0] ?? 0);
+          SW.push((top[c]?.[1] ?? 0) / total);
+        }
+      }
+      mids.set(key, id);
+      return id;
+    };
+    const tris: number[] = [];
+    for (let t = 0; t < index.count; t += 3) {
+      const a = index.getX(t);
+      const b = index.getX(t + 1);
+      const c = index.getX(t + 2);
+      const ab = mid(a, b);
+      const bc = mid(b, c);
+      const ca = mid(c, a);
+      tris.push(a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca);
+    }
+    const next = new THREE.BufferGeometry();
+    next.setAttribute("position", new THREE.Float32BufferAttribute(P, 3));
+    if (uv) next.setAttribute("uv", new THREE.Float32BufferAttribute(UV, 2));
+    if (si && sw) {
+      next.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(SI, 4));
+      next.setAttribute("skinWeight", new THREE.Float32BufferAttribute(SW, 4));
+    }
+    next.setIndex(tris);
+    geo = next;
+  }
+  seamlessNormals(geo);
+  geo.computeBoundingBox();
+  geo.computeBoundingSphere();
+  smoothed.set(source, geo);
+  return geo;
 }
